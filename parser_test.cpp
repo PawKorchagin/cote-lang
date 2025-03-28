@@ -51,7 +51,7 @@ INSTANTIATE_TEST_SUITE_P(
     MainScopeOKTest,
     Values(
         "int a = 10;",   //simple initialization
-        "int b = -100"   //negarive number           
+        "int b = -100;"   //negarive number           
         "int a = 0; int b = a;",        // init with another variable
         "int a = 1; int A = 2;", //register independent
         "int _ = 10;", //ignore name
@@ -78,15 +78,19 @@ INSTANTIATE_TEST_SUITE_P(
         "int for = 10;",
         "int if = 10;",
         "int >>> = 1;",
-        "int return = 1", 
+        "int return = 1;", 
         "for = 0;",
         "int invalid name = 10;", //space in name
         "int a = 10000000000000;", //overflow 
         "int a = -100000000000000;",
+        "int a = 2147483648;",  
+        "int a = -2147483649;"    
         "int a@!ghf^@^#@ = 1;", //invalid symbols
         "int 😁😂 = 1;", //unicode symbols
         "int a = 1; int a = 1;" //initialize initialized
         "int a = b;" //init with unitialized variable
+        "int  a  =  10  ;", //whitespaces
+        "int\ta\t=\t10\t;"      
     )
 );
 
