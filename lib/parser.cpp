@@ -9,5 +9,5 @@ public:
 };
 
 void parse(const std::string& s) {
-    throw new AlwaysException("sad thrombone");
+    throw new AlwaysException("sad trombone");
 }
