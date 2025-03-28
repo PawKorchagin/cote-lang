@@ -46,4 +46,5 @@ bin/crypt
 !bin/CMakeLists.txt
 !lib/CMakeLists.txt
 !tests/CMakeLists.txt
+!CMakeLists.txt
 Testing
