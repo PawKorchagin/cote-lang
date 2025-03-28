@@ -1,4 +1,5 @@
 #include "parser.h"
+#include <fstream>
 
 class AlwaysException {
     std::string what;
@@ -8,6 +9,10 @@ public:
     }
 };
 
-void parse(const std::string& s) {
+namespace {
+
+}
+
+std::unique_ptr<Expr> parse(std::istream &in) {
     throw new AlwaysException("sad trombone");
 }
