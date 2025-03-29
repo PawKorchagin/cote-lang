@@ -8,7 +8,7 @@ using namespace testing;
 using InvalidParserExceptionParamTestSuite = TestWithParam<std::string>;
 
 TEST_P(InvalidParserExceptionParamTestSuite, Sample) {
-    auto code = GetParam();
+    auto code = std::istringstream(GetParam());
 
     ASSERT_ANY_THROW(parse(code));
 }
@@ -27,7 +27,7 @@ INSTANTIATE_TEST_SUITE_P(
 using CorrectParserExceptionParamTestSuite = TestWithParam<std::string>;
 
 TEST_P(CorrectParserExceptionParamTestSuite, CorrectSample) {
-    auto code = GetParam();
+    auto code = std::istringstream(GetParam());
     ASSERT_NO_THROW(parse(code));
 }
 
