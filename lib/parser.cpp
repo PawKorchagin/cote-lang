@@ -6,8 +6,8 @@
 
 
 namespace {
-    using namespace AST;
-    using namespace Parser;
+    using namespace ast;
+    using namespace parser;
     std::vector<int> line_breaks;
 
     //wrapper for keeping cursor position and error messages
@@ -112,13 +112,13 @@ namespace {
         auto rhs = parse_precedence(rules[op].precedence + 1);//because we want all operators to be left-assoc(if right-assoc needed just do not add 1)
         switch (op) {
             case TOKEN_ADD:
-                return std::make_unique<BinaryExpr<BinaryOpType::ADD>>(std::move(lhs), std::move(rhs));
+                return std::make_unique<AddExpr>(std::move(lhs), std::move(rhs));
             case TOKEN_SUB:
-                return std::make_unique<BinaryExpr<BinaryOpType::SUB>>(std::move(lhs), std::move(rhs));
+                return std::make_unique<SubExpr>(std::move(lhs), std::move(rhs));
             case TOKEN_MUL:
-                return std::make_unique<BinaryExpr<BinaryOpType::MUL>>(std::move(lhs), std::move(rhs));
+                return std::make_unique<MulExpr>(std::move(lhs), std::move(rhs));
             case TOKEN_DIV:
-                return std::make_unique<BinaryExpr<BinaryOpType::DIV>>(std::move(lhs), std::move(rhs));
+                return std::make_unique<DivExpr>(std::move(lhs), std::move(rhs));
             default:
                 throw std::runtime_error("Unknown error");
         }
@@ -137,7 +137,7 @@ namespace {
         return lhs;
     }
 }
-namespace Parser {
+namespace parser {
     unique_ptr<Node> parse_expression() {
         return parse_precedence(PREC_ASSIGN);
     }

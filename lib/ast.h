@@ -7,14 +7,35 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <memory>
 
 template<typename T>
 using unique_ptr = std::unique_ptr<T>;
-namespace AST {
+namespace ast {
+    enum class VarType {
+        UNKNOWN,
+        INT,
+        //:)
+    };
+    enum class BinaryOpType {
+        ADD = 0,
+        SUB,
+        DIV,
+        MUL,
+        ASSIGN,
+        EQ,
+        LE,
+        LS,
+        GR,
+        GE,
+        AND2,
+        OR2,
+        UNKNOWN
+    };
     class Node {
     public:
         virtual ~Node() = default;
-        virtual std::string toStr1() { throw std::runtime_error("Should not be called"); }
+        virtual std::string toStr1();
     };
     class FunctionSignature {
         //TODO
@@ -33,12 +54,7 @@ namespace AST {
     public:
         int number;
         IntLitExpr(int val):number(val) {  }
-        std::string toStr1() override { return std::to_string(number); }
-    };
-    enum class VarType {
-        UNKNOWN,
-        INT,
-        //:)
+        std::string toStr1() override;
     };
     //actually any expression with identifier at first
     class VarExpr : public Node {
@@ -46,29 +62,14 @@ namespace AST {
         VarType type;
         std::string name;
         VarExpr(const std::string& name): name(name) {}
-        std::string toStr1() override { return name; }
-    };
-    enum class BinaryOpType : int {
-        ADD = 0,
-        SUB,
-        DIV,
-        MUL,
-        ASSIGN,
-        EQ,
-        LE,
-        LS,
-        GR,
-        GE,
-        AND2,
-        OR2,
-        UNKNOWN
+        std::string toStr1() override;
+
     };
     template<BinaryOpType type>
     class BinaryExpr : public Node {
     public:
         unique_ptr<Node> l, r;
         BinaryExpr(unique_ptr<Node> l, unique_ptr<Node> r):l(std::move(l)), r(std::move(r)) {}
-        std::string_view get_string_op() { return "ff"; }
         std::string operatorString() {
             switch (type) {
                 case BinaryOpType::ADD: return "+";
@@ -77,9 +78,15 @@ namespace AST {
                 case BinaryOpType::DIV: return "/";
             }
         }
-        std::string toStr1() override { return "(" + l->toStr1() + operatorString() + r->toStr1() + ")"; }
+        std::string toStr1() override {
+            return "(" + l->toStr1() + operatorString() + r->toStr1() + ")";
+        }
     };
 
+    using AddExpr = BinaryExpr<BinaryOpType::ADD>;
+    using DivExpr = BinaryExpr<BinaryOpType::DIV>;
+    using MulExpr = BinaryExpr<BinaryOpType::MUL>;
+    using SubExpr = BinaryExpr<BinaryOpType::SUB>;
 }
 
 #endif //CRYPT_AST_H
