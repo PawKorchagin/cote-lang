@@ -2,11 +2,12 @@
 здесь пишем только то, что должно быть видно извне и стараемся только
 сигнатуры тут писать, пример ниже
 */
-
+#ifndef CRYPT_PARSER_H
+#define CRYPT_PARSER_H
 #include <string>
 #include <exception>
 #include <memory>
-#include "AST.h"
+#include "ast.h"
 
 class AlwaysException : std::exception {
     std::string what;
@@ -17,8 +18,8 @@ public:
     }
 };
 
-using namespace AST;
-namespace Parser {
+using namespace ast;
+namespace parser {
     typedef std::unique_ptr<Node> (*PrefixRule)();
 
     typedef std::unique_ptr<Node> (*InfixRule)(std::unique_ptr<Node> lhs, int op);
@@ -86,3 +87,5 @@ namespace Parser {
 
 
 `*/
+
+#endif

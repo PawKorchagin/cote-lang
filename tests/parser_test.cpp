@@ -2,7 +2,7 @@
 #include "lib/parser.h"
 
 using namespace testing;
-using namespace Parser;
+using namespace parser;
 
 // можно использовать параметры в тестах так:
 
@@ -39,3 +39,20 @@ INSTANTIATE_TEST_SUITE_P(
         "fn main() {}"
     )
 );
+
+using CorrectParserExpressionTestWithAnswer = Test;
+
+std::string parse_res(std::string x) {
+    std::stringstream ss(x);
+    return parse(ss)->to_str1();
+}
+TEST(CorrectParserExpressionTestWithAnswer, ExampleTest) {
+    ASSERT_EQ(parse_res("x"), "x");
+    ASSERT_EQ(parse_res("y"), "y");
+    ASSERT_EQ(parse_res("zf"), "zf");
+    ASSERT_EQ(parse_res("12"), "12");
+    ASSERT_EQ(parse_res("x * 2"), "(x*2)");
+    ASSERT_EQ(parse_res("x * y + z - y"), "(((x*y)+z)-y)");
+    ASSERT_EQ(parse_res("2 * 2 - 2 * 2"), "((2*2)-(2*2))");
+}
+
