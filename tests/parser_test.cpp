@@ -44,7 +44,7 @@ using CorrectParserExpressionTestWithAnswer = Test;
 
 std::string parse_res(std::string x) {
     std::stringstream ss(x);
-    return parse(ss)->toStr1();
+    return parse(ss)->to_str1();
 }
 TEST(CorrectParserExpressionTestWithAnswer, ExampleTest) {
     ASSERT_EQ(parse_res("x"), "x");

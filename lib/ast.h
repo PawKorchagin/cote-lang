@@ -35,7 +35,7 @@ namespace ast {
     class Node {
     public:
         virtual ~Node() = default;
-        virtual std::string toStr1();
+        virtual std::string to_str1();
     };
     class FunctionSignature {
         //TODO
@@ -54,7 +54,7 @@ namespace ast {
     public:
         int number;
         IntLitExpr(int val):number(val) {  }
-        std::string toStr1() override;
+        std::string to_str1() override;
     };
     //actually any expression with identifier at first
     class VarExpr : public Node {
@@ -62,7 +62,7 @@ namespace ast {
         VarType type;
         std::string name;
         VarExpr(const std::string& name): name(name) {}
-        std::string toStr1() override;
+        std::string to_str1() override;
 
     };
     template<BinaryOpType type>
@@ -78,8 +78,8 @@ namespace ast {
                 case BinaryOpType::DIV: return "/";
             }
         }
-        std::string toStr1() override {
-            return "(" + l->toStr1() + operatorString() + r->toStr1() + ")";
+        std::string to_str1() override {
+            return "(" + l->to_str1() + operatorString() + r->to_str1() + ")";
         }
     };
 
