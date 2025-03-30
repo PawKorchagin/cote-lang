@@ -46,6 +46,7 @@ std::string parse_res(std::string x) {
     std::stringstream ss(x);
     return parse(ss)->to_str1();
 }
+
 TEST(CorrectParserExpressionTestWithAnswer, ExampleTest) {
     ASSERT_EQ(parse_res("x"), "x");
     ASSERT_EQ(parse_res("y"), "y");
@@ -54,5 +55,6 @@ TEST(CorrectParserExpressionTestWithAnswer, ExampleTest) {
     ASSERT_EQ(parse_res("x * 2"), "(x*2)");
     ASSERT_EQ(parse_res("x * y + z - y"), "(((x*y)+z)-y)");
     ASSERT_EQ(parse_res("2 * 2 - 2 * 2"), "((2*2)-(2*2))");
+    ASSERT_EQ(parse_res("(3 + x) * (7 - y)"), "((3 + x) * (7 - y))"); // segmentation fault
 }
 

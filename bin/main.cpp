@@ -1,8 +1,9 @@
 #include <iostream>
+#include <sstream>
+
 #include "lib/parser.h"
 #include "lib/equals.h"
-
-using namespace AST;
+#include "lib/debug.h"
 
 int main() {
     std::cout << "crypt\n";
@@ -18,13 +19,24 @@ int main() {
     auto subExpr = std::make_unique<BinaryExpr<BinaryOpType::SUB>>(std::move(seven), std::move(y));
 
     // Create (3 + x) * (7 - y)
-    auto mulExpr = std::make_unique<BinaryExpr<BinaryOpType::MUL>>(std::move(addExpr), std::move(subExpr));
-    auto mulExpr2 = std::make_unique<BinaryExpr<BinaryOpType::MUL>>(std::move(addExpr), std::move(subExpr));
+    auto mulExpr = std::make_unique<BinaryExpr<BinaryOpType::MUL>>(std::move(x), std::move(three));
 
-    std::cout << (equals(mulExpr.get(), mulExpr2.get()));
+    debug("kek");
+    // auto mulExpr2 = std::make_unique<BinaryExpr<BinaryOpType::MUL>>(std::move(addExpr), std::move(subExpr));
+    // auto in = std::stringstream("(3 + x) * (7 - y)");
+    auto in = std::stringstream("3 * x");
+    auto expr = parser::parse(in);
+    
+    try {
+        std::cout << (AST::equals(expr.get(), mulExpr.get()));
+    } catch (std::bad_cast& e) {
+        std::cout << e.what() << "\n";
+    } catch(std::exception& e) {
+        std::cout << e.what() << "\n";
+    }
 
     // Print expression
-    std::cout << "Expression: " << mulExpr->toStr1() << std::endl;
+    // std::cout << "Expression: " << mulExpr->to_str1() << std::endl;
 
     return 0;
 }

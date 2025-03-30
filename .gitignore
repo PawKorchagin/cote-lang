@@ -49,3 +49,4 @@ bin/crypt
 !tests/CMakeLists.txt
 !CMakeLists.txt
 Testing
+.vscode
