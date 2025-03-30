@@ -2,6 +2,7 @@
 #include "lib/parser.h"
 
 using namespace testing;
+using namespace Parser;
 
 // можно использовать параметры в тестах так:
 
