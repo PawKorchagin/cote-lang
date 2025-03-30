@@ -5,6 +5,7 @@
 #ifndef CRYPT_AST_H
 #define CRYPT_AST_H
 #include <string>
+#include <utility>
 #include <vector>
 #include <stdexcept>
 #include <memory>
@@ -35,7 +36,7 @@ namespace ast {
     class Node {
     public:
         virtual ~Node() = default;
-        virtual std::string to_str1();
+        virtual std::string to_str1() const;
     };
     class FunctionSignature {
         //TODO
@@ -52,17 +53,17 @@ namespace ast {
     };
     class IntLitExpr : public Node {
     public:
-        int number;
+        const int number;
         IntLitExpr(int val):number(val) {  }
-        std::string to_str1() override;
+        std::string to_str1() const override;
     };
     //actually any expression with identifier at first
     class VarExpr : public Node {
     public:
         VarType type;
         std::string name;
-        VarExpr(const std::string& name): name(name) {}
-        std::string to_str1() override;
+        VarExpr(std::string  name): name(std::move(name)) {}
+        std::string to_str1() const override;
 
     };
     template<BinaryOpType type>
@@ -70,15 +71,17 @@ namespace ast {
     public:
         unique_ptr<Node> l, r;
         BinaryExpr(unique_ptr<Node> l, unique_ptr<Node> r):l(std::move(l)), r(std::move(r)) {}
-        std::string operatorString() {
+
+        static std::string operatorString() {
             switch (type) {
                 case BinaryOpType::ADD: return "+";
                 case BinaryOpType::SUB: return "-";
                 case BinaryOpType::MUL: return "*";
                 case BinaryOpType::DIV: return "/";
+                default: throw std::invalid_argument("never see me");;
             }
         }
-        std::string to_str1() override {
+        std::string to_str1() const override {
             return "(" + l->to_str1() + operatorString() + r->to_str1() + ")";
         }
     };

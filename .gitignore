@@ -50,3 +50,4 @@ bin/crypt
 !CMakeLists.txt
 Testing
 .vscode
+/lib/debug.h
