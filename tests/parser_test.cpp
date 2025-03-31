@@ -1,5 +1,10 @@
 #include "gtest/gtest.h"
 #include "lib/parser.h"
+#include <random>
+#include <vector>
+#include <stdexcept>
+#include <ctime>
+#include <string>
 
 using namespace testing;
 using namespace parser;
@@ -38,7 +43,10 @@ INSTANTIATE_TEST_SUITE_P(
     )
 );
 
+// ---Equals Tests---
+
 using CorrectParserExpressionTestWithAnswer = Test;
+using RandomExpressionEqualsTest = Test;
 
 std::string parse_res(std::string x) {
     std::stringstream ss(x);
@@ -56,6 +64,66 @@ TEST(CorrectParserExpressionTestWithAnswer, ExampleTest) {
     // ASSERT_EQ(parse_res("(3 + x) * (7 - y)"), "((3 + x) * (7 - y))"); // segmentation fault
 }
 
+enum ExpressionParts {
+    ADD,
+    SUB,
+    MULT,
+    DIV,
+    //add here new operations if needed
+    VAR,
+    CONST,
+    PARTS_COUNT
+};
+
+const std::string operations_tokens[] = {"+", "-", "*", "/"}; //add here operation as string
+const std::string vars[3] = {"x", "y", "z"};
+std::discrete_distribution<int> vars_distr {1,1,1};    
+
+std::string rand_expr_rec(std::vector<int>& weights, std::default_random_engine& generator) {
+    std::discrete_distribution<int> parts_distr(weights.begin(), weights.end());
+    int part = parts_distr(generator);
+    std::string expr;
+
+    if (part < VAR) {
+        weights[VAR]++;
+        weights[CONST]++;
+        std::string left = rand_expr_rec(weights, generator);
+        std::string right = rand_expr_rec(weights, generator);
+        expr = "(" + left + operations_tokens[part] + right + ")";
+        weights[VAR]--;
+        weights[CONST]--;
+    } 
+    else if (part == VAR) {
+        expr = vars[vars_distr(generator)];
+    } 
+    else if (part == CONST) {
+        expr = std::to_string(std::rand() % 100);
+    } 
+    else {
+        throw std::runtime_error("Invalid expression part");
+    }
+
+    return expr;
+}
+
+std::string rand_expression() {
+    const int initial_weight = 10; //increase to get longer expressions
+    std::vector<int> weights(PARTS_COUNT, initial_weight);
+    std::random_device rd;
+    std::default_random_engine generator(rd());
+
+    return rand_expr_rec(weights, generator);
+}
+
+TEST(RandomExpressionEqualsTest, RandomTests) {
+    const int test_amount = 1000;
+    std::srand(std::time(0)); 
+
+    for (int i = 0; i < test_amount; ++i) {
+        std::string exp = rand_expression();
+        ASSERT_EQ(parse_res(exp), exp);
+    }
+}
 
 using MainScopeOKTest = TestWithParam<std::string>;
 using MainScopeFailTest = TestWithParam<std::string>;
