@@ -54,15 +54,15 @@ namespace ast {
     class IntLitExpr : public Node {
     public:
         const int number;
-        IntLitExpr(int val):number(val) {  }
-        std::string to_str1() const override;
+        explicit IntLitExpr(int val):number(val) {  }
+        [[nodiscard]] std::string to_str1() const override;
     };
     //actually any expression with identifier at first
     class VarExpr : public Node {
     public:
         VarType type;
         std::string name;
-        VarExpr(std::string  name): name(std::move(name)) {}
+        explicit VarExpr(std::string  name): name(std::move(name)) {}
         std::string to_str1() const override;
 
     };

@@ -6,7 +6,7 @@
 // #include "debug.h"
 
 namespace AST {
-    bool equals(const Node*, const Node*);
+    bool equals(const ast::Node*, const ast::Node*);
     //
     // inline bool operator==(const Node& lhs, const Node& rhs) {
     //     return equals(&lhs, &rhs);
@@ -25,12 +25,13 @@ namespace AST {
     // }
 
     template<typename Type>
-    const Type* downcast(const Node* node) {
-        static_assert(std::is_base_of_v<Node, Type>, "downcast: Type must be derived from Node");
+    const Type* downcast(const ast::Node* node) {
+        static_assert(std::is_base_of_v<ast::Node, Type>, "downcast: Type must be derived from Node");
         return dynamic_cast<const Type*>(node);
     }
 
-    inline bool equals(const Node* lhs, const Node* rhs) {
+    inline bool equals(const ast::Node* lhs, const ast::Node* rhs) {
+        using namespace ast;
         if (lhs == nullptr && rhs == nullptr) return true;
         // debug(lhs);
         // debug(rhs);

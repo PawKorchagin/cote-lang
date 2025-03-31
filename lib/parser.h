@@ -4,6 +4,7 @@
 */
 #ifndef CRYPT_PARSER_H
 #define CRYPT_PARSER_H
+
 #include <string>
 #include <exception>
 #include <memory>
@@ -18,11 +19,11 @@ public:
     }
 };
 
-using namespace ast;
 namespace parser {
-    typedef std::unique_ptr<Node> (*PrefixRule)();
 
-    typedef std::unique_ptr<Node> (*InfixRule)(std::unique_ptr<Node> lhs, int op);
+    typedef std::unique_ptr<ast::Node> (*PrefixRule)();
+
+    typedef std::unique_ptr<ast::Node> (*InfixRule)(std::unique_ptr<ast::Node> lhs, int op);
 
     enum Precedence {
         PREC_NONE,
@@ -47,22 +48,25 @@ namespace parser {
         TOKEN_INT_LIT,
         TOKEN_LPAREN,
         TOKEN_RPAREN,
+        TOKEN_UNKNOWN
     };
     constexpr int OPERATOR_EXPECTED = 1;
     constexpr int VALUE_EXPECTED = 2;
     constexpr int ANY_TOKEN_EXPECTED = OPERATOR_EXPECTED | VALUE_EXPECTED;
 
-    //guys you can test this
-    std::unique_ptr<Node> parse(std::istream &in);
+    std::vector<std::string> get_errors();
 
-    //and this
-    unique_ptr<Node> parse_expression();
+    void init_parser(std::istream &in);
 
-    inline unique_ptr<Function> parseFunction() { throw AlwaysException("never");/* TODO */ }
+    unique_ptr<ast::Node> parse_expression();
 
-    inline unique_ptr<Block> parseBlock() { throw AlwaysException("gonna");/* TODO */ }
+    inline unique_ptr<ast::Function> parseFunction() { throw AlwaysException("never");/* TODO */ }
 
-    inline unique_ptr<Node> parseStatement() { throw AlwaysException("give you up");/* TODO */ }
+    inline unique_ptr<ast::Block> parseBlock() { throw AlwaysException("gonna");/* TODO */ }
+
+    inline unique_ptr<ast::Node> parseStatement() { throw AlwaysException("give");/* TODO */ }
+
+    inline std::unique_ptr<ast::Node> parse_program() { throw AlwaysException(" you up"); }
 }
 
 /* Grammar */ /*`
