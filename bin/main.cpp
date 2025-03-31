@@ -3,9 +3,13 @@
 
 #include "lib/parser.h"
 #include "lib/equals.h"
-#include "lib/debug.h"
 
+std::unique_ptr<ast::Node> parse(std::istream& in) {
+    parser::init_parser(in);
+    return parser::parse_expression();
+}
 int main() {
+    using namespace ast;
     std::cout << "crypt\n";
     auto three = std::make_unique<IntLitExpr>(3);
     auto seven = std::make_unique<IntLitExpr>(7);
@@ -21,11 +25,10 @@ int main() {
     // Create (3 + x) * (7 - y)
     auto mulExpr = std::make_unique<BinaryExpr<BinaryOpType::MUL>>(std::move(x), std::move(three));
 
-    debug("kek");
     // auto mulExpr2 = std::make_unique<BinaryExpr<BinaryOpType::MUL>>(std::move(addExpr), std::move(subExpr));
     // auto in = std::stringstream("(3 + x) * (7 - y)");
     auto in = std::stringstream("3 * x");
-    auto expr = parser::parse(in);
+    auto expr = parse(in);
     
     try {
         std::cout << (AST::equals(expr.get(), mulExpr.get()));
@@ -34,6 +37,8 @@ int main() {
     } catch(std::exception& e) {
         std::cout << e.what() << "\n";
     }
+    in = std::stringstream ("(x * 3)");
+    std::cout << parse(in)->to_str1() << std::endl;
 
     // Print expression
     // std::cout << "Expression: " << mulExpr->to_str1() << std::endl;
