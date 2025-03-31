@@ -131,10 +131,10 @@ std::string rand_expr_rec(std::vector<int>& weights, std::default_random_engine&
     }
     else if (part == VAR) {
         expr = vars[vars_distr(generator)];
-    }
+    } 
     else if (part == CONST) {
         expr = std::to_string(std::rand() % 100);
-    }
+    } 
     else {
         throw std::runtime_error("Invalid expression part");
     }
@@ -157,7 +157,6 @@ TEST(RandomExpressionEqualsTest, RandomTests) {
 
     for (int i = 0; i < test_amount; ++i) {
         std::string exp = rand_expression();
-        std::cerr << exp << std::endl;
         ASSERT_EQ(parse_res(exp), exp);
     }
 }
