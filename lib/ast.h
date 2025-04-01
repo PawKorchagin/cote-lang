@@ -37,6 +37,11 @@ namespace ast {
     public:
         virtual ~Node() = default;
         virtual std::string to_str1() const;
+
+        bool operator==(const Node &other) const;
+
+        bool operator==(const Node*) const;
+        bool operator!=(const Node*) const;
     };
     class FunctionSignature {
         //TODO

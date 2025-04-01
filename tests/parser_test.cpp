@@ -13,7 +13,7 @@ using namespace ast;
 
 using InvalidParserExceptionParamTestSuite = TestWithParam<std::string>;
 
-auto parse(std::string text) {
+auto parse(const std::string &text) {
     auto in = std::stringstream(text);
     parser::init_parser(in);
     auto expr = parse_expression();
@@ -96,8 +96,8 @@ TEST(IncorrectParserExpressionTest, ExampleTest) {
     EXPECT_THROW(parse("++1"), std::runtime_error);
     EXPECT_THROW(parse("y++"), std::runtime_error);
     EXPECT_THROW(parse("+"), std::runtime_error);
-    //ASSERT_EQ(parse_res("- 1"), "- 1");
-    // ASSERT_EQ(parse_res("(3 + x) * (7 - y)"), "((3 + x) * (7 - y))"); // segmentation fault
+    // ASSERT_EQ(parse_res("- 1"), "- 1");
+    ASSERT_EQ(parse_res("(3 + x) * (7 - y)"), "((3+x)*(7-y))"); // segmentation fault
 }
 
 enum ExpressionParts {
@@ -114,6 +114,8 @@ enum ExpressionParts {
 const std::string operations_tokens[] = {"+", "-", "*", "/"}; //add here operation as string
 const std::string vars[3] = {"x", "y", "z"};
 std::discrete_distribution<int> vars_distr {1,1,1};
+
+std::mt19937 rnd; // better to use fix seed and mt19937
 
 std::string rand_expr_rec(std::vector<int>& weights, std::default_random_engine& generator) {
     std::discrete_distribution<int> parts_distr(weights.begin(), weights.end());
@@ -133,7 +135,7 @@ std::string rand_expr_rec(std::vector<int>& weights, std::default_random_engine&
         expr = vars[vars_distr(generator)];
     } 
     else if (part == CONST) {
-        expr = std::to_string(std::rand() % 100);
+        expr = std::to_string(rnd() % 100);
     } 
     else {
         throw std::runtime_error("Invalid expression part");
@@ -143,6 +145,7 @@ std::string rand_expr_rec(std::vector<int>& weights, std::default_random_engine&
 }
 
 std::string rand_expression() {
+    rnd = std::mt19937(2); //better to use fix seed and param tests with seeds
     const int initial_weight = 10; //increase to get longer expressions
     std::vector<int> weights(PARTS_COUNT, initial_weight);
     std::random_device rd;
@@ -153,7 +156,6 @@ std::string rand_expression() {
 
 TEST(RandomExpressionEqualsTest, RandomTests) {
     const int test_amount = 1000;
-    std::srand(std::time(0));
 
     for (int i = 0; i < test_amount; ++i) {
         std::string exp = rand_expression();
@@ -233,10 +235,8 @@ INSTANTIATE_TEST_SUITE_P(
 #include <memory>
 #include <sstream>
 
-#include "ast.h"
-#include "equals.h"
-
-using namespace AST;
+#include "lib/ast.h"
+#include "lib/equals.h"
 
 TEST(ManualEqualsTest, ParseExpressionTest) {
     auto three = std::make_unique<IntLitExpr>(3);
