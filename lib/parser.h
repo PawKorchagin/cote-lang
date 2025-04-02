@@ -30,6 +30,7 @@ namespace parser {
         PREC_ASSIGN,
         PREC_ADD,
         PREC_FACTOR,
+        PREC_UNARY,
         PREC_CALL,
         PREC_PRIMARY
     };
@@ -48,11 +49,18 @@ namespace parser {
         TOKEN_INT_LIT,
         TOKEN_LPAREN,
         TOKEN_RPAREN,
-        TOKEN_UNKNOWN
+        TOKEN_LCURLY,
+        TOKEN_RCURLY,
+        TOKEN_FN,
+        TOKEN_ASSIGN,
+        TOKEN_SEMICOLON,
+        TOKEN_UNKNOWN,
     };
     constexpr int OPERATOR_EXPECTED = 1;
     constexpr int VALUE_EXPECTED = 2;
     constexpr int ANY_TOKEN_EXPECTED = OPERATOR_EXPECTED | VALUE_EXPECTED;
+
+    std::string token_to_string(TokenInfo tok, std::string temp_data);
 
     std::vector<std::string> get_errors();
 
@@ -60,13 +68,13 @@ namespace parser {
 
     unique_ptr<ast::Node> parse_expression();
 
-    inline unique_ptr<ast::Function> parseFunction() { throw AlwaysException("never");/* TODO */ }
+    unique_ptr<ast::Function> parse_function();
 
-    inline unique_ptr<ast::Block> parseBlock() { throw AlwaysException("gonna");/* TODO */ }
+    unique_ptr<ast::Block> parse_block();
 
-    inline unique_ptr<ast::Node> parseStatement() { throw AlwaysException("give");/* TODO */ }
+    unique_ptr<ast::Node> parse_statement();
 
-    inline std::unique_ptr<ast::Node> parse_program() { throw AlwaysException(" you up"); }
+    ast::Program parse_program();
 }
 
 /* Grammar */ /*`
