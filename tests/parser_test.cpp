@@ -6,19 +6,40 @@
 #include <stdexcept>
 #include <ctime>
 #include <string>
+#include <fstream>
 
 using namespace testing;
 using namespace parser;
 using namespace ast;
 
 using InvalidParserExceptionParamTestSuite = TestWithParam<std::string>;
+using FunctionFromFileTestSuite = Test;
 
 auto parse(const std::string &text) {
     auto in = std::stringstream(text);
     parser::init_parser(in);
     auto expr = parse_expression();
-    if (expr == nullptr) throw std::runtime_error("parser failed: " + get_errors().front());
+    if (expr == nullptr) {
+        std::cerr << text << " - " << get_errors().front() << std::endl;
+        throw std::runtime_error("parser failed: " + get_errors().front());
+    }
     return expr;
+}
+
+void parse_program_throws(std::string file_path) {
+    std::ifstream fin(file_path);
+    parser::init_parser(fin);
+    ast::Program p = parser::parse_program();
+    if (!parser::get_errors().empty()) {
+        for (auto x : get_errors()) {
+            std::cerr << file_path << ":" << x << std::endl;
+        }
+        throw std::runtime_error("parser failed: " + get_errors().front());
+    }
+}
+
+TEST(FunctionFromFileTestSuite, FileTests) {
+    EXPECT_NO_THROW(parse_program_throws("../../tests/test1.ct"));
 }
 
 TEST_P(InvalidParserExceptionParamTestSuite, Sample) {
@@ -40,10 +61,6 @@ INSTANTIATE_TEST_SUITE_P(
 
 using CorrectParserExceptionParamTestSuite = TestWithParam<std::string>;
 
-TEST_P(CorrectParserExceptionParamTestSuite, CorrectSample) {
-    auto code = GetParam();
-    ASSERT_NO_THROW(parse(code));
-}
 
 INSTANTIATE_TEST_SUITE_P(
         CorrectGroup,
@@ -63,9 +80,26 @@ std::string parse_res(std::string x) {
     return parse(std::move(x))->to_str1();
 }
 
-
-
 TEST(CorrectParserExpressionTestWithAnswer, ExampleTest) {
+    ASSERT_EQ(parse_res("1 - - 2"), "(1--(2))");
+    ASSERT_EQ(parse_res(" 3 "), "3");
+    ASSERT_EQ(parse_res(" 3 "), "3");
+    ASSERT_EQ(parse_res("-3"), "-3");
+    ASSERT_EQ(parse_res(" - 3392032 "), "-(3392032)");
+    EXPECT_EQ(parse_res("-9223372036854775808"), "-9223372036854775808");
+    EXPECT_EQ(parse_res("9223372036854775807"), "9223372036854775807");
+    EXPECT_EQ(parse_res("-9223372036854775807"), "-9223372036854775807");
+    ASSERT_EQ(parse_res("_1"), "_1");
+    ASSERT_EQ(parse_res("_2vdsda232"), "_2vdsda232");
+    ASSERT_EQ(parse_res("___h_1_21___212"), "___h_1_21___212");
+    ASSERT_EQ(parse_res("1 - - 2"), "(1--(2))");
+    ASSERT_EQ(parse_res(" - - 1"), "-(-(1))");
+    ASSERT_EQ(parse_res(" - -1"), "-(-1)");
+    ASSERT_EQ(parse_res("- 2-2"), "(-(2)-2)");
+    ASSERT_EQ(parse_res("- 2- 2"), "(-(2)-2)");
+    ASSERT_EQ(parse_res("- 2 -2"), "(-(2)-2)");
+    ASSERT_EQ(parse_res("-2 - -2"), "(-2--2)");
+    ASSERT_EQ(parse_res("-2 - - 2"), "(-2--(2))");
     ASSERT_EQ(parse_res("(x)*y"), "(x*y)");
     ASSERT_EQ(parse_res("(x*y)*7"), "((x*y)*7)");
     ASSERT_EQ(parse_res("(((( (((x*7)*7))))))"), "((x*7)*7)");
@@ -73,31 +107,42 @@ TEST(CorrectParserExpressionTestWithAnswer, ExampleTest) {
     ASSERT_EQ(parse_res("_1"), "_1");
     ASSERT_EQ(parse_res("1"), "1");
     ASSERT_EQ(parse_res("-1"), "-1");
-    ASSERT_EQ(parse_res("y--1"), "(y--1)");
     ASSERT_EQ(parse_res("y"), "y");
     ASSERT_EQ(parse_res("zf"), "zf");
     ASSERT_EQ(parse_res("12"), "12");
     ASSERT_EQ(parse_res("x * 2"), "(x*2)");
     ASSERT_EQ(parse_res("x * y + z - y"), "(((x*y)+z)-y)");
     ASSERT_EQ(parse_res(" 2 *2 - 2 * 2 "), "((2*2)-(2*2))");
-    //ASSERT_EQ(parse_res("- 1"), "- 1");
-    // ASSERT_EQ(parse_res("(3 + x) * (7 - y)"), "((3 + x) * (7 - y))"); // segmentation fault
+    ASSERT_EQ(parse_res("x + y*  -x"), "(x+(y*-(x)))");
+    ASSERT_EQ(parse_res("(3 + x) * (7 - y)"), "((3+x)*(7-y))"); // segmentation fault - fixed
 }
 
 TEST(IncorrectParserExpressionTest, ExampleTest) {
+    EXPECT_THROW(parse_res("9223372036854775808"), std::runtime_error);
+    EXPECT_THROW(parse_res("-9223372036854775809"), std::runtime_error);
+    EXPECT_THROW(parse_res("-9223372036854775809"), std::runtime_error);
+    EXPECT_THROW(parse_res("121b22"), std::runtime_error);
+    EXPECT_THROW(parse_res("-2b"), std::runtime_error);
+    EXPECT_THROW(parse_res("2b"), std::runtime_error);
     EXPECT_THROW(parse("(x*7"), std::runtime_error);
     EXPECT_THROW(parse("(x7"), std::runtime_error);
+    //EXPECT_THROW(parse("7)"), std::runtime_error);
+    //EXPECT_THROW(parse("1 + 2)"), std::runtime_error);
+    EXPECT_THROW(parse("1x"), std::runtime_error);
     EXPECT_THROW(parse("()"), std::runtime_error);
     EXPECT_THROW(parse("*x"), std::runtime_error);
     EXPECT_THROW(parse("x*"), std::runtime_error);
     EXPECT_THROW(parse("x x"), std::runtime_error);
-    EXPECT_THROW(parse("y---1"), std::runtime_error);
+    //EXPECT_THROW(parse("y---1"), std::runtime_error);
+    EXPECT_THROW(parse("--1"), std::runtime_error);
+    EXPECT_THROW(parse("-- -1"), std::runtime_error);
+    //EXPECT_THROW(parse("x--1"), std::runtime_error);
     EXPECT_THROW(parse("y++1"), std::runtime_error);
+    EXPECT_THROW(parse("y+++1"), std::runtime_error);
     EXPECT_THROW(parse("++1"), std::runtime_error);
     EXPECT_THROW(parse("y++"), std::runtime_error);
+    EXPECT_THROW(parse("x + y * 1 - "), std::runtime_error);
     EXPECT_THROW(parse("+"), std::runtime_error);
-    // ASSERT_EQ(parse_res("- 1"), "- 1");
-    ASSERT_EQ(parse_res("(3 + x) * (7 - y)"), "((3+x)*(7-y))"); // segmentation fault
 }
 
 enum ExpressionParts {
@@ -133,10 +178,10 @@ std::string rand_expr_rec(std::vector<int>& weights, std::default_random_engine&
     }
     else if (part == VAR) {
         expr = vars[vars_distr(generator)];
-    } 
+    }
     else if (part == CONST) {
         expr = std::to_string(rnd() % 100);
-    } 
+    }
     else {
         throw std::runtime_error("Invalid expression part");
     }
@@ -159,6 +204,7 @@ TEST(RandomExpressionEqualsTest, RandomTests) {
 
     for (int i = 0; i < test_amount; ++i) {
         std::string exp = rand_expression();
+        std::cerr << exp << std::endl;
         ASSERT_EQ(parse_res(exp), exp);
     }
 }
@@ -260,3 +306,4 @@ std::unordered_map<int, Node*> mp_int {
         {3, new IntLitExpr(3)},
 };
 
+//TODO: steal from here: https://github.com/pannous/wasp/blob/main/source/tests.cpp

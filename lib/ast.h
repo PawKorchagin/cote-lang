@@ -33,6 +33,9 @@ namespace ast {
         OR2,
         UNKNOWN
     };
+    enum class UnaryOpType {
+        MINUS,
+    };
     class Node {
     public:
         virtual ~Node() = default;
@@ -44,22 +47,28 @@ namespace ast {
         bool operator!=(const Node*) const;
     };
     class FunctionSignature {
+    public:
+        std::string name;
         //TODO
     };
     class Block : public Node {
     public:
         std::vector<unique_ptr<Node>> lines;
-        unique_ptr<Block> block;
     };
     class Function : public Node  {
     public:
-        std::unique_ptr<FunctionSignature> signature;
+        FunctionSignature signature;
         std::unique_ptr<Block> block;
+    };
+    class Program {
+    public:
+        //function declaration (or const var declaration; TODO will be added later )
+        std::vector<std::unique_ptr<Function>> declarations;
     };
     class IntLitExpr : public Node {
     public:
-        const int number;
-        explicit IntLitExpr(int val):number(val) {  }
+        const int64_t number;
+        explicit IntLitExpr(int64_t val):number(val) {  }
         [[nodiscard]] std::string to_str1() const override;
     };
     //actually any expression with identifier at first
@@ -71,6 +80,14 @@ namespace ast {
         std::string to_str1() const override;
 
     };
+    template<UnaryOpType type>
+    class UnaryExpr : public Node {
+    public:
+        std::unique_ptr<Node> expr;
+        explicit UnaryExpr(std::unique_ptr<Node> expr): expr(std::move(expr)) {}
+        std::string to_str1() const override { return "-(" + expr->to_str1() + ")"; }
+    };
+
     template<BinaryOpType type>
     class BinaryExpr : public Node {
     public:

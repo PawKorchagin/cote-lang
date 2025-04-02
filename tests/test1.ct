@@ -1,0 +1,9 @@
+fn main() {
+    x = 1;
+}
+
+fn _f2() {
+// this is a comment
+    y = x = 2; // we can write comments!
+    z = y * x + 2 * 2;
+}
