@@ -5,5 +5,10 @@ fn main() {
 fn _f2() {
 // this is a comment
     y = x = 2; // we can write comments!
+    if (y == 2) {
+        while (y == 2) {
+            y = y - 1;
+        }
+    }
     z = y * x + 2 * 2;
 }

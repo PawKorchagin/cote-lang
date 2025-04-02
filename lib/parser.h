@@ -28,6 +28,7 @@ namespace parser {
     enum Precedence {
         PREC_NONE,
         PREC_ASSIGN,
+        PREC_EQ,
         PREC_ADD,
         PREC_FACTOR,
         PREC_UNARY,
@@ -52,7 +53,10 @@ namespace parser {
         TOKEN_LCURLY,
         TOKEN_RCURLY,
         TOKEN_FN,
+        TOKEN_IF,
+        TOKEN_WHILE,
         TOKEN_ASSIGN,
+        TOKEN_EQ,
         TOKEN_SEMICOLON,
         TOKEN_UNKNOWN,
     };

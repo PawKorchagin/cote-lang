@@ -59,6 +59,9 @@ namespace {
         return nullptr;
     }
 
+    std::string error_msg(const std::string& text) {
+        return "expected " + text + " but found " + token_to_string(static_cast<TokenInfo>(cur_token), temp_identifier);
+    }
 
 //-----------------LEXER----------------------
 
@@ -88,6 +91,8 @@ namespace {
             cur_char = in.get();
         } while (isalnum(cur_char) || cur_char == '_');
         if (temp_identifier == "fn") return cur_token = TOKEN_FN;
+        if (temp_identifier == "if") return cur_token = TOKEN_IF;
+        if (temp_identifier == "while") return cur_token = TOKEN_WHILE;
         return cur_token = TOKEN_IDENTIFIER;
     }
 
@@ -121,7 +126,9 @@ namespace {
                 }
                 return cur_token = TOKEN_DIV;
             case '=':
-                return helper_return_char(TOKEN_ASSIGN);
+                cur_char = in.get();
+                if (cur_char == '=') return helper_return_char(TOKEN_EQ);
+                return cur_token = TOKEN_ASSIGN;
             case ';':
                 return helper_return_char(TOKEN_SEMICOLON);
             default:
@@ -189,11 +196,11 @@ namespace {
     std::unique_ptr<Node> pfn_grouping() {
         if (!match(TOKEN_LPAREN))
             return parser_throws(
-                    "expected ( but found " + token_to_string(static_cast<TokenInfo>(cur_token), temp_identifier));
+                    error_msg("("));
         auto expr = parse_expression();
         if (cur_token != TOKEN_RPAREN)
             return parser_throws(
-                    "expected ) but found " + token_to_string(static_cast<TokenInfo>(cur_token), temp_identifier));
+                    error_msg(")"));
         get_tok(OPERATOR_EXPECTED);
         return expr;
     }
@@ -222,7 +229,10 @@ namespace {
     /* TOKEN_LCURLY */      {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_RCURLY */     {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_FN */         {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_IF */         {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_WHILE */      {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_ASSIGN */     {nullptr,   ifn_binary,    PREC_ASSIGN},
+    /* TOKEN_EQ */         {nullptr,   ifn_binary,    PREC_EQ},
     /* TOKEN_SEMICOLON */  {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_UNKNOWN */    {nullptr,   nullptr,    PREC_NONE},
     };
@@ -233,8 +243,7 @@ namespace {
         auto rhs = parse_precedence(rules[op].precedence +
                                     1);//because we want all operators to be left-assoc(if right-assoc needed just do not add 1)
         if (rhs == nullptr)
-            return parser_throws(
-                    "expected value but found " + token_to_string(static_cast<TokenInfo>(cur_token), temp_identifier));
+            return parser_throws(error_msg("identifier"));
         switch (op) {
             case TOKEN_ADD:
                 return std::make_unique<AddExpr>(std::move(lhs), std::move(rhs));
@@ -246,6 +255,8 @@ namespace {
                 return std::make_unique<DivExpr>(std::move(lhs), std::move(rhs));
             case TOKEN_ASSIGN:
                 return std::make_unique<BinaryExpr<BinaryOpType::ASSIGN>>(std::move(lhs), std::move(rhs));
+            case TOKEN_EQ:
+                return std::make_unique<BinaryExpr<BinaryOpType::EQ>>(std::move(lhs), std::move(rhs));
             default:
                 return parser_throws("Unknown binary operator | or internal error");
         }
@@ -253,14 +264,12 @@ namespace {
 
     unique_ptr<Node> parse_precedence(int prec) {
         if (rules[cur_token].prefix == nullptr)
-            return parser_throws("expected identifier but found " +
-                                 token_to_string(static_cast<TokenInfo>(cur_token), temp_identifier));
+            return parser_throws(error_msg("identifier"));
         auto lhs = rules[cur_token].prefix();
         int op = cur_token;
         while (lhs && prec <= rules[op].precedence) {
             if (rules[op].infix == nullptr)
-                return parser_throws("expected operator but found " + token_to_string(static_cast<TokenInfo>(cur_token),
-                                                                                      temp_identifier));
+                return parser_throws(error_msg("operator"));
             get_tok();
             lhs = rules[op].infix(std::move(lhs), op);
             op = cur_token;
@@ -301,9 +310,28 @@ namespace parser {
 
     //make sure that cur_token != TOKEN_EOF && cur_token != TOKEN_RCURLY on call
     unique_ptr<ast::Node> parse_statement() {
+        if (match(TOKEN_IF)) {
+            if (!match(TOKEN_LPAREN)) return parser_throws(error_msg("( after if keyword"));
+            auto res = parse_expression();
+            if (res == nullptr) return nullptr;
+            if (!match(TOKEN_RPAREN)) return parser_throws(error_msg("closing ) in if statement"));
+            if (!match(TOKEN_LCURLY)) return parser_throws(error_msg("{"));
+            auto body = parse_block();
+            if (body == nullptr) return nullptr;
+            return std::make_unique<IfStmt>(std::move(res), std::move(body));
+        }
+        if (match(TOKEN_WHILE)) {
+            if (!match(TOKEN_LPAREN)) return parser_throws(error_msg("( after if keyword"));
+            auto res = parse_expression();
+            if (res == nullptr) return nullptr;
+            if (!match(TOKEN_RPAREN)) return parser_throws(error_msg("closing ) in if statement"));
+            if (!match(TOKEN_LCURLY)) return parser_throws(error_msg("{"));
+            auto body = parse_block();
+            if (body == nullptr) return nullptr;
+            return std::make_unique<WhileStmt>(std::move(res), std::move(body));
+        }
         auto res = parse_expression();
-        if (!match(TOKEN_SEMICOLON)) return parser_throws("expected ; after expression but found " + token_to_string(
-                    static_cast<TokenInfo>(cur_token), temp_identifier));
+        if (!match(TOKEN_SEMICOLON)) return parser_throws(error_msg("; after expression"));
         return res;
     }
 
@@ -361,6 +389,16 @@ namespace parser {
             case TOKEN_IDENTIFIER:
             case TOKEN_INT_LIT:
                 return temp_data;
+            case TOKEN_IF:
+                return "if";
+            case TOKEN_WHILE:
+                return "while";
+            case TOKEN_ASSIGN:
+                return "=";
+            case TOKEN_EQ:
+                return "==";
+            case TOKEN_SEMICOLON:
+                return ";";
         }
         throw std::runtime_error("token_to_string failed - internal error");
     }

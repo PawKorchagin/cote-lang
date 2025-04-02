@@ -80,6 +80,19 @@ namespace ast {
         std::string to_str1() const override;
 
     };
+    class IfStmt : public Node {
+    public:
+        std::unique_ptr<Node> expr;
+        std::unique_ptr<Block> etrue = nullptr;
+        std::unique_ptr<Block> efalse = nullptr;
+        IfStmt(std::unique_ptr<Node> expr, std::unique_ptr<Block> etrue, std::unique_ptr<Block> efalse = nullptr): expr(std::move(expr)), etrue(std::move(etrue)), efalse(std::move(efalse)) {}
+    };
+    class WhileStmt : public Node {
+    public:
+        std::unique_ptr<Node> expr;
+        std::unique_ptr<Block> body;
+        WhileStmt(std::unique_ptr<Node> expr, std::unique_ptr<Block> body): expr(std::move(expr)), body(std::move(body)) {}
+    };
     template<UnaryOpType type>
     class UnaryExpr : public Node {
     public:
