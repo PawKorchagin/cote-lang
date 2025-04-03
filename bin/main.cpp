@@ -31,7 +31,7 @@ int main() {
     auto expr = parse(in);
     
     try {
-        std::cout << (AST::equals(expr.get(), mulExpr.get()));
+        std::cout << (ast::equals(expr.get(), mulExpr.get()));
     } catch (std::bad_cast& e) {
         std::cout << e.what() << "\n";
     } catch(std::exception& e) {
