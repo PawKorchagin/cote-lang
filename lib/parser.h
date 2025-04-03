@@ -18,7 +18,13 @@ public:
         what = s;
     }
 };
-
+//TODO:
+// - panic on statments
+// - for loop support
+// - extend if support(if, else, else if ...)
+// - if expression support
+// - functions multiple arguments support
+// - short syntax for functions
 namespace parser {
 
     typedef std::unique_ptr<ast::Node> (*PrefixRule)();
@@ -28,6 +34,9 @@ namespace parser {
     enum Precedence {
         PREC_NONE,
         PREC_ASSIGN,
+        PREC_LAMBDA,
+        PREC_EQ,
+        PREC_CMP,
         PREC_ADD,
         PREC_FACTOR,
         PREC_UNARY,
@@ -52,8 +61,18 @@ namespace parser {
         TOKEN_LCURLY,
         TOKEN_RCURLY,
         TOKEN_FN,
+        TOKEN_FN_COLON,
+        TOKEN_IF,
+        TOKEN_ELSE,
+        TOKEN_WHILE,
         TOKEN_ASSIGN,
+        TOKEN_EQ,
+        TOKEN_LS,
+        TOKEN_LE,
+        TOKEN_GR,
+        TOKEN_GE,
         TOKEN_SEMICOLON,
+        TOKEN_ARROW,
         TOKEN_UNKNOWN,
     };
     constexpr int OPERATOR_EXPECTED = 1;
@@ -68,7 +87,7 @@ namespace parser {
 
     unique_ptr<ast::Node> parse_expression();
 
-    unique_ptr<ast::Function> parse_function();
+    unique_ptr<ast::Function> parse_function(bool anonymous = false);
 
     unique_ptr<ast::Block> parse_block();
 
