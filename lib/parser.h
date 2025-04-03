@@ -20,7 +20,7 @@ public:
 };
 //TODO:
 // - panic on statments
-// - for support
+// - for loop support
 // - extend if support(if, else, else if ...)
 // - if expression support
 // - functions multiple arguments support

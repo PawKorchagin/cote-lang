@@ -1,0 +1,18 @@
+---
+# This configuration requires clang-format version 7.0
+BasedOnStyle:  Google
+
+AccessModifierOffset:                -4
+AlignConsecutiveAssignments:         true
+AlignConsecutiveBitFields:           true
+AllowShortIfStatementsOnASingleLine: false
+AllowShortFunctionsOnASingleLine:    Inline
+AllowShortLoopsOnASingleLine:        false
+BreakConstructorInitializers:        BeforeComma
+ColumnLimit:                         120
+IndentCaseLabels:                    false
+SpaceBeforeInheritanceColon:         false
+TabWidth:                            4
+IndentWidth:                         4
+UseTab:                              Never
+...

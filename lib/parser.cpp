@@ -147,7 +147,8 @@ namespace {
             case '>':
                 return parse_token2('=', TOKEN_GR, TOKEN_GE);
             default:
-                return parser_throws("unknown token " + std::to_string(char(cur_char))), helper_return_char(TOKEN_UNKNOWN);
+                return parser_throws("unknown token " + std::to_string(char(cur_char))), helper_return_char(
+                        TOKEN_UNKNOWN);
 
         }
     }
@@ -352,7 +353,7 @@ namespace parser {
         auto body = parse_block();
         if (body == nullptr) return nullptr;
         std::unique_ptr<Block> elsebody = nullptr;
-        if (cur.token == TOKEN_ELSE) {
+        if (match(TOKEN_ELSE)) {
             if (!match(TOKEN_LCURLY)) return parser_throws(error_msg("{ after else"));
             elsebody = parse_block();
         }
@@ -382,8 +383,7 @@ namespace parser {
         while (cur.token != TOKEN_EOF) {
             if (match(TOKEN_FN)) {
                 res.declarations.push_back(parse_function());
-            }
-            else {
+            } else {
                 parser_throws(error_msg("function definition"));
                 panic_mode = true;
             }
