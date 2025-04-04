@@ -74,6 +74,11 @@ namespace ast {
         std::vector<std::unique_ptr<Node>> args;
         explicit FunctionCall(std::string name):name(std::move(name)) {}
     };
+    class ReturnStmt : public Node {
+    public:
+        std::unique_ptr<Node> expr;
+        ReturnStmt(std::unique_ptr<Node> expr):expr(std::move(expr)) {}
+    };
 
     class Program {
     public:

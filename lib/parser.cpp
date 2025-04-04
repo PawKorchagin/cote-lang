@@ -99,6 +99,7 @@ namespace {
         if (cur.identifier == "if") return cur.token = TOKEN_IF;
         if (cur.identifier == "while") return cur.token = TOKEN_WHILE;
         if (cur.identifier == "else") return cur.token = TOKEN_ELSE;
+        if (cur.identifier == "return") return cur.token = TOKEN_RETURN;
         return cur.token = TOKEN_IDENTIFIER;
     }
 
@@ -273,6 +274,7 @@ namespace {
     /* TOKEN_IF */         {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_ELSE */       {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_WHILE */      {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_RETURN */     {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_ASSIGN */     {nullptr,   ifn_binary,    PREC_ASSIGN},
     /* TOKEN_EQ */         {nullptr,   ifn_binary,    PREC_EQ},
     /* TOKEN_LS */         {nullptr,   ifn_binary,    PREC_CMP},
@@ -386,6 +388,12 @@ namespace parser {
         return std::make_unique<IfStmt>(std::move(res), std::move(body), std::move(elsebody));
     }
 
+    std::unique_ptr<ast::Node> parse_expr_sc() {
+        auto res = parse_expression();
+        if (!match(TOKEN_SEMICOLON)) return parser_throws(error_msg("; after expression"));
+        return res;
+    }
+
     //make sure that cur.token != TOKEN_EOF && cur.token != TOKEN_RCURLY on call
     unique_ptr<ast::Node> parse_statement() {
         if (match(TOKEN_IF)) return if_statement();
@@ -399,9 +407,8 @@ namespace parser {
             if (body == nullptr) return nullptr;
             return std::make_unique<WhileStmt>(std::move(res), std::move(body));
         }
-        auto res = parse_expression();
-        if (!match(TOKEN_SEMICOLON)) return parser_throws(error_msg("; after expression"));
-        return res;
+        if (match(TOKEN_RETURN)) return std::make_unique<ReturnStmt>(parse_expr_sc());
+        return parse_expr_sc();
     }
 
     ast::Program parse_program() {
@@ -492,6 +499,8 @@ namespace parser {
                 return ">=";
             case TOKEN_COMMA:
                 return ",";
+            case TOKEN_RETURN:
+                return "return";
         }
         throw std::runtime_error("token_to_string failed - internal error");
     }

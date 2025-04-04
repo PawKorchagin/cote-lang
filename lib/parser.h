@@ -66,6 +66,7 @@ namespace parser {
         TOKEN_IF,
         TOKEN_ELSE,
         TOKEN_WHILE,
+        TOKEN_RETURN,
         TOKEN_ASSIGN,
         TOKEN_EQ,
         TOKEN_LS,
