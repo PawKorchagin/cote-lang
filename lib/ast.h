@@ -54,6 +54,7 @@ namespace ast {
     class FunctionSignature {
     public:
         std::string name;
+        std::vector<std::string> params;
         //TODO
     };
 
@@ -62,16 +63,27 @@ namespace ast {
         std::vector<unique_ptr<Node>> lines;
     };
 
-    class Function : public Node {
+    class FunctionDef : public Node {
     public:
         FunctionSignature signature;
         std::unique_ptr<Block> block;
+    };
+    class FunctionCall : public Node {
+    public:
+        std::string name;
+        std::vector<std::unique_ptr<Node>> args;
+        explicit FunctionCall(std::string name):name(std::move(name)) {}
+    };
+    class ReturnStmt : public Node {
+    public:
+        std::unique_ptr<Node> expr;
+        ReturnStmt(std::unique_ptr<Node> expr):expr(std::move(expr)) {}
     };
 
     class Program {
     public:
         //function declaration (or const var declaration; TODO will be added later )
-        std::vector<std::unique_ptr<Function>> declarations;
+        std::vector<std::unique_ptr<FunctionDef>> declarations;
     };
 
     class IntLitExpr : public Node {
@@ -98,10 +110,10 @@ namespace ast {
     class IfStmt : public Node {
     public:
         std::unique_ptr<Node> expr;
-        std::unique_ptr<Block> etrue = nullptr;
-        std::unique_ptr<Block> efalse = nullptr;
+        std::unique_ptr<Node> etrue = nullptr;
+        std::unique_ptr<Node> efalse = nullptr;
 
-        IfStmt(std::unique_ptr<Node> expr, std::unique_ptr<Block> etrue, std::unique_ptr<Block> efalse = nullptr)
+        IfStmt(std::unique_ptr<Node> expr, std::unique_ptr<Node> etrue, std::unique_ptr<Node> efalse = nullptr)
                 : expr(std::move(expr)), etrue(std::move(etrue)), efalse(std::move(efalse)) {}
     };
 
