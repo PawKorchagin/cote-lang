@@ -136,6 +136,10 @@ namespace {
                     return get_tok(token_info);
                 }
                 return cur.token = TOKEN_DIV;
+            case '[':
+                return helper_return_char(TOKEN_LBRACKET);
+            case ']':
+                return helper_return_char(TOKEN_RBRACKET);
             case '=':
                 return parse_token2('=', TOKEN_ASSIGN, TOKEN_EQ);
             case ';':
@@ -211,7 +215,7 @@ namespace {
         int64_t res = 0;
         for (int i = start; i < cur.identifier.size(); ++i) {
             res *= 10ll;
-            res += (int64_t) (cur.identifier[i] - '0') * mul;
+            res += (int64_t)(cur.identifier[i] - '0') * mul;
         }
         get_tok(OPERATOR_EXPECTED);
         return std::make_unique<IntLitExpr>(res);
@@ -242,8 +246,7 @@ namespace {
     }
 
     std::unique_ptr<Node> ifn_call(std::unique_ptr<Node> lhs) {
-        if (prv.token != TOKEN_IDENTIFIER) return parser_throws(error_msg("function name"));
-        std::unique_ptr<FunctionCall> f = std::make_unique<FunctionCall>(prv.identifier);
+        std::unique_ptr<FunctionCall> f = std::make_unique<FunctionCall>(std::move(lhs));
         get_tok();
         if (!parse_param_list([&]() {
             auto res = parse_expression();
@@ -251,6 +254,13 @@ namespace {
         }))
             return nullptr;
         return f;
+    }
+
+    std::unique_ptr<Node> ifn_arrayget(std::unique_ptr<Node> lhs) {
+        get_tok();
+        auto x = parse_expression();
+        if (!x || !match(TOKEN_RBRACKET)) return parser_throws(error_msg("]"));
+        return std::make_unique<ArrayGet>(std::move(lhs), std::move(x));
     }
 
     std::unique_ptr<Node> ifn_binary(std::unique_ptr<Node> lhs);
@@ -266,9 +276,11 @@ namespace {
     /* TOKEN_DIV */         {nullptr,        ifn_binary, PREC_FACTOR},
     /* TOKEN_IDENTIFIER */  {pfn_identifier, nullptr,    PREC_PRIMARY},
     /* TOKEN_INT_LIT */     {pfn_number,     nullptr,    PREC_PRIMARY},
-    /* TOKEN_LPAREN */          {pfn_grouping,   ifn_call,    PREC_CALL},
-    /* TOKEN_RPAREN */      {nullptr,   nullptr,    PREC_NONE},
-    /* TOKEN_LCURLY */      {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_LBRACKET */    {nullptr,   ifn_arrayget,    PREC_CALL},
+    /* TOKEN_RBRACKET */    {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_LPAREN */      {pfn_grouping,   ifn_call,    PREC_CALL},
+    /* TOKEN_RPAREN */     {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_LCURLY */     {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_RCURLY */     {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_FN */         {pfn_lambda,   nullptr,    PREC_NONE},
     /* TOKEN_IF */         {nullptr,   nullptr,    PREC_NONE},
@@ -501,6 +513,10 @@ namespace parser {
                 return ",";
             case TOKEN_RETURN:
                 return "return";
+            case TOKEN_LBRACKET:
+                return "]";
+            case TOKEN_RBRACKET:
+                return "[";
         }
         throw std::runtime_error("token_to_string failed - internal error");
     }
