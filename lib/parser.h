@@ -58,6 +58,8 @@ namespace parser {
         TOKEN_DIV,
         TOKEN_IDENTIFIER,
         TOKEN_INT_LIT,
+        TOKEN_LBRACKET,
+        TOKEN_RBRACKET,
         TOKEN_LPAREN,
         TOKEN_RPAREN,
         TOKEN_LCURLY,

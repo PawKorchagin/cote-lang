@@ -70,9 +70,16 @@ namespace ast {
     };
     class FunctionCall : public Node {
     public:
-        std::string name;
+        std::unique_ptr<Node> name_expr;
         std::vector<std::unique_ptr<Node>> args;
-        explicit FunctionCall(std::string name):name(std::move(name)) {}
+        explicit FunctionCall(std::unique_ptr<Node> name_expr):name_expr(std::move(name_expr)) {}
+    };
+    class ArrayGet : public Node {
+    public:
+        std::unique_ptr<Node> name_expr;
+        std::unique_ptr<Node> index;
+        ArrayGet(unique_ptr<Node> name_expr, std::unique_ptr<Node> index) : name_expr(std::move(name_expr)), index(std::move(index)) {}
+
     };
     class ReturnStmt : public Node {
     public:
