@@ -38,11 +38,29 @@ namespace ast {
         MINUS,
     };
 
+    enum class NodeType {
+        Block,
+        FunctionDef,
+        FunctionCall,
+        ArrayGet,
+        Return,
+        IntLit,
+        Var,
+        If,
+        While,
+        UnaryMinus,
+        BinaryPlus,
+        BinaryMul,
+        BinaryDiv,
+        BinaryMinus,
+    };
     class Node {
     public:
         virtual ~Node() = default;
 
         virtual std::string to_str1() const;
+
+        virtual NodeType get_type() const = 0;
 
         bool operator==(const Node &other) const;
 
@@ -61,30 +79,34 @@ namespace ast {
     class Block : public Node {
     public:
         std::vector<unique_ptr<Node>> lines;
+        inline NodeType get_type() const override { return NodeType::Block; }
     };
 
     class FunctionDef : public Node {
     public:
         FunctionSignature signature;
         std::unique_ptr<Block> block;
+        inline NodeType get_type() const override { return NodeType::FunctionDef; }
     };
     class FunctionCall : public Node {
     public:
         std::unique_ptr<Node> name_expr;
         std::vector<std::unique_ptr<Node>> args;
         explicit FunctionCall(std::unique_ptr<Node> name_expr):name_expr(std::move(name_expr)) {}
+        inline NodeType get_type() const override { return NodeType::FunctionCall; }
     };
     class ArrayGet : public Node {
     public:
         std::unique_ptr<Node> name_expr;
         std::unique_ptr<Node> index;
         ArrayGet(unique_ptr<Node> name_expr, std::unique_ptr<Node> index) : name_expr(std::move(name_expr)), index(std::move(index)) {}
-
+        inline NodeType get_type() const override { return NodeType::ArrayGet; }
     };
     class ReturnStmt : public Node {
     public:
         std::unique_ptr<Node> expr;
         ReturnStmt(std::unique_ptr<Node> expr):expr(std::move(expr)) {}
+        inline NodeType get_type() const override { return NodeType::Return; }
     };
 
     class Program {
@@ -98,7 +120,7 @@ namespace ast {
         const int64_t number;
 
         explicit IntLitExpr(int64_t val) : number(val) {}
-
+        inline NodeType get_type() const override { return NodeType::IntLit; }
         [[nodiscard]] std::string to_str1() const override;
     };
 
@@ -109,8 +131,9 @@ namespace ast {
         std::string name;
 
         explicit VarExpr(std::string name) : name(std::move(name)) {}
-
         std::string to_str1() const override;
+
+        inline NodeType get_type() const override { return NodeType::Var; }
 
     };
 
@@ -122,6 +145,8 @@ namespace ast {
 
         IfStmt(std::unique_ptr<Node> expr, std::unique_ptr<Node> etrue, std::unique_ptr<Node> efalse = nullptr)
                 : expr(std::move(expr)), etrue(std::move(etrue)), efalse(std::move(efalse)) {}
+        inline NodeType get_type() const override { return NodeType::If; }
+
     };
 
     class WhileStmt : public Node {
@@ -131,6 +156,8 @@ namespace ast {
 
         WhileStmt(std::unique_ptr<Node> expr, std::unique_ptr<Block> body) : expr(std::move(expr)),
                                                                              body(std::move(body)) {}
+        inline NodeType get_type() const override { return NodeType::While; }
+
     };
 
     template<UnaryOpType type>
@@ -141,6 +168,15 @@ namespace ast {
         explicit UnaryExpr(std::unique_ptr<Node> expr) : expr(std::move(expr)) {}
 
         std::string to_str1() const override { return "-(" + expr->to_str1() + ")"; }
+        inline NodeType get_type() const override {
+            switch (type) {
+                case UnaryOpType::MINUS:
+                    return NodeType::UnaryMinus;
+            }
+            throw std::runtime_error("not implemented");
+        }
+
+
     };
 
     template<BinaryOpType type>
@@ -149,6 +185,19 @@ namespace ast {
         unique_ptr<Node> l, r;
 
         BinaryExpr(unique_ptr<Node> l, unique_ptr<Node> r) : l(std::move(l)), r(std::move(r)) {}
+        inline NodeType get_type() const override {
+            switch (type) {
+                case BinaryOpType::ADD:
+                    return NodeType::BinaryPlus;
+                case BinaryOpType::MUL:
+                    return NodeType::BinaryMul;
+                case BinaryOpType::DIV:
+                    return NodeType::BinaryDiv;
+                case BinaryOpType::SUB:
+                    return NodeType::BinaryMinus;
+            }
+            throw std::runtime_error("not implemented");
+        }
 
         static std::string operatorString() {
             switch (type) {
