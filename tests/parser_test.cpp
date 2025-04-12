@@ -44,7 +44,6 @@ TEST(FunctionFromFileTestSuite, FileTests) {
 
 TEST_P(InvalidParserExceptionParamTestSuite, Sample) {
     auto code = GetParam();
-
     ASSERT_ANY_THROW(parse(code));
 }
 

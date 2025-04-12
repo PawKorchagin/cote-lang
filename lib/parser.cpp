@@ -5,7 +5,6 @@
 #include <cassert>
 #include <array>
 
-
 namespace {
     using namespace ast;
     using namespace parser;
@@ -26,25 +25,25 @@ namespace {
             return c;
         }
 
-        void update_pos() {
-            saved_lines = lines;
-            saved_cnt = cnt;
-        }
+        int plines() { return lines; }
 
-        int plines() { return saved_lines; }
-        int pcnt() { return saved_cnt; }
+        int pcnt() { return cnt; }
+
     private:
         int lines = 1;
         int cnt = 0;
-        int saved_lines = 0;
-        int saved_cnt = 0;
         std::istream &in;
     };
 
-    std::string temp_identifier;
+    struct TokenData {
+        std::string identifier = "";
+        int token = 0;
+        int lines = 0;
+        int cnt = 0;
+    };
+    TokenData cur, prv;
     std::vector<std::string> error_log;
     int cur_char = ' ';
-    int cur_token = 0;
     SimpleStream in(NULL_STREAM);
     void *m_stream_ptr = &in;
 
@@ -55,44 +54,59 @@ namespace {
         panic_mode = true;
 
         error_log.push_back(
-                std::to_string(in.plines()) + ":" + std::to_string(in.pcnt()) + ": " + message);
+                std::to_string(cur.lines) + ":" + std::to_string(cur.cnt) + ": " + message);
         return nullptr;
     }
 
+    std::string error_msg(const std::string &text) {
+        return "expected " + text + " but found " + token_to_string(static_cast<TokenInfo>(cur.token), cur.identifier);
+    }
 
 //-----------------LEXER----------------------
 
     int helper_return_char(int TOKEN) {
         cur_char = in.get();
-        return cur_token = TOKEN;
+        return cur.token = TOKEN;
     }
 
     int tok_number() {
-        temp_identifier.clear();
+        cur.identifier.clear();
         int expected_size = int(cur_char == '-') + 1;
         do {
-            temp_identifier.push_back(static_cast<char>(cur_char));
+            cur.identifier.push_back(static_cast<char>(cur_char));
             cur_char = in.get();
         } while (isdigit(cur_char));
-        if (temp_identifier.size() < expected_size) {
-            if (cur_char == '-') return parser_throws("illegal token --"), cur_token = TOKEN_UNKNOWN;
-            return cur_token = TOKEN_SUB;
+        if (cur.identifier.size() < expected_size) {
+            if (cur_char == '-') return parser_throws("illegal token --"), cur.token = TOKEN_UNKNOWN;
+            return cur.token = TOKEN_SUB;
         }
-        return cur_token = TOKEN_INT_LIT;
+        return cur.token = TOKEN_INT_LIT;
+    }
+
+    int parse_token2(char second, int res1, int res2) {
+        cur_char = in.get();
+        if (cur_char == second) return helper_return_char(res2);
+        return cur.token = res1;
     }
 
     int tok_identifier() {
-        temp_identifier.clear();
+        cur.identifier.clear();
         do {
-            temp_identifier.push_back(static_cast<char>(cur_char));
+            cur.identifier.push_back(static_cast<char>(cur_char));
             cur_char = in.get();
         } while (isalnum(cur_char) || cur_char == '_');
-        if (temp_identifier == "fn") return cur_token = TOKEN_FN;
-        return cur_token = TOKEN_IDENTIFIER;
+        if (cur.identifier == "fn") return cur.token = TOKEN_FN;
+        if (cur.identifier == "if") return cur.token = TOKEN_IF;
+        if (cur.identifier == "while") return cur.token = TOKEN_WHILE;
+        if (cur.identifier == "else") return cur.token = TOKEN_ELSE;
+        if (cur.identifier == "return") return cur.token = TOKEN_RETURN;
+        return cur.token = TOKEN_IDENTIFIER;
     }
 
     int get_tok(int token_info = ANY_TOKEN_EXPECTED) {
-        in.update_pos();
+        std::swap(prv, cur);
+        cur.lines = in.plines();
+        cur.cnt = in.pcnt();
         while (isspace(cur_char)) cur_char = in.get();
         if (isdigit(cur_char) || (token_info & VALUE_EXPECTED) && cur_char == '-')
             return tok_number();
@@ -102,15 +116,17 @@ namespace {
         if (cur_char == ')') return helper_return_char(TOKEN_RPAREN);
         if (cur_char == '}') return helper_return_char(TOKEN_RCURLY);
         if (cur_char == '{') return helper_return_char(TOKEN_LCURLY);
-        if (cur_char == -1) return cur_token = TOKEN_EOF;
+        if (cur_char == -1) return cur.token = TOKEN_EOF;
         switch (cur_char) {
+            case ',':
+                return helper_return_char(TOKEN_COMMA);
             case '+':
                 return helper_return_char(TOKEN_ADD);
             case '-':
                 cur_char = in.get();
                 if (cur_char == '-')
-                    return parser_throws("illegal token --"), cur_token = TOKEN_UNKNOWN;
-                return cur_token = TOKEN_SUB;
+                    return parser_throws("illegal token --"), cur.token = TOKEN_UNKNOWN;
+                return cur.token = TOKEN_SUB;
             case '*':
                 return helper_return_char(TOKEN_MUL);
             case '/':
@@ -119,13 +135,22 @@ namespace {
                     while (cur_char != '\n') cur_char = in.get();
                     return get_tok(token_info);
                 }
-                return cur_token = TOKEN_DIV;
+                return cur.token = TOKEN_DIV;
+            case '[':
+                return helper_return_char(TOKEN_LBRACKET);
+            case ']':
+                return helper_return_char(TOKEN_RBRACKET);
             case '=':
-                return helper_return_char(TOKEN_ASSIGN);
+                return parse_token2('=', TOKEN_ASSIGN, TOKEN_EQ);
             case ';':
                 return helper_return_char(TOKEN_SEMICOLON);
+            case '<':
+                return parse_token2('=', TOKEN_LS, TOKEN_LE);
+            case '>':
+                return parse_token2('=', TOKEN_GR, TOKEN_GE);
             default:
-                return parser_throws("unknown token " + std::to_string(char(cur_char))), cur_token = TOKEN_UNKNOWN;
+                return parser_throws("unknown token " + std::to_string(char(cur_char))), helper_return_char(
+                        TOKEN_UNKNOWN);
 
         }
     }
@@ -137,7 +162,7 @@ namespace {
 //stops at ; or declaration or statement
     void panic() {
         while (true) {
-            switch (cur_token) {
+            switch (cur.token) {
                 case TOKEN_EOF:
                 case TOKEN_FN:
                     panic_mode = false;
@@ -152,35 +177,45 @@ namespace {
 // ---------------ERROR SYSTEM-----------------
 
     bool match(int token_type) {
-        if (token_type != cur_token) return false;
+        if (token_type != cur.token) return false;
         get_tok();
         return true;
     }
 
     unique_ptr<Node> parse_precedence(int prec);
 
+    template<typename T>
+    bool parse_param_list(T check_add) {
+        if (match(TOKEN_RPAREN)) return true;
+        while (true) {
+            if (!check_add()) return false;
+            if (match(TOKEN_RPAREN)) return true;
+            if (!match(TOKEN_COMMA)) return parser_throws(error_msg(", in parameter list")), false;
+        }
+    }
+
     std::unique_ptr<Node> pfn_identifier() {
-        auto res = std::make_unique<VarExpr>(temp_identifier);
+        auto res = std::make_unique<VarExpr>(cur.identifier);
         return get_tok(OPERATOR_EXPECTED), std::move(res);
     }
 
     std::unique_ptr<Node> pfn_number() {
         int64_t mul = 1;
         int start = 0;
-        if (temp_identifier.size() > 1 && temp_identifier[0] == '-') {
-            if (temp_identifier.size() > 20 ||
-                temp_identifier.size() == 20 && temp_identifier > "-9223372036854775808")
-                return parser_throws("Invalid number format: " + temp_identifier);
+        if (cur.identifier.size() > 1 && cur.identifier[0] == '-') {
+            if (cur.identifier.size() > 20 ||
+                cur.identifier.size() == 20 && cur.identifier > "-9223372036854775808")
+                return parser_throws("Invalid number format: " + cur.identifier);
             mul = -1;
             start = 1;
-        } else if (temp_identifier.size() > 19 ||
-                   temp_identifier.size() == 19 && temp_identifier > "9223372036854775807") {
-            return parser_throws("Invalid number format: " + temp_identifier);
+        } else if (cur.identifier.size() > 19 ||
+                   cur.identifier.size() == 19 && cur.identifier > "9223372036854775807") {
+            return parser_throws("Invalid number format: " + cur.identifier);
         }
         int64_t res = 0;
-        for (int i = start; i < temp_identifier.size(); ++i) {
+        for (int i = start; i < cur.identifier.size(); ++i) {
             res *= 10ll;
-            res += (int64_t) (temp_identifier[i] - '0') * mul;
+            res += (int64_t)(cur.identifier[i] - '0') * mul;
         }
         get_tok(OPERATOR_EXPECTED);
         return std::make_unique<IntLitExpr>(res);
@@ -189,11 +224,11 @@ namespace {
     std::unique_ptr<Node> pfn_grouping() {
         if (!match(TOKEN_LPAREN))
             return parser_throws(
-                    "expected ( but found " + token_to_string(static_cast<TokenInfo>(cur_token), temp_identifier));
+                    error_msg("("));
         auto expr = parse_expression();
-        if (cur_token != TOKEN_RPAREN)
+        if (cur.token != TOKEN_RPAREN)
             return parser_throws(
-                    "expected ) but found " + token_to_string(static_cast<TokenInfo>(cur_token), temp_identifier));
+                    error_msg(")"));
         get_tok(OPERATOR_EXPECTED);
         return expr;
     }
@@ -204,7 +239,31 @@ namespace {
         return res ? std::make_unique<UnaryExpr<UnaryOpType::MINUS>>(std::move(res)) : nullptr;
     }
 
-    std::unique_ptr<Node> ifn_binary(std::unique_ptr<Node> lhs, int op);
+
+    std::unique_ptr<Node> pfn_lambda() {
+        get_tok();
+        return parse_function(true);
+    }
+
+    std::unique_ptr<Node> ifn_call(std::unique_ptr<Node> lhs) {
+        std::unique_ptr<FunctionCall> f = std::make_unique<FunctionCall>(std::move(lhs));
+        get_tok();
+        if (!parse_param_list([&]() {
+            auto res = parse_expression();
+            return !(res == nullptr) && (f->args.push_back(std::move(res)), true);
+        }))
+            return nullptr;
+        return f;
+    }
+
+    std::unique_ptr<Node> ifn_arrayget(std::unique_ptr<Node> lhs) {
+        get_tok();
+        auto x = parse_expression();
+        if (!x || !match(TOKEN_RBRACKET)) return parser_throws(error_msg("]"));
+        return std::make_unique<ArrayGet>(std::move(lhs), std::move(x));
+    }
+
+    std::unique_ptr<Node> ifn_binary(std::unique_ptr<Node> lhs);
 
 // clang-format off
 // @formatter:off
@@ -217,24 +276,37 @@ namespace {
     /* TOKEN_DIV */         {nullptr,        ifn_binary, PREC_FACTOR},
     /* TOKEN_IDENTIFIER */  {pfn_identifier, nullptr,    PREC_PRIMARY},
     /* TOKEN_INT_LIT */     {pfn_number,     nullptr,    PREC_PRIMARY},
-    /* TOKEN_LPAREN */      {pfn_grouping,   nullptr,    PREC_CALL},
-    /* TOKEN_RPAREN */      {nullptr,   nullptr,    PREC_NONE},
-    /* TOKEN_LCURLY */      {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_LBRACKET */    {nullptr,   ifn_arrayget,    PREC_CALL},
+    /* TOKEN_RBRACKET */    {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_LPAREN */      {pfn_grouping,   ifn_call,    PREC_CALL},
+    /* TOKEN_RPAREN */     {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_LCURLY */     {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_RCURLY */     {nullptr,   nullptr,    PREC_NONE},
-    /* TOKEN_FN */         {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_FN */         {pfn_lambda,   nullptr,    PREC_NONE},
+    /* TOKEN_IF */         {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_ELSE */       {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_WHILE */      {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_RETURN */     {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_ASSIGN */     {nullptr,   ifn_binary,    PREC_ASSIGN},
+    /* TOKEN_EQ */         {nullptr,   ifn_binary,    PREC_EQ},
+    /* TOKEN_LS */         {nullptr,   ifn_binary,    PREC_CMP},
+    /* TOKEN_LE */         {nullptr,   ifn_binary,    PREC_CMP},
+    /* TOKEN_GR */         {nullptr,   ifn_binary,    PREC_CMP},
+    /* TOKEN_GE */         {nullptr,   ifn_binary,    PREC_CMP},
     /* TOKEN_SEMICOLON */  {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_COMMA */      {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_UNKNOWN */    {nullptr,   nullptr,    PREC_NONE},
     };
 // clang-format on
 // @formatter:on
 
-    std::unique_ptr<Node> ifn_binary(std::unique_ptr<Node> lhs, int op) {
+    std::unique_ptr<Node> ifn_binary(std::unique_ptr<Node> lhs) {
+        int op = cur.token;
+        get_tok();
         auto rhs = parse_precedence(rules[op].precedence +
                                     1);//because we want all operators to be left-assoc(if right-assoc needed just do not add 1)
         if (rhs == nullptr)
-            return parser_throws(
-                    "expected value but found " + token_to_string(static_cast<TokenInfo>(cur_token), temp_identifier));
+            return nullptr;
         switch (op) {
             case TOKEN_ADD:
                 return std::make_unique<AddExpr>(std::move(lhs), std::move(rhs));
@@ -246,29 +318,37 @@ namespace {
                 return std::make_unique<DivExpr>(std::move(lhs), std::move(rhs));
             case TOKEN_ASSIGN:
                 return std::make_unique<BinaryExpr<BinaryOpType::ASSIGN>>(std::move(lhs), std::move(rhs));
+            case TOKEN_EQ:
+                return std::make_unique<BinaryExpr<BinaryOpType::EQ>>(std::move(lhs), std::move(rhs));
+            case TOKEN_LE:
+                return std::make_unique<BinaryExpr<BinaryOpType::LE>>(std::move(lhs), std::move(rhs));
+            case TOKEN_LS:
+                return std::make_unique<BinaryExpr<BinaryOpType::LS>>(std::move(lhs), std::move(rhs));
+            case TOKEN_GR:
+                return std::make_unique<BinaryExpr<BinaryOpType::GR>>(std::move(lhs), std::move(rhs));
+            case TOKEN_GE:
+                return std::make_unique<BinaryExpr<BinaryOpType::GE>>(std::move(lhs), std::move(rhs));
             default:
                 return parser_throws("Unknown binary operator | or internal error");
         }
     }
 
     unique_ptr<Node> parse_precedence(int prec) {
-        if (rules[cur_token].prefix == nullptr)
-            return parser_throws("expected identifier but found " +
-                                 token_to_string(static_cast<TokenInfo>(cur_token), temp_identifier));
-        auto lhs = rules[cur_token].prefix();
-        int op = cur_token;
+        if (rules[cur.token].prefix == nullptr)
+            return parser_throws(error_msg("identifier"));
+        auto lhs = rules[cur.token].prefix();
+        int op = cur.token;
         while (lhs && prec <= rules[op].precedence) {
             if (rules[op].infix == nullptr)
-                return parser_throws("expected operator but found " + token_to_string(static_cast<TokenInfo>(cur_token),
-                                                                                      temp_identifier));
-            get_tok();
-            lhs = rules[op].infix(std::move(lhs), op);
-            op = cur_token;
+                return parser_throws(error_msg("operator"));
+            lhs = rules[op].infix(std::move(lhs));
+            op = cur.token;
         }
         return lhs;
     }
 }
 namespace parser {
+
     unique_ptr<Node> parse_expression() {
         return parse_precedence(PREC_ASSIGN);
     }
@@ -286,9 +366,10 @@ namespace parser {
     unique_ptr<ast::Block> parse_block() {
         std::unique_ptr<Block> res = std::make_unique<Block>();
         while (true) {
-            switch (cur_token) {
+            switch (cur.token) {
                 case TOKEN_RCURLY:
-                    return get_tok(), std::move(res);
+                    get_tok();
+                    return res;
                 case TOKEN_EOF:
                     return parser_throws("expected } but found EOF");
                 default:
@@ -298,38 +379,85 @@ namespace parser {
         }
     }
 
-
-    //make sure that cur_token != TOKEN_EOF && cur_token != TOKEN_RCURLY on call
-    unique_ptr<ast::Node> parse_statement() {
+    //cur_tok = '('
+    std::unique_ptr<ast::Node> if_statement() {
+        if (!match(TOKEN_LPAREN)) return parser_throws(error_msg("( after if keyword"));
         auto res = parse_expression();
-        if (!match(TOKEN_SEMICOLON)) return parser_throws("expected ; after expression but found " + token_to_string(
-                    static_cast<TokenInfo>(cur_token), temp_identifier));
+        if (res == nullptr) return nullptr;
+        if (!match(TOKEN_RPAREN)) return parser_throws(error_msg("closing ) in if statement"));
+        if (!match(TOKEN_LCURLY)) return parser_throws(error_msg("{"));
+        auto body = parse_block();
+        if (body == nullptr) return nullptr;
+        std::unique_ptr<ast::Node> elsebody = nullptr;
+        if (match(TOKEN_ELSE)) {
+            if (match(TOKEN_IF)) {
+                elsebody = if_statement();
+            } else {
+                if (!match(TOKEN_LCURLY)) return parser_throws(error_msg("{ after else"));
+                elsebody = parse_block();
+            }
+        }
+        return std::make_unique<IfStmt>(std::move(res), std::move(body), std::move(elsebody));
+    }
+
+    std::unique_ptr<ast::Node> parse_expr_sc() {
+        auto res = parse_expression();
+        if (!match(TOKEN_SEMICOLON)) return parser_throws(error_msg("; after expression"));
         return res;
+    }
+
+    //make sure that cur.token != TOKEN_EOF && cur.token != TOKEN_RCURLY on call
+    unique_ptr<ast::Node> parse_statement() {
+        if (match(TOKEN_IF)) return if_statement();
+        if (match(TOKEN_WHILE)) {
+            if (!match(TOKEN_LPAREN)) return parser_throws(error_msg("( after if keyword"));
+            auto res = parse_expression();
+            if (res == nullptr) return nullptr;
+            if (!match(TOKEN_RPAREN)) return parser_throws(error_msg("closing ) in if statement"));
+            if (!match(TOKEN_LCURLY)) return parser_throws(error_msg("{"));
+            auto body = parse_block();
+            if (body == nullptr) return nullptr;
+            return std::make_unique<WhileStmt>(std::move(res), std::move(body));
+        }
+        if (match(TOKEN_RETURN)) return std::make_unique<ReturnStmt>(parse_expr_sc());
+        return parse_expr_sc();
     }
 
     ast::Program parse_program() {
         Program res;
-        while (cur_token != TOKEN_EOF) {
-            res.declarations.push_back(parse_function());
+        while (cur.token != TOKEN_EOF) {
+            if (match(TOKEN_FN)) {
+                res.declarations.push_back(parse_function());
+            } else {
+                parser_throws(error_msg("function definition"));
+                panic_mode = true;
+            }
             if (panic_mode) panic();
         }
         return res;
     }
 
-    unique_ptr<ast::Function> parse_function() {
-        if (!match(TOKEN_FN)) return parser_throws("expected function");
-        std::string cur_name;
-        if (!match(TOKEN_IDENTIFIER)) {
-            return parser_throws("expected function name");
+    unique_ptr<ast::FunctionDef> parse_function(bool anonymous) {
+        std::unique_ptr<FunctionDef> f = std::unique_ptr<FunctionDef>(new FunctionDef());
+        FunctionSignature fsig;
+        if (!anonymous) {
+            if (!match(TOKEN_IDENTIFIER)) {
+                return parser_throws(error_msg("function name"));
+            }
+            fsig.name = std::move(cur.identifier);
+            cur.identifier = "";
         }
-        cur_name = std::move(temp_identifier);
-        temp_identifier = "";
-        if (!match(TOKEN_LPAREN)) return parser_throws("expected (");
-        if (!match(TOKEN_RPAREN)) return parser_throws("expected )");
-        if (!match(TOKEN_LCURLY)) return parser_throws("expected {");
-        FunctionSignature fsig{.name = cur_name};
-        std::unique_ptr<Function> f = std::unique_ptr<Function>(new Function());
-        f->signature = fsig;
+        if (!match(TOKEN_LPAREN)) return parser_throws(error_msg("("));
+        if (!parse_param_list([&]() {
+            if (cur.token != TOKEN_IDENTIFIER)
+                return parser_throws(error_msg("identifier in function definition")), false;
+            fsig.params.push_back(cur.identifier);
+            get_tok();
+            return true;
+        }))
+            return nullptr;
+        if (!match(TOKEN_LCURLY)) return parser_throws(error_msg("{"));
+        f->signature = std::move(fsig);
         f->block = parse_block();
         return f;
     }
@@ -361,6 +489,34 @@ namespace parser {
             case TOKEN_IDENTIFIER:
             case TOKEN_INT_LIT:
                 return temp_data;
+            case TOKEN_IF:
+                return "if";
+            case TOKEN_WHILE:
+                return "while";
+            case TOKEN_ASSIGN:
+                return "=";
+            case TOKEN_EQ:
+                return "==";
+            case TOKEN_SEMICOLON:
+                return ";";
+            case TOKEN_ELSE:
+                return "else";
+            case TOKEN_LS:
+                return "<";
+            case TOKEN_LE:
+                return "<=";
+            case TOKEN_GR:
+                return ">";
+            case TOKEN_GE:
+                return ">=";
+            case TOKEN_COMMA:
+                return ",";
+            case TOKEN_RETURN:
+                return "return";
+            case TOKEN_LBRACKET:
+                return "]";
+            case TOKEN_RBRACKET:
+                return "[";
         }
         throw std::runtime_error("token_to_string failed - internal error");
     }
@@ -370,5 +526,4 @@ namespace parser {
         return error_log;
     }
 }
-//TODO: add warning at 2 - -3 - are you sure?
 //TODO: panic on error and output many errors

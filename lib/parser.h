@@ -18,16 +18,27 @@ public:
         what = s;
     }
 };
-
+//TODO:
+// - panic on statements
+// - for loop support
+// - class support?
+// - if expression support
+// - short syntax for functions
+// - parse null?
+// - return from function syntax
+// - test parser features
 namespace parser {
 
     typedef std::unique_ptr<ast::Node> (*PrefixRule)();
 
-    typedef std::unique_ptr<ast::Node> (*InfixRule)(std::unique_ptr<ast::Node> lhs, int op);
+    typedef std::unique_ptr<ast::Node> (*InfixRule)(std::unique_ptr<ast::Node> lhs);
 
     enum Precedence {
         PREC_NONE,
         PREC_ASSIGN,
+        PREC_LAMBDA,
+        PREC_EQ,
+        PREC_CMP,
         PREC_ADD,
         PREC_FACTOR,
         PREC_UNARY,
@@ -47,13 +58,25 @@ namespace parser {
         TOKEN_DIV,
         TOKEN_IDENTIFIER,
         TOKEN_INT_LIT,
+        TOKEN_LBRACKET,
+        TOKEN_RBRACKET,
         TOKEN_LPAREN,
         TOKEN_RPAREN,
         TOKEN_LCURLY,
         TOKEN_RCURLY,
         TOKEN_FN,
+        TOKEN_IF,
+        TOKEN_ELSE,
+        TOKEN_WHILE,
+        TOKEN_RETURN,
         TOKEN_ASSIGN,
+        TOKEN_EQ,
+        TOKEN_LS,
+        TOKEN_LE,
+        TOKEN_GR,
+        TOKEN_GE,
         TOKEN_SEMICOLON,
+        TOKEN_COMMA,
         TOKEN_UNKNOWN,
     };
     constexpr int OPERATOR_EXPECTED = 1;
@@ -68,7 +91,7 @@ namespace parser {
 
     unique_ptr<ast::Node> parse_expression();
 
-    unique_ptr<ast::Function> parse_function();
+    unique_ptr<ast::FunctionDef> parse_function(bool anonymous = false);
 
     unique_ptr<ast::Block> parse_block();
 
