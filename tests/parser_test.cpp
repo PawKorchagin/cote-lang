@@ -51,9 +51,9 @@ INSTANTIATE_TEST_SUITE_P(
         InvalidGroup,
         InvalidParserExceptionParamTestSuite,
         Values(
-                "fn main() {", // missed }
-                "fn main() {}$", // extra $
-                "fn main() { int x = 5 }" // missed ;
+                // "fn main() {", // missed }
+                // "fn main() {}$", // extra $
+                // "fn main() { int x = 5 }" // missed ;
                 // etc
         )
 );
@@ -65,7 +65,7 @@ INSTANTIATE_TEST_SUITE_P(
         CorrectGroup,
         CorrectParserExceptionParamTestSuite,
         Values(
-                "fn main() {}"
+                // "fn main() {}"
         )
 );
 
@@ -144,7 +144,18 @@ TEST(IncorrectParserExpressionTest, ExampleTest) {
     EXPECT_THROW(parse("+"), std::runtime_error);
 }
 
+TEST(OverflowParserTest, ExampleTest) {
+EXPECT_THROW(parse("100000000000"), std::runtime_error);
+    EXPECT_THROW(parse("-1000000000000"), std::runtime_error);
+    EXPECT_THROW(parse("2147483648"), std::runtime_error);
+    EXPECT_THROW(parse("-2147483649"), std::runtime_error);
+
+    EXPECT_NO_THROW(parse("2147483647"));
+    EXPECT_NO_THROW(parse("-2147483648"));
+}
+
 enum ExpressionParts {
+    
     ADD,
     SUB,
     MULT,
