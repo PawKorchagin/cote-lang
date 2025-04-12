@@ -49,7 +49,7 @@ fn f2() {
     c = 3;
     d = a + b + c;
     y = fn(a) { return a + b + c + d; };
-    return y;
+//    return y; - error return should be last
     x = fn(a, b) { a + b; };
     y = x(1, 2);
     x = 2 * 2 + 2;
@@ -65,7 +65,7 @@ fn f2() {
 
 
 fn f() {
-
+    b = 2;
 }
 
 fn g() {//10

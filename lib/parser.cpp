@@ -164,9 +164,12 @@ namespace {
         while (true) {
             switch (cur.token) {
                 case TOKEN_EOF:
-                case TOKEN_FN:
-                    panic_mode = false;
                     return;
+                case TOKEN_FN:
+                    if (get_tok() == TOKEN_IDENTIFIER) {
+                        panic_mode = false;
+                        return;
+                    }
                 default:
                     get_tok();
             }
@@ -419,7 +422,12 @@ namespace parser {
             if (body == nullptr) return nullptr;
             return std::make_unique<WhileStmt>(std::move(res), std::move(body));
         }
-        if (match(TOKEN_RETURN)) return std::make_unique<ReturnStmt>(parse_expr_sc());
+        if (match(TOKEN_RETURN)) {
+            auto res = std::make_unique<ReturnStmt>(parse_expr_sc());
+            if (cur.token != TOKEN_RCURLY)
+                return parser_throws(error_msg("return should be the last statement in a function"));
+            return res;
+        }
         return parse_expr_sc();
     }
 
@@ -432,7 +440,10 @@ namespace parser {
                 parser_throws(error_msg("function definition"));
                 panic_mode = true;
             }
-            if (panic_mode) panic();
+            while (panic_mode) {
+                panic();
+                parse_function();
+            }
         }
         return res;
     }
