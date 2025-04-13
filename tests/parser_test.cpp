@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include "lib/parser.h"
+#include "lib/exceptions.h"
 #include <random>
 #include <utility>
 #include <vector>

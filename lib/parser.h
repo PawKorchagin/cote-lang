@@ -85,10 +85,6 @@ namespace parser {
 
     std::string token_to_string(TokenInfo tok, std::string temp_data);
 
-    std::vector<std::string> get_errors();
-
-    void init_parser(std::istream &in);
-
     unique_ptr<ast::Node> parse_expression();
 
     unique_ptr<ast::FunctionDef> parse_function(bool anonymous = false);
@@ -97,8 +93,13 @@ namespace parser {
 
     unique_ptr<ast::Node> parse_statement();
 
+    void parse_annotations();
+
     ast::Program parse_program();
+
+    void init_parser(std::istream& in);
 }
+
 
 /* Grammar */ /*`
  let's assume LL(1) grammar for now ( TODO: proof )

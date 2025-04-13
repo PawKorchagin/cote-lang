@@ -16,6 +16,7 @@ fn main() {
 //проверка типов базовая(мб ^^^^)
 // (запретить функцию в выражении)
 // array,
+//@jitoff, inline,O2 - annotations?
 fn f2() {
 // this is a comment
     y = x = 2; // we can write comments!
