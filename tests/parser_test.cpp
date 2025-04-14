@@ -9,6 +9,11 @@
 #include <string>
 #include <fstream>
 
+namespace gtest_do_not_use_outside_namespace_scope {
+    GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(CorrectParserExceptionParamTestSuite);
+    GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(InvalidParserExceptionParamTestSuite);
+}
+
 using namespace testing;
 using namespace parser;
 using namespace ast;
