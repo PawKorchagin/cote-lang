@@ -1,5 +1,7 @@
 #include "parser.h"
-#include "mish.h"
+#include "lexer.h"
+#include "misc.h"
+#include "exceptions.h"
 #include <fstream>
 #include <map>
 #include <cassert>
@@ -8,176 +10,6 @@
 namespace {
     using namespace ast;
     using namespace parser;
-
-    //wrapper for keeping cursor position and error messages
-    struct SimpleStream {
-        SimpleStream(std::istream &in) : in(in) {}
-
-        int get() {
-            int c = in.get();
-            if (c == '\r' && in.peek() == '\n') return get();
-            cnt++;
-            if (c == '\r' || c == '\n') {
-                c = '\n';
-                cnt = 1;
-                lines++;
-            }
-            return c;
-        }
-
-        int plines() { return lines; }
-
-        int pcnt() { return cnt; }
-
-    private:
-        int lines = 1;
-        int cnt = 0;
-        std::istream &in;
-    };
-
-    struct TokenData {
-        std::string identifier = "";
-        int token = 0;
-        int lines = 0;
-        int cnt = 0;
-    };
-    TokenData cur, prv;
-    std::vector<std::string> error_log;
-    int cur_char = ' ';
-    SimpleStream in(NULL_STREAM);
-    void *m_stream_ptr = &in;
-
-    bool panic_mode = false;
-
-    std::nullptr_t parser_throws(const std::string &message) {
-        if (panic_mode) return nullptr;
-        panic_mode = true;
-
-        error_log.push_back(
-                std::to_string(cur.lines) + ":" + std::to_string(cur.cnt) + ": " + message);
-        return nullptr;
-    }
-
-    std::string error_msg(const std::string &text) {
-        return "expected " + text + " but found " + token_to_string(static_cast<TokenInfo>(cur.token), cur.identifier);
-    }
-
-//-----------------LEXER----------------------
-
-    int helper_return_char(int TOKEN) {
-        cur_char = in.get();
-        return cur.token = TOKEN;
-    }
-
-    int tok_number() {
-        cur.identifier.clear();
-        int expected_size = int(cur_char == '-') + 1;
-        do {
-            cur.identifier.push_back(static_cast<char>(cur_char));
-            cur_char = in.get();
-        } while (isdigit(cur_char));
-        if (cur.identifier.size() < expected_size) {
-            if (cur_char == '-') return parser_throws("illegal token --"), cur.token = TOKEN_UNKNOWN;
-            return cur.token = TOKEN_SUB;
-        }
-        return cur.token = TOKEN_INT_LIT;
-    }
-
-    int parse_token2(char second, int res1, int res2) {
-        cur_char = in.get();
-        if (cur_char == second) return helper_return_char(res2);
-        return cur.token = res1;
-    }
-
-    int tok_identifier() {
-        cur.identifier.clear();
-        do {
-            cur.identifier.push_back(static_cast<char>(cur_char));
-            cur_char = in.get();
-        } while (isalnum(cur_char) || cur_char == '_');
-        if (cur.identifier == "fn") return cur.token = TOKEN_FN;
-        if (cur.identifier == "if") return cur.token = TOKEN_IF;
-        if (cur.identifier == "while") return cur.token = TOKEN_WHILE;
-        if (cur.identifier == "else") return cur.token = TOKEN_ELSE;
-        if (cur.identifier == "return") return cur.token = TOKEN_RETURN;
-        return cur.token = TOKEN_IDENTIFIER;
-    }
-
-    int get_tok(int token_info = ANY_TOKEN_EXPECTED) {
-        std::swap(prv, cur);
-        cur.lines = in.plines();
-        cur.cnt = in.pcnt();
-        while (isspace(cur_char)) cur_char = in.get();
-        if (isdigit(cur_char) || (token_info & VALUE_EXPECTED) && cur_char == '-')
-            return tok_number();
-        if (isalpha(cur_char) || cur_char == '_')
-            return tok_identifier();
-        if (cur_char == '(') return helper_return_char(TOKEN_LPAREN);
-        if (cur_char == ')') return helper_return_char(TOKEN_RPAREN);
-        if (cur_char == '}') return helper_return_char(TOKEN_RCURLY);
-        if (cur_char == '{') return helper_return_char(TOKEN_LCURLY);
-        if (cur_char == -1) return cur.token = TOKEN_EOF;
-        switch (cur_char) {
-            case ',':
-                return helper_return_char(TOKEN_COMMA);
-            case '+':
-                return helper_return_char(TOKEN_ADD);
-            case '-':
-                cur_char = in.get();
-                if (cur_char == '-')
-                    return parser_throws("illegal token --"), cur.token = TOKEN_UNKNOWN;
-                return cur.token = TOKEN_SUB;
-            case '*':
-                return helper_return_char(TOKEN_MUL);
-            case '/':
-                cur_char = in.get();
-                if (cur_char == '/') {
-                    while (cur_char != '\n') cur_char = in.get();
-                    return get_tok(token_info);
-                }
-                return cur.token = TOKEN_DIV;
-            case '[':
-                return helper_return_char(TOKEN_LBRACKET);
-            case ']':
-                return helper_return_char(TOKEN_RBRACKET);
-            case '=':
-                return parse_token2('=', TOKEN_ASSIGN, TOKEN_EQ);
-            case ';':
-                return helper_return_char(TOKEN_SEMICOLON);
-            case '<':
-                return parse_token2('=', TOKEN_LS, TOKEN_LE);
-            case '>':
-                return parse_token2('=', TOKEN_GR, TOKEN_GE);
-            default:
-                return parser_throws("unknown token " + std::to_string(char(cur_char))), helper_return_char(
-                        TOKEN_UNKNOWN);
-
-        }
-    }
-
-//-----------------LEXER----------------------
-// ---------------ERROR SYSTEM-----------------
-
-
-//stops at ; or declaration or statement
-    void panic() {
-        while (true) {
-            switch (cur.token) {
-                case TOKEN_EOF:
-                    return;
-                case TOKEN_FN:
-                    if (get_tok() == TOKEN_IDENTIFIER) {
-                        panic_mode = false;
-                        return;
-                    }
-                default:
-                    get_tok();
-            }
-        }
-        //TODO
-    }
-
-// ---------------ERROR SYSTEM-----------------
 
     bool match(int token_type) {
         if (token_type != cur.token) return false;
@@ -298,6 +130,7 @@ namespace {
     /* TOKEN_GE */         {nullptr,   ifn_binary,    PREC_CMP},
     /* TOKEN_SEMICOLON */  {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_COMMA */      {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_NEWLINE */    {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_UNKNOWN */    {nullptr,   nullptr,    PREC_NONE},
     };
 // clang-format on
@@ -354,15 +187,6 @@ namespace parser {
 
     unique_ptr<Node> parse_expression() {
         return parse_precedence(PREC_ASSIGN);
-    }
-
-    void init_parser(std::istream &input_stream) {
-        error_log.clear();
-        in.~SimpleStream();
-        panic_mode = false;
-        new(m_stream_ptr) SimpleStream(input_stream);
-        cur_char = ' ';
-        get_tok();
     }
 
 
@@ -434,16 +258,14 @@ namespace parser {
     ast::Program parse_program() {
         Program res;
         while (cur.token != TOKEN_EOF) {
-            if (match(TOKEN_FN)) {
-                res.declarations.push_back(parse_function());
-            } else {
-                parser_throws(error_msg("function definition"));
-                panic_mode = true;
-            }
-            while (panic_mode) {
+            bool had_errors = is_panic();
+            if (is_panic()) {
                 panic();
-                parse_function();
             }
+            if ((had_errors ? prv.token : cur.token) == TOKEN_FN) {
+                if (!had_errors) get_tok();
+                res.declarations.push_back(parse_function());
+            } else parser_throws(error_msg("function definition"));
         }
         return res;
     }
@@ -533,8 +355,10 @@ namespace parser {
     }
 
 
-    std::vector<std::string> get_errors() {
-        return error_log;
+    void init_parser(std::istream &in) {
+        init_lexer(in);
+        init_exceptions();
     }
+
 }
 //TODO: panic on error and output many errors
