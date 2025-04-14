@@ -1,79 +1,11 @@
-#include "gtest/gtest.h"
-#include "lib/parser.h"
-#include "lib/exceptions.h"
-#include <random>
-#include <utility>
-#include <vector>
-#include <stdexcept>
-#include <ctime>
-#include <string>
-#include <fstream>
+#include "utils.h"
 
-namespace gtest_do_not_use_outside_namespace_scope {
-    GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(CorrectParserExceptionParamTestSuite);
-    GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(InvalidParserExceptionParamTestSuite);
-}
-
-using namespace testing;
-using namespace parser;
-using namespace ast;
-
-using InvalidParserExceptionParamTestSuite = TestWithParam<std::string>;
+using parser_exception_param_test_suite = TestWithParam<std::string>;
 using FunctionFromFileTestSuite = Test;
-
-auto parse(const std::string &text) {
-    auto in = std::stringstream(text);
-    parser::init_parser(in);
-    auto expr = parse_expression();
-    if (expr == nullptr) {
-        std::cerr << text << " - " << get_errors().front() << std::endl;
-        throw std::runtime_error("parser failed: " + get_errors().front());
-    }
-    return expr;
-}
-
-void parse_program_throws(std::string file_path) {
-    std::ifstream fin(file_path);
-    parser::init_parser(fin);
-    ast::Program p = parser::parse_program();
-    if (!parser::get_errors().empty()) {
-        for (auto x : get_errors()) {
-            std::cerr << file_path << ":" << x << std::endl;
-        }
-        throw std::runtime_error("parser failed: " + get_errors().front());
-    }
-}
 
 TEST(FunctionFromFileTestSuite, FileTests) {
     EXPECT_NO_THROW(parse_program_throws("../../tests/test1.ct"));
 }
-
-TEST_P(InvalidParserExceptionParamTestSuite, Sample) {
-    auto code = GetParam();
-    ASSERT_ANY_THROW(parse(code));
-}
-
-INSTANTIATE_TEST_SUITE_P(
-        InvalidGroup,
-        InvalidParserExceptionParamTestSuite,
-        Values(
-                // "fn main() {", // missed }
-                // "fn main() {}$", // extra $
-                // "fn main() { int x = 5 }" // missed ;
-                // etc
-        )
-);
-
-using CorrectParserExceptionParamTestSuite = TestWithParam<std::string>;
-
-
-INSTANTIATE_TEST_SUITE_P(
-        CorrectGroup,
-        CorrectParserExceptionParamTestSuite,
-        Values(
-                // "fn main() {}"
-        )
-);
 
 // ---Equals Tests---
 
@@ -224,75 +156,6 @@ TEST(RandomExpressionEqualsTest, RandomTests) {
         ASSERT_EQ(parse_res(exp), exp);
     }
 }
-
-using MainScopeOKTest = TestWithParam<std::string>;
-using MainScopeFailTest = TestWithParam<std::string>;
-/*
-TEST_P(MainScopeOKTest, ValidScope) {
-    std::string scope = GetParam();
-    std::string code("fn main() {" + scope + "}");
-
-    ASSERT_NO_THROW(parse(code));
-}
-
-TEST_P(MainScopeFailTest, InvalidScope) {
-    const std::string scope = GetParam();
-    std::string code = "fn main() {" + scope + "}";
-
-    ASSERT_ANY_THROW(parse(code));
-}
-
-// ---Variables init tests---
-
-INSTANTIATE_TEST_SUITE_P(
-        initOKGroup,
-        MainScopeOKTest,
-        Values(
-                "int a = 10;",   //simple initialization
-                "int b = -100;"   //negarive number
-                "int a = 0; int b = a;",        // init with another variable
-                "int a = 1; int A = 2;", //register independent
-                "int _ = 10;", //ignore name
-                "int A_ = 0; int b1 = 2; int hello_world = 1; int world_HELLO = 228;", //different symbols in names
-                "int a1 = 1; int a1234567890 = 2; int a1a2a3 = 3;" //numbers in names
-                "int StR_A1nge00Na____00219321__Me = 10;", //everything in name
-                "int a = 2147483647;", //max integer
-                "int a = -2147483648;" //min integer
-        )
-);
-
-INSTANTIATE_TEST_SUITE_P(
-        InitFailGroup,
-        MainScopeFailTest,
-        Values(
-                "int 1a = 1;", //name start with number
-                "int a- = 1;", // - in name
-                "int a++ = 1;",
-                "a;", //no type no assign
-                "a = 10;", //no type
-                //"int a;" //no assign
-                "int      = 10;", //whitespace name
-                "int int = 10;", //name of a type
-                "int for = 10;",
-                "int if = 10;",
-                "int >>> = 1;",
-                "int return = 1;",
-                "for = 0;",
-                "int invalid name = 10;", //space in name
-                "int a = 10000000000000;", //overflow
-                "int a = -100000000000000;",
-                "int a = 2147483648;",
-                "int a = -2147483649;"
-                "int a@!ghf^@^#@ = 1;", //invalid symbols
-                "int 😁😂 = 1;", //unicode symbols
-                "int a = 1; int a = 1;" //initialize initialized
-                "int a = b;" //init with unitialized variable
-                "int  a  =  10  ;", //whitespaces
-                "int\ta\t=\t10\t;"
-        )
-);
-
- */
 
 #include <memory>
 #include <sstream>
