@@ -6,13 +6,13 @@
 #define CRYPT_AST_H
 
 #include <string>
-#include <utility>
 #include <vector>
 #include <stdexcept>
 #include <memory>
 
 template<typename T>
 using unique_ptr = std::unique_ptr<T>;
+
 
 namespace ast {
     enum class VarType {
@@ -67,6 +67,7 @@ namespace ast {
 
         virtual NodeType get_type() const = 0;
 
+        // upcasting unique_ptr<Derived> to unique_ptr<Node> with honest copying objects
         virtual std::unique_ptr<Node> clone_upcasting() const = 0;
 
         bool operator==(const Node &other) const;
@@ -112,7 +113,7 @@ namespace ast {
             new_fn->signature = this->signature;
             if (this->block) {
                 new_fn->block = std::unique_ptr<Block>(
-                    static_cast<Block *>(this->block->clone_upcasting().release()));
+                    dynamic_cast<Block *>(this->block->clone_upcasting().release()));
                 // new_fn->block = block;
             }
             return new_fn;
@@ -173,7 +174,7 @@ namespace ast {
     class Program {
     public:
         //function declaration (or const var declaration; TODO will be added later )
-        std::vector<std::unique_ptr<FunctionDef> > declarations;
+        std::vector<std::unique_ptr<FunctionDef>> declarations;
     };
 
     class IntLitExpr : public Node {
@@ -333,4 +334,20 @@ namespace ast {
     using SubExpr = BinaryExpr<BinaryOpType::SUB>;
 }
 
+
+namespace detail {
+    inline std::string get_type(const ast::VarType type) {
+        switch (type) {
+            case ast::VarType::UNKNOWN:
+                return "unknown";
+            case ast::VarType::INT:
+                return "int";
+            default:
+                throw std::runtime_error("detail::get_type of ast::VarType with such type unimplemented");
+        }
+
+    }
+}
+
 #endif //CRYPT_AST_H
+

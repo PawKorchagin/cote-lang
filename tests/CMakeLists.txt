@@ -13,7 +13,7 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 
 add_executable(
-        parser_test
+        crypt_test
         parser_test.cpp
         vm_test.cpp
         parser_test_param.cpp
@@ -21,9 +21,9 @@ add_executable(
         analyze_param_test.cpp
 )
 
-target_link_libraries(parser_test PRIVATE crypt_lib GTest::gtest_main)
+target_link_libraries(crypt_test PRIVATE crypt_lib GTest::gtest_main)
 
-target_include_directories(parser_test PUBLIC ${PROJECT_SOURCE_DIR})
+target_include_directories(crypt_test PUBLIC ${PROJECT_SOURCE_DIR})
 
 include(GoogleTest)
-gtest_discover_tests(parser_test)
+gtest_discover_tests(crypt_test)

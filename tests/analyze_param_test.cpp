@@ -37,9 +37,29 @@ TEST_P(str_semantics_suite, lvalue_issues) {
     );
 }
 
+TEST_P(str_semantics_suite, rvalue_issues) {
+    EXPECT_THROW(
+        {
+        for (const auto &program = parse_from_string(GetParam());
+            const auto &fn: program.declarations) {
+        auto tree = fn->clone_upcasting();
+        analysis::analyze(tree);
+        }
+        }, rvalue_error
+    );
+}
+
 INSTANTIATE_TEST_SUITE_P(lvalue_issues,
                          str_semantics_suite,
                          Values(
                              "fn main() { 1 = 1; }",
-                             "fn kek() { 1 = 1; }\nfn main() { kek(); }"
+                             "fn kek() { 1 = 1; }\nfn main() { kek(); }",
+                             "fn main() { kek(); }\nfn kek() { 1 = 1; }",
+                             "fn main() { kek() = 1; }\nfn kek() {}"
+                         ));
+
+INSTANTIATE_TEST_SUITE_P(rvalue_issues,
+                         str_semantics_suite,
+                         Values(
+                             // "fn main() { x = x; }"
                          ));
