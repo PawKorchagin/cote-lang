@@ -20,7 +20,7 @@ using namespace ast;
 inline auto run(const std::string &s) {
     for (const auto &program = parse_from_string(s);
          const auto &fn: program.declarations) {
-        auto tree = fn->clone_ptr_upcasting();
+        auto tree = fn->clone_upcasting();
         analysis::analyze(tree);
     }
 }
@@ -30,7 +30,7 @@ TEST_P(str_semantics_suite, lvalue_issues) {
         {
         for (const auto &program = parse_from_string(GetParam());
             const auto &fn: program.declarations) {
-        auto tree = fn->clone_ptr_upcasting();
+        auto tree = fn->clone_upcasting();
         analysis::analyze(tree);
         }
         }, lvalue_error

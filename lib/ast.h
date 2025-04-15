@@ -67,7 +67,7 @@ namespace ast {
 
         virtual NodeType get_type() const = 0;
 
-        virtual std::unique_ptr<Node> clone_ptr_upcasting() const = 0;
+        virtual std::unique_ptr<Node> clone_upcasting() const = 0;
 
         bool operator==(const Node &other) const;
 
@@ -88,14 +88,14 @@ namespace ast {
         std::vector<std::unique_ptr<Node> > lines;
         NodeType get_type() const override { return NodeType::Block; }
 
-        std::unique_ptr<Node> clone_ptr_upcasting() const override {
+        std::unique_ptr<Node> clone_upcasting() const override {
             auto new_block = std::make_unique<Block>();
             // new_block->lines = lines; // honest vec copy?
             // new_block->lines.assign(lines.size;
             new_block->lines.reserve(lines.size());
             for (const auto &line: lines) {
                 // Use const reference
-                new_block->lines.push_back(line->clone_ptr_upcasting());
+                new_block->lines.push_back(line->clone_upcasting());
             }
             return new_block;
         }
@@ -107,12 +107,12 @@ namespace ast {
         std::unique_ptr<Block> block;
         NodeType get_type() const override { return NodeType::FunctionDef; }
 
-        std::unique_ptr<Node> clone_ptr_upcasting() const override {
+        std::unique_ptr<Node> clone_upcasting() const override {
             auto new_fn = std::make_unique<FunctionDef>();
             new_fn->signature = this->signature;
             if (this->block) {
                 new_fn->block = std::unique_ptr<Block>(
-                    static_cast<Block *>(this->block->clone_ptr_upcasting().release()));
+                    static_cast<Block *>(this->block->clone_upcasting().release()));
                 // new_fn->block = block;
             }
             return new_fn;
@@ -129,11 +129,11 @@ namespace ast {
 
         NodeType get_type() const override { return NodeType::FunctionCall; }
 
-        std::unique_ptr<Node> clone_ptr_upcasting() const override {
-            auto new_call = std::make_unique<FunctionCall>(name_expr->clone_ptr_upcasting());
+        std::unique_ptr<Node> clone_upcasting() const override {
+            auto new_call = std::make_unique<FunctionCall>(name_expr->clone_upcasting());
             new_call->args.reserve(args.size());
             for (const auto &arg: args) {
-                new_call->args.push_back(arg->clone_ptr_upcasting());
+                new_call->args.push_back(arg->clone_upcasting());
             }
             return new_call;
         }
@@ -150,9 +150,9 @@ namespace ast {
 
         NodeType get_type() const override { return NodeType::ArrayGet; }
 
-        std::unique_ptr<Node> clone_ptr_upcasting() const override {
-            return std::make_unique<ArrayGet>(name_expr->clone_ptr_upcasting(),
-                                              index->clone_ptr_upcasting());
+        std::unique_ptr<Node> clone_upcasting() const override {
+            return std::make_unique<ArrayGet>(name_expr->clone_upcasting(),
+                                              index->clone_upcasting());
         }
     };
 
@@ -165,8 +165,8 @@ namespace ast {
 
         NodeType get_type() const override { return NodeType::Return; }
 
-        std::unique_ptr<Node> clone_ptr_upcasting() const override {
-            return std::make_unique<ReturnStmt>(expr->clone_ptr_upcasting());
+        std::unique_ptr<Node> clone_upcasting() const override {
+            return std::make_unique<ReturnStmt>(expr->clone_upcasting());
         }
     };
 
@@ -187,7 +187,7 @@ namespace ast {
 
         [[nodiscard]] std::string to_str1() const override;
 
-        std::unique_ptr<Node> clone_ptr_upcasting() const override {
+        std::unique_ptr<Node> clone_upcasting() const override {
             return std::make_unique<IntLitExpr>(number);
         }
     };
@@ -205,7 +205,7 @@ namespace ast {
 
         NodeType get_type() const override { return NodeType::Var; }
 
-        std::unique_ptr<Node> clone_ptr_upcasting() const override {
+        std::unique_ptr<Node> clone_upcasting() const override {
             auto new_var = std::make_unique<VarExpr>(name);
             new_var->type = type;
             return new_var;
@@ -224,11 +224,11 @@ namespace ast {
 
         NodeType get_type() const override { return NodeType::If; }
 
-        std::unique_ptr<Node> clone_ptr_upcasting() const override {
-            auto new_if = std::make_unique<IfStmt>(expr->clone_ptr_upcasting(),
-                                                   etrue->clone_ptr_upcasting());
+        std::unique_ptr<Node> clone_upcasting() const override {
+            auto new_if = std::make_unique<IfStmt>(expr->clone_upcasting(),
+                                                   etrue->clone_upcasting());
             if (efalse) {
-                new_if->efalse = efalse->clone_ptr_upcasting();
+                new_if->efalse = efalse->clone_upcasting();
             }
             return new_if;
         }
@@ -245,10 +245,10 @@ namespace ast {
 
         NodeType get_type() const override { return NodeType::While; }
 
-        std::unique_ptr<Node> clone_ptr_upcasting() const override {
-            auto new_while = std::make_unique<WhileStmt>(expr->clone_ptr_upcasting(),
+        std::unique_ptr<Node> clone_upcasting() const override {
+            auto new_while = std::make_unique<WhileStmt>(expr->clone_upcasting(),
                                                          std::unique_ptr<Block>(
-                                                             static_cast<Block *>(body->clone_ptr_upcasting().
+                                                             static_cast<Block *>(body->clone_upcasting().
                                                                  release())));
             return new_while;
         }
@@ -272,8 +272,8 @@ namespace ast {
             throw std::runtime_error("not implemented");
         }
 
-        std::unique_ptr<Node> clone_ptr_upcasting() const override {
-            return std::make_unique<UnaryExpr>(expr->clone_ptr_upcasting());
+        std::unique_ptr<Node> clone_upcasting() const override {
+            return std::make_unique<UnaryExpr>(expr->clone_upcasting());
         }
     };
 
@@ -321,9 +321,9 @@ namespace ast {
             return "(" + l->to_str1() + operatorString() + r->to_str1() + ")";
         }
 
-        std::unique_ptr<Node> clone_ptr_upcasting() const override {
-            return std::make_unique<BinaryExpr>(l->clone_ptr_upcasting(),
-                                                r->clone_ptr_upcasting());
+        std::unique_ptr<Node> clone_upcasting() const override {
+            return std::make_unique<BinaryExpr>(l->clone_upcasting(),
+                                                r->clone_upcasting());
         }
     };
 

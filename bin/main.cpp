@@ -160,7 +160,7 @@ int main() {
          const auto &fn: program.declarations) {
         // Use reference
         std::cout << "tree start\n";
-        auto tree = fn->clone_ptr_upcasting();
+        auto tree = fn->clone_upcasting();
         // print_post_order(tree);
         analysis::analyze(tree);
     }
