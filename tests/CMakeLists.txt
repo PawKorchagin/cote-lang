@@ -12,9 +12,13 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-add_executable(parser_test parser_test.cpp vm_test.cpp
+add_executable(
+        parser_test
+        parser_test.cpp
+        vm_test.cpp
         parser_test_param.cpp
         utils.h
+        analyze_param_test.cpp
 )
 
 target_link_libraries(parser_test PRIVATE crypt_lib GTest::gtest_main)

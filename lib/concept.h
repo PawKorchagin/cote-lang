@@ -7,11 +7,11 @@
 
 namespace ast {
     // to requires different types
-    template<typename T>
-    concept is_commutative = std::same_as<T, const AddExpr*> || std::same_as<T, const MulExpr*>;
+    // template<typename T>
+    // concept is_commutative = std::same_as<T, const AddExpr*> || std::same_as<T, const MulExpr*>;
 
-    template<typename T>
-    concept is_binary_operation = (is_commutative<T> || std::same_as<T, const SubExpr*> || std::same_as<T, const DivExpr*>);
+    // template<typename T>
+    // concept is_binary_operation = (is_commutative<T> || std::same_as<T, const SubExpr*> || std::same_as<T, const DivExpr*>);
 }
 
 #endif //CONCEPT_H
