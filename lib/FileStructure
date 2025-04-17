@@ -1,0 +1,32 @@
+//cstring ~ char[] ending with \0
+//magic - universal number to identify file type, example 0x569B397E
+//types?     int, double, string, array, fn, custom obj
+//each native function will have its own number, so clock - 1, println - 2, ... etc.
+//design decision: one big stack vs many small stacks?
+//idea: store Value[], and strings store separatly in array
+VARIANT many small stacks:
+MAX_CONSTANTS_PER_FILE = ...;
+MAX_FUNCTION_ARGUMENTS = 16;
+Possible file structure:
+struct File {
+     uint32_t magic;
+     int nints;
+     int64_t intarr[nints];
+     int ndoubles;
+     double doublearr[ndoubles];
+     int nstrings;
+     const char* stringarr[nstrings];
+     int nfunctions;
+     Function functionarr[nfunctions];
+     uint32_t code[..];
+}
+TODO: class and function layout
+struct Function {
+    int32_t meta;//arity here, annotations, etc.
+    int entry;//ptr to start in code section
+}
+struct Class {
+
+}
+
+//struct Foo{}

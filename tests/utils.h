@@ -23,10 +23,11 @@ using namespace testing;
 using namespace parser;
 using namespace ast;
 
-inline auto parse(const std::string &text) {
+template<typename T = decltype(parse_expression)>
+inline auto parse(const std::string &text, T func = parse_expression) {
     auto in = std::stringstream(text);
     parser::init_parser(in);
-    auto expr = parse_expression();
+    auto expr = func();
     if (expr == nullptr) {
         std::cerr << text << " - " << get_errors().front() << std::endl;
         throw std::runtime_error("parser failed: " + get_errors().front());

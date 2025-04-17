@@ -39,6 +39,8 @@ namespace parser {
 
     TokenData cur = {};
     TokenData prv = {};
+    TokenData nxt = {.token = -1};
+
     int helper_return_char(int TOKEN) {
         cur_char = in.get();
         return cur.token = TOKEN;
@@ -46,20 +48,26 @@ namespace parser {
 
     int tok_number() {
         cur.identifier.clear();
-        int expected_size = int(cur_char == '-') + 1;
-        do {
+        cur.identifier.push_back(static_cast<char>(cur_char));
+        if (cur_char == '-') {
+            cur_char = in.get();
+            if (cur_char == '-') return parser_throws("illegal token --"), cur.token = TOKEN_UNKNOWN;
+            if (cur_char == '>') return helper_return_char(TOKEN_ARROW);
+            if (!isdigit(cur_char)) return cur.token = TOKEN_SUB;
+        }
+        else cur_char = in.get();
+        while (isdigit(cur_char)) {
             cur.identifier.push_back(static_cast<char>(cur_char));
             cur_char = in.get();
-        } while (isdigit(cur_char));
-        if (cur.identifier.size() < expected_size) {
-            if (cur_char == '-') return parser_throws("illegal token --"), cur.token = TOKEN_UNKNOWN;
-            return cur.token = TOKEN_SUB;
         }
         return cur.token = TOKEN_INT_LIT;
     }
 
+    template<bool readFirst = true>
     int parse_token2(char second, int res1, int res2) {
-        cur_char = in.get();
+        if constexpr (readFirst) {
+            cur_char = in.get();
+        }
         if (cur_char == second) return helper_return_char(res2);
         return cur.token = res1;
     }
@@ -70,26 +78,36 @@ namespace parser {
             cur.identifier.push_back(static_cast<char>(cur_char));
             cur_char = in.get();
         } while (isalnum(cur_char) || cur_char == '_');
+        if (cur.identifier == "and") return cur.token = TOKEN_AND;
+        if (cur.identifier == "or") return cur.token = TOKEN_OR;
         if (cur.identifier == "fn") return cur.token = TOKEN_FN;
         if (cur.identifier == "if") return cur.token = TOKEN_IF;
+        if (cur.identifier == "for") return cur.token = TOKEN_FOR;
         if (cur.identifier == "while") return cur.token = TOKEN_WHILE;
         if (cur.identifier == "else") return cur.token = TOKEN_ELSE;
         if (cur.identifier == "return") return cur.token = TOKEN_RETURN;
         return cur.token = TOKEN_IDENTIFIER;
     }
 
+    int tok_string_literal() {
+        cur.identifier.clear();
+        while((cur_char = in.get()) !=  '"' && cur_char != EOF) {
+            cur.identifier.push_back(static_cast<char>(cur_char));
+        }
+        if (cur_char != EOF) cur_char = in.get();
+        return cur.token = TOKEN_STR_LIT;
+    }
 
-    int get_tok(int token_info) {
-        std::swap(prv, cur);
-        cur.lines = in.plines();
-        cur.cnt = in.pcnt();
+
+    int get_tok_core(int token_info) {
         while (isspace(cur_char)) cur_char = in.get();
         if (isdigit(cur_char) || (token_info & VALUE_EXPECTED) && cur_char == '-')
             return tok_number();
         if (isalpha(cur_char) || cur_char == '_')
             return tok_identifier();
-        if (cur_char == -1) return cur.token = TOKEN_EOF;
+        if (cur_char == '"') return tok_string_literal();
         switch (cur_char) {
+            case EOF: return cur.token = TOKEN_EOF;
             case '(': return helper_return_char(TOKEN_LPAREN);
             case ')': return helper_return_char(TOKEN_RPAREN);
             case '}': return helper_return_char(TOKEN_RCURLY);
@@ -98,11 +116,15 @@ namespace parser {
                 return helper_return_char(TOKEN_COMMA);
             case '+':
                 return helper_return_char(TOKEN_ADD);
+            case '.':
+                return helper_return_char(TOKEN_DOT);
+            case '%':
+                return helper_return_char(TOKEN_MOD);
             case '-':
                 cur_char = in.get();
                 if (cur_char == '-')
                     return parser_throws("illegal token --"), cur.token = TOKEN_UNKNOWN;
-                return cur.token = TOKEN_SUB;
+                return parse_token2<false>('>', TOKEN_SUB, TOKEN_ARROW);
             case '*':
                 return helper_return_char(TOKEN_MUL);
             case '/':
@@ -130,6 +152,26 @@ namespace parser {
 
         }
     }
+
+    void roll_back() {
+        nxt = std::move(cur);
+        cur = std::move(prv);
+        prv.token = TOKEN_UNKNOWN;
+    }
+
+    int get_tok(int token_info) {
+        if (nxt.token != -1) {
+            cur = std::move(nxt);
+            prv = std::move(cur);
+            nxt.token = -1;
+            return cur.token;
+        }
+        prv = std::move(cur);
+        cur.lines = in.plines();
+        cur.cnt = in.pcnt();
+        return get_tok_core(token_info);
+    }
+
     void init_lexer(std::istream &input_stream) {
         in.~SimpleStream();
         new(m_stream_ptr) SimpleStream(input_stream);

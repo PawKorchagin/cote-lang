@@ -36,7 +36,8 @@ namespace parser {
     enum Precedence {
         PREC_NONE,
         PREC_ASSIGN,
-        PREC_LAMBDA,
+        PREC_OR,
+        PREC_AND,
         PREC_EQ,
         PREC_CMP,
         PREC_ADD,
@@ -49,6 +50,7 @@ namespace parser {
         PrefixRule prefix;
         InfixRule infix;
         int precedence;
+        bool left_assoc = true;
     };
     enum TokenInfo {
         TOKEN_EOF = 0,
@@ -56,8 +58,10 @@ namespace parser {
         TOKEN_SUB,
         TOKEN_MUL,
         TOKEN_DIV,
+        TOKEN_MOD,
         TOKEN_IDENTIFIER,
         TOKEN_INT_LIT,
+        TOKEN_STR_LIT,
         TOKEN_LBRACKET,
         TOKEN_RBRACKET,
         TOKEN_LPAREN,
@@ -65,11 +69,15 @@ namespace parser {
         TOKEN_LCURLY,
         TOKEN_RCURLY,
         TOKEN_FN,
+        TOKEN_ARROW,
         TOKEN_IF,
         TOKEN_ELSE,
+        TOKEN_FOR,
         TOKEN_WHILE,
         TOKEN_RETURN,
         TOKEN_ASSIGN,
+        TOKEN_AND,
+        TOKEN_OR,
         TOKEN_EQ,
         TOKEN_LS,
         TOKEN_LE,
@@ -77,6 +85,7 @@ namespace parser {
         TOKEN_GE,
         TOKEN_SEMICOLON,
         TOKEN_COMMA,
+        TOKEN_DOT,
         TOKEN_UNKNOWN,
     };
     constexpr int OPERATOR_EXPECTED = 1;
@@ -87,7 +96,7 @@ namespace parser {
 
     unique_ptr<ast::Node> parse_expression();
 
-    unique_ptr<ast::FunctionDef> parse_function(bool anonymous = false);
+    unique_ptr<ast::FunctionDef> parse_function();
 
     unique_ptr<ast::Block> parse_block();
 
