@@ -11,55 +11,55 @@ namespace detail {
 }
 
 namespace analysis {
-    void analyze(const std::unique_ptr<Block> &node) {
-        // auto* block = node.get();
-        for (const auto &child: node->lines) {
-            analyze(child);
-        }
-    }
+    // void analyze(const std::unique_ptr<Block> &node) {
+    //     // auto* block = node.get();
+    //     for (const auto &child: node->lines) {
+    //         analyze(child);
+    //     }
+    // }
 
-     void analyze(const std::unique_ptr<Node> &node) {
-        if (!node) return;
+    std::unique_ptr<Node> analyze(std::unique_ptr<Node> node) {
+        if (!node) return nullptr;
 
         // First visit all children (post-order traversal)
         switch (node->get_type()) {
             case NodeType::Block: {
                 auto *block = dynamic_cast<Block *>(node.get());
-                for (const auto &child: block->lines) {
-                    analyze(child);
+                for (auto&& child: block->lines) {
+                    analyze(std::move(child));
                 }
                 break;
             }
             case NodeType::FunctionDef: {
-                const auto *func_def = dynamic_cast<FunctionDef *>(node.get());
-                analyze(func_def->block);
+                auto *func_def = dynamic_cast<FunctionDef *>(node.get());
+                analyze(std::move(func_def->block));
                 break;
             }
             case NodeType::FunctionCall: {
                 auto *func_call = dynamic_cast<FunctionCall *>(node.get());
-                analyze(func_call->name_expr);
-                for (const auto &arg: func_call->args) {
-                    analyze(arg);
+                analyze(std::move(func_call->name_expr));
+                for (auto&& arg: func_call->args) {
+                    analyze(std::move(arg));
                 }
                 break;
             }
             case NodeType::ArrayGet: {
                 auto *array_get = dynamic_cast<ArrayGet *>(node.get());
-                analyze(array_get->name_expr);
-                analyze(array_get->index);
+                analyze(std::move(array_get->name_expr));
+                analyze(std::move(array_get->index));
                 break;
             }
             case NodeType::Return: {
                 auto *return_stmt = dynamic_cast<ReturnStmt *>(node.get());
-                analyze(return_stmt->expr);
+                analyze(std::move(return_stmt->expr));
                 break;
             }
             case NodeType::If: {
                 auto *if_stmt = dynamic_cast<IfStmt *>(node.get());
-                analyze(if_stmt->expr);
-                analyze(if_stmt->etrue);
+                analyze(std::move(if_stmt->expr));
+                analyze(std::move(if_stmt->etrue));
                 if (if_stmt->efalse) {
-                    analyze(if_stmt->efalse);
+                    analyze(std::move(if_stmt->efalse));
                 }
                 break;
             }
@@ -68,57 +68,58 @@ namespace analysis {
             }
             case NodeType::UnaryMinus: {
                 auto *unary = dynamic_cast<UnaryExpr<UnaryOpType::MINUS> *>(node.get());
-                analyze(unary->expr);
+                analyze(std::move(unary->expr));
                 break;
             }
             case NodeType::BinaryPlus: {
                 auto *binary_add = dynamic_cast<BinaryExpr<BinaryOpType::ADD> *>(node.get());
-                analyze(binary_add->l);
-                analyze(binary_add->r);
+                analyze(std::move(binary_add->l));
+                analyze(std::move(binary_add->r));
                 break;
             }
             case NodeType::BinaryMul: {
                 auto *binary_mul = dynamic_cast<BinaryExpr<BinaryOpType::MUL> *>(node.get());
-                analyze(binary_mul->l);
-                analyze(binary_mul->r);
+                analyze(std::move(binary_mul->l));
+                analyze(std::move(binary_mul->r));
                 break;
             }
             case NodeType::BinaryDiv: {
-                const auto *binary_div = dynamic_cast<BinaryExpr<BinaryOpType::DIV> *>(node.get());
-                analyze(binary_div->l);
-                analyze(binary_div->r);
+                auto *binary_div = dynamic_cast<BinaryExpr<BinaryOpType::DIV> *>(node.get());
+                analyze(std::move(binary_div->l));
+                analyze(std::move(binary_div->r));
                 break;
             }
             case NodeType::BinaryMinus: {
-                const auto *binary_sub = dynamic_cast<BinaryExpr<BinaryOpType::SUB> *>(node.get());
-                analyze(binary_sub->l);
-                analyze(binary_sub->r);
+                auto *binary_sub = dynamic_cast<BinaryExpr<BinaryOpType::SUB> *>(node.get());
+                analyze(std::move(binary_sub->l));
+                analyze(std::move(binary_sub->r));
                 break;
             }
             case NodeType::Assign: {
-                const auto *expr = dynamic_cast<BinaryExpr<BinaryOpType::ASSIGN> *>(node.get());
-                analyze(expr->l);
-                analyze(expr->r);
+                auto *expr = dynamic_cast<BinaryExpr<BinaryOpType::ASSIGN> *>(node.get());
+                auto left = analyze(std::move(expr->l));
+                auto right = analyze(std::move(expr->r));
 
                 // ?
-                if (!expr->l) {
+                if (!left) {
                     throw lvalue_error("no lvalue presented");
                 }
 
                 // ?
-                if (!expr->r) {
+                if (!right) {
                     throw rvalue_error("no rvalue presented");
                 }
 
-                if (expr->l && expr->l->get_type() != NodeType::Var) {
-                    throw lvalue_error("lvalue can be only variable");
+                if (left && left->get_type() != NodeType::Var) {
+                    throw lvalue_error("lvalue can be only variable, but got: TODO");
                 }
 
-                const auto* var = dynamic_cast<VarExpr*>(expr->l.get());
+                const auto* var = dynamic_cast<VarExpr*>(left.get());
 
-                if (var->type == VarType::UNKNOWN) {
-                    throw lvalue_error("unknow type of lvalue");
-                }
+                // var can be unknown
+                // if (var->type == VarType::UNKNOWN) {
+                //     throw lvalue_error("unknow type of lvalue");
+                // }
 
                 break;
             }
@@ -136,5 +137,7 @@ namespace analysis {
                 }
                 break;
         }
+
+        return node;
     }
 } // analysis

@@ -23,9 +23,9 @@ namespace analysis {
     class semantic_analyzer {
     };
 
-    void analyze(const std::unique_ptr<Node> &);
+    std::unique_ptr<Node> analyze(std::unique_ptr<Node>);
 
-    void analyze(const std::unique_ptr<Block> &);
+    // void analyze(const std::unique_ptr<Block> &);
 } // analysis
 
 #endif //AST_ITERATOR_H
