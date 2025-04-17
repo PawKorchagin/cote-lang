@@ -24,16 +24,17 @@ namespace ast {
     enum class BinaryOpType {
         ADD = 0,
         SUB,
-        DIV,
         MUL,
+        DIV,
+        MOD,
         ASSIGN,
         EQ,
         LE,
         LS,
         GR,
         GE,
-        AND2,
-        OR2,
+        AND,
+        OR,
         UNKNOWN
     };
 
@@ -46,11 +47,14 @@ namespace ast {
         FunctionDef,
         FunctionCall,
         ArrayGet,
+        Member,
         Return,
         IntLit,
+        StringLit,
         Var,
         If,
         While,
+        For,
         UnaryMinus,
         BinaryPlus,
         BinaryMul,
@@ -77,16 +81,35 @@ namespace ast {
         bool operator!=(const Node *) const;
     };
 
-    class FunctionSignature {
+    class FunctionSignature : public Node {
     public:
+
         std::string name;
         std::vector<std::string> params;
+
+        FunctionSignature() = default;
+
+        FunctionSignature(std::string name, std::string first_param) : name(std::move(name)),
+                                                                       params({std::move(first_param)}) {}
+
+        std::string to_str1() const override {
+            throw "todo";
+        }
+
+        NodeType get_type() const override {
+            throw "todo";
+        }
+
+        unique_ptr<Node> clone_upcasting() const override {
+            throw "todo";
+        }
         //TODO
     };
 
     class Block : public Node {
     public:
         std::vector<std::unique_ptr<Node> > lines;
+
         NodeType get_type() const override { return NodeType::Block; }
 
         std::unique_ptr<Node> clone_upcasting() const override {
@@ -104,19 +127,21 @@ namespace ast {
 
     class FunctionDef : public Node {
     public:
-        FunctionSignature signature;
-        std::unique_ptr<Block> block;
+        std::unique_ptr<Node> signature;
+        std::unique_ptr<Node> block;
+
         NodeType get_type() const override { return NodeType::FunctionDef; }
 
+        FunctionDef() = default;
+
+        FunctionDef(FunctionSignature sig, std::unique_ptr<Node> block) : signature(std::make_unique<FunctionSignature>(sig)),
+                                                                          block(std::move(block)) {}
+
+        FunctionDef(std::unique_ptr<Node> sig, std::unique_ptr<Node> block) : signature(std::move(sig)),
+                                                                          block(std::move(block)) {}
+
         std::unique_ptr<Node> clone_upcasting() const override {
-            auto new_fn = std::make_unique<FunctionDef>();
-            new_fn->signature = this->signature;
-            if (this->block) {
-                new_fn->block = std::unique_ptr<Block>(
-                    dynamic_cast<Block *>(this->block->clone_upcasting().release()));
-                // new_fn->block = block;
-            }
-            return new_fn;
+            throw "todo";
         }
     };
 
@@ -125,7 +150,7 @@ namespace ast {
         std::unique_ptr<Node> name_expr;
         std::vector<std::unique_ptr<Node> > args;
 
-        explicit FunctionCall(std::unique_ptr<Node> name_expr): name_expr(std::move(name_expr)) {
+        explicit FunctionCall(std::unique_ptr<Node> name_expr) : name_expr(std::move(name_expr)) {
         }
 
         NodeType get_type() const override { return NodeType::FunctionCall; }
@@ -138,6 +163,25 @@ namespace ast {
             }
             return new_call;
         }
+    };
+
+    class MemberGet : public Node {
+    public:
+        std::unique_ptr<Node> owner;
+        std::string property;
+
+        std::string to_str1() const override {
+            throw "todo";
+        }
+
+        NodeType get_type() const override { return NodeType::Member; }
+
+        std::unique_ptr<Node> clone_upcasting() const override {
+            throw "todo";
+        }
+
+        MemberGet(std::unique_ptr<Node> owner, std::string property_name) : owner(std::move(owner)),
+                                                                            property(std::move(property_name)) {}
     };
 
     class ArrayGet : public Node {
@@ -161,7 +205,7 @@ namespace ast {
     public:
         std::unique_ptr<Node> expr;
 
-        ReturnStmt(std::unique_ptr<Node> expr): expr(std::move(expr)) {
+        ReturnStmt(std::unique_ptr<Node> expr) : expr(std::move(expr)) {
         }
 
         NodeType get_type() const override { return NodeType::Return; }
@@ -181,8 +225,7 @@ namespace ast {
     public:
         const int64_t number;
 
-        explicit IntLitExpr(int64_t val) : number(val) {
-        }
+        explicit IntLitExpr(int64_t val) : number(val) {}
 
         NodeType get_type() const override { return NodeType::IntLit; }
 
@@ -190,6 +233,21 @@ namespace ast {
 
         std::unique_ptr<Node> clone_upcasting() const override {
             return std::make_unique<IntLitExpr>(number);
+        }
+    };
+
+    class StringLitExpr : public Node {
+    public:
+        const std::string val;
+
+        explicit StringLitExpr(std::string val) : val(std::move(val)) {}
+
+        NodeType get_type() const override { return NodeType::StringLit; }
+
+        [[nodiscard]] std::string to_str1() const override { throw "todo"; }
+
+        std::unique_ptr<Node> clone_upcasting() const override {
+            throw "todo";
         }
     };
 
@@ -220,7 +278,7 @@ namespace ast {
         std::unique_ptr<Node> efalse = nullptr;
 
         IfStmt(std::unique_ptr<Node> expr, std::unique_ptr<Node> etrue, std::unique_ptr<Node> efalse = nullptr)
-            : expr(std::move(expr)), etrue(std::move(etrue)), efalse(std::move(efalse)) {
+                : expr(std::move(expr)), etrue(std::move(etrue)), efalse(std::move(efalse)) {
         }
 
         NodeType get_type() const override { return NodeType::If; }
@@ -235,13 +293,34 @@ namespace ast {
         }
     };
 
+    class ForStmt : public Node {
+    public:
+        std::unique_ptr<Node> init;
+        std::unique_ptr<Node> cond;
+        std::unique_ptr<Node> inc;
+        std::unique_ptr<Block> body;
+
+        ForStmt() = default;
+//        ForStmt(std::unique_ptr<Node> init, std::unique_ptr<Node> cond, std::unique_ptr<Node> inc,
+//                std::unique_ptr<Block> body) : init(std::move(init)),
+//                cond(std::move(cond)),
+//                inc(std::move(inc)),
+//                body(std::move(body)) {}
+
+        NodeType get_type() const override { return NodeType::For; }
+
+        std::unique_ptr<Node> clone_upcasting() const override {
+            throw "todo";
+        }
+    };
+
     class WhileStmt : public Node {
     public:
         std::unique_ptr<Node> expr;
-        std::unique_ptr<Block> body;
+        std::unique_ptr<Node> body;
 
-        WhileStmt(std::unique_ptr<Node> expr, std::unique_ptr<Block> body) : expr(std::move(expr)),
-                                                                             body(std::move(body)) {
+        WhileStmt(std::unique_ptr<Node> expr, std::unique_ptr<Node> body) : expr(std::move(expr)),
+                                                                            body(std::move(body)) {
         }
 
         NodeType get_type() const override { return NodeType::While; }
@@ -249,8 +328,8 @@ namespace ast {
         std::unique_ptr<Node> clone_upcasting() const override {
             auto new_while = std::make_unique<WhileStmt>(expr->clone_upcasting(),
                                                          std::unique_ptr<Block>(
-                                                             static_cast<Block *>(body->clone_upcasting().
-                                                                 release())));
+                                                                 static_cast<Block *>(body->clone_upcasting().
+                                                                         release())));
             return new_while;
         }
     };

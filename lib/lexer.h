@@ -16,8 +16,11 @@ namespace parser {
     extern TokenData cur;
     extern TokenData prv;
 
+
     void keep_newlines();
     void skip_newlines();
+
+    void roll_back();
 
     int get_tok(int token_info = ANY_TOKEN_EXPECTED);
     void init_lexer(std::istream &in);

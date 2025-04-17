@@ -4,7 +4,7 @@ using parser_exception_param_test_suite = TestWithParam<std::string>;
 using FunctionFromFileTestSuite = Test;
 
 TEST(FunctionFromFileTestSuite, FileTests) {
-    EXPECT_NO_THROW(parse_program_throws("../../tests/test1.ct"));
+    EXPECT_NO_THROW(parse_program_throws("../../tests/sources/test1.ct"));
 }
 
 // ---Equals Tests---
