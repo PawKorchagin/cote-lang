@@ -61,6 +61,7 @@ fn lambdas() {
     } else {
         println("not even close");
     }
+    bad = "heelo" * (a, b, c) * ()->x * x -> x;
     literal = "hello world" * 2 + 3;//(
     literal = "hello world";
 }

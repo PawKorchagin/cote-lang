@@ -163,8 +163,11 @@ namespace {
         if (!match(TOKEN_LPAREN))
             return parser_throws(
                     error_msg("("));
-        //'(<identifier>,'     <-is lamda expression
-        //'(<identifier>)'       <-maybe lambda expression
+        //either (), (<identifier>), (<identifier>, ...)
+        if (cur.token == TOKEN_RPAREN) {
+            get_tok(OPERATOR_EXPECTED);
+            return std::make_unique<FunctionSignature>();
+        }
         if (cur.token == TOKEN_IDENTIFIER) {
             const std::string first = cur.identifier;
             if (get_tok(OPERATOR_EXPECTED) == TOKEN_COMMA) {
@@ -172,10 +175,7 @@ namespace {
             }
             roll_back();
         }
-        if (cur.token == TOKEN_RPAREN) {
-            get_tok(OPERATOR_EXPECTED);
-            return std::make_unique<FunctionSignature>();
-        }
+
         auto expr = parse_expression();
         if (cur.token != TOKEN_RPAREN)
             return parser_throws(
@@ -299,7 +299,7 @@ namespace parser {
     std::unique_ptr<Node> parse_while() {
         return parse_typical_statement(parse_expression, [](std::unique_ptr<Node> expr, std::unique_ptr<Node> body) {
             return std::make_unique<WhileStmt>(std::move(expr), std::move(body));
-        }, "( after while statement", ") in while statement");
+        }, "( after while", ") in while statement");
     }
 
     std::unique_ptr<Node> parse_for() {
@@ -314,7 +314,7 @@ namespace parser {
             return s;
         }, [](std::unique_ptr<Node> expr, std::unique_ptr<Node> body) {
             return std::make_unique<WhileStmt>(std::move(expr), std::move(body));
-        }, "( after while statement", ") in while statement");
+        }, "( after for", ") in for statement");
     }
 
     //make sure that cur.token != TOKEN_EOF && cur.token != TOKEN_RCURLY on call
@@ -343,31 +343,15 @@ namespace parser {
 
     //if anonymous: cur = first argument
     //otherwise: cur = function name
-    std::unique_ptr<FunctionDef> parse_function(bool anonymous) {
-        std::unique_ptr<FunctionDef> f = std::unique_ptr<FunctionDef>(new FunctionDef());
-        FunctionSignature fsig;
-        if (!anonymous) {
-            if (!match(TOKEN_IDENTIFIER)) {
-                return parser_throws(error_msg("function name"));
-            }
-            fsig.name = std::move(cur.identifier);
-            //cur.identifier = "";
-            if (!match(TOKEN_LPAREN)) return parser_throws(error_msg("("));
-        }
-        if (!parse_param_list<OPERATOR_EXPECTED>(TOKEN_RPAREN, [&]() {
-            if (cur.token != TOKEN_IDENTIFIER)
-                return parser_throws(error_msg("identifier in function definition")), false;
-            fsig.params.push_back(cur.identifier);
-            get_tok();
-            return true;
-        }))
-            return nullptr;
-        if (anonymous) {
-            if (cur.token != TOKEN_ARROW) return parser_throws(error_msg("-> in lambda expression"));
-            return ifn_lambda_body<FunctionDef>(std::make_unique<FunctionSignature>(fsig));
-        }
+    std::unique_ptr<FunctionDef> parse_function() {
+        if (!match(TOKEN_IDENTIFIER)) return parser_throws(error_msg("function name"));
+        std::string name = std::move(cur.identifier);
+        if (!match(TOKEN_LPAREN)) return parser_throws(error_msg("("));
+        auto header = parse_fn_params();
+        if (header == nullptr) return nullptr;
+        header->name = name;
         if (!match(TOKEN_LCURLY)) return parser_throws(error_msg("{ in function body"));
-        return std::make_unique<FunctionDef>(fsig, parse_block());
+        return std::make_unique<FunctionDef>(std::move(header), parse_block());
     }
 
     std::string token_to_string(TokenInfo tok, std::string temp_data) {

@@ -96,7 +96,7 @@ namespace parser {
 
     unique_ptr<ast::Node> parse_expression();
 
-    unique_ptr<ast::FunctionDef> parse_function(bool anonymous = false);
+    unique_ptr<ast::FunctionDef> parse_function();
 
     unique_ptr<ast::Block> parse_block();
 
