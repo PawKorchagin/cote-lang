@@ -9,6 +9,7 @@
 #include <vector>
 #include <stdexcept>
 #include <memory>
+#include <unistd.h>
 
 template<typename T>
 using unique_ptr = std::unique_ptr<T>;
@@ -74,6 +75,8 @@ namespace ast {
         // upcasting unique_ptr<Derived> to unique_ptr<Node> with honest copying objects
         virtual std::unique_ptr<Node> clone_upcasting() const = 0;
 
+        virtual std::unique_ptr<Node> move_upcasting() = 0;
+
         bool operator==(const Node &other) const;
 
         bool operator==(const Node *) const;
@@ -83,14 +86,14 @@ namespace ast {
 
     class FunctionSignature : public Node {
     public:
-
         std::string name;
         std::vector<std::string> params;
 
         FunctionSignature() = default;
 
         FunctionSignature(std::string name, std::string first_param) : name(std::move(name)),
-                                                                       params({std::move(first_param)}) {}
+                                                                       params({std::move(first_param)}) {
+        }
 
         std::string to_str1() const override {
             throw "todo";
@@ -103,6 +106,14 @@ namespace ast {
         unique_ptr<Node> clone_upcasting() const override {
             throw "todo";
         }
+
+        unique_ptr<Node> move_upcasting() override {
+            auto new_fn_sign = std::make_unique<FunctionSignature>();
+            new_fn_sign->name = std::move(name);
+            new_fn_sign->params = std::move(params);
+            return new_fn_sign;
+        }
+
         //TODO
     };
 
@@ -123,6 +134,12 @@ namespace ast {
             }
             return new_block;
         }
+
+        std::unique_ptr<Node> move_upcasting() override {
+            auto new_block = std::make_unique<Block>();
+            new_block->lines = std::move(lines);
+            return new_block;
+        }
     };
 
     class FunctionDef : public Node {
@@ -134,14 +151,21 @@ namespace ast {
 
         FunctionDef() = default;
 
-        FunctionDef(FunctionSignature sig, std::unique_ptr<Node> block) : signature(std::make_unique<FunctionSignature>(sig)),
-                                                                          block(std::move(block)) {}
+        FunctionDef(FunctionSignature sig, std::unique_ptr<Node> block) : signature(
+                                                                              std::make_unique<FunctionSignature>(sig)),
+                                                                          block(std::move(block)) {
+        }
 
         FunctionDef(std::unique_ptr<Node> sig, std::unique_ptr<Node> block) : signature(std::move(sig)),
-                                                                          block(std::move(block)) {}
+                                                                              block(std::move(block)) {
+        }
 
         std::unique_ptr<Node> clone_upcasting() const override {
             throw "todo";
+        }
+
+        std::unique_ptr<Node> move_upcasting() override {
+            return std::make_unique<FunctionDef>(std::move(signature), std::move(block));
         }
     };
 
@@ -163,6 +187,12 @@ namespace ast {
             }
             return new_call;
         }
+
+        std::unique_ptr<Node> move_upcasting() override {
+            auto new_call = std::make_unique<FunctionCall>(std::move(name_expr));
+            new_call->args = std::move(args);
+            return new_call;
+        }
     };
 
     class MemberGet : public Node {
@@ -180,8 +210,13 @@ namespace ast {
             throw "todo";
         }
 
+        std::unique_ptr<Node> move_upcasting() override {
+            throw "todo";
+        }
+
         MemberGet(std::unique_ptr<Node> owner, std::string property_name) : owner(std::move(owner)),
-                                                                            property(std::move(property_name)) {}
+                                                                            property(std::move(property_name)) {
+        }
     };
 
     class ArrayGet : public Node {
@@ -199,6 +234,10 @@ namespace ast {
             return std::make_unique<ArrayGet>(name_expr->clone_upcasting(),
                                               index->clone_upcasting());
         }
+
+        std::unique_ptr<Node> move_upcasting() override {
+            return std::make_unique<ArrayGet>(std::move(name_expr), std::move(index));
+        }
     };
 
     class ReturnStmt : public Node {
@@ -213,19 +252,24 @@ namespace ast {
         std::unique_ptr<Node> clone_upcasting() const override {
             return std::make_unique<ReturnStmt>(expr->clone_upcasting());
         }
+
+        std::unique_ptr<Node> move_upcasting() override {
+            return std::make_unique<ReturnStmt>(std::move(expr));
+        }
     };
 
     class Program {
     public:
         //function declaration (or const var declaration; TODO will be added later )
-        std::vector<std::unique_ptr<FunctionDef>> declarations;
+        std::vector<std::unique_ptr<FunctionDef> > declarations;
     };
 
     class IntLitExpr : public Node {
     public:
         const int64_t number;
 
-        explicit IntLitExpr(int64_t val) : number(val) {}
+        explicit IntLitExpr(int64_t val) : number(val) {
+        }
 
         NodeType get_type() const override { return NodeType::IntLit; }
 
@@ -234,13 +278,18 @@ namespace ast {
         std::unique_ptr<Node> clone_upcasting() const override {
             return std::make_unique<IntLitExpr>(number);
         }
+
+        std::unique_ptr<Node> move_upcasting() override {
+            return std::make_unique<IntLitExpr>(number); // No move needed for primitive type
+        }
     };
 
     class StringLitExpr : public Node {
     public:
         const std::string val;
 
-        explicit StringLitExpr(std::string val) : val(std::move(val)) {}
+        explicit StringLitExpr(std::string val) : val(std::move(val)) {
+        }
 
         NodeType get_type() const override { return NodeType::StringLit; }
 
@@ -248,6 +297,10 @@ namespace ast {
 
         std::unique_ptr<Node> clone_upcasting() const override {
             throw "todo";
+        }
+
+        std::unique_ptr<Node> move_upcasting() override {
+            return std::make_unique<StringLitExpr>(val);
         }
     };
 
@@ -269,6 +322,12 @@ namespace ast {
             new_var->type = type;
             return new_var;
         }
+
+        std::unique_ptr<Node> move_upcasting() override {
+            auto new_var = std::make_unique<VarExpr>(std::move(name));
+            new_var->type = type;
+            return new_var;
+        }
     };
 
     class IfStmt : public Node {
@@ -278,7 +337,7 @@ namespace ast {
         std::unique_ptr<Node> efalse = nullptr;
 
         IfStmt(std::unique_ptr<Node> expr, std::unique_ptr<Node> etrue, std::unique_ptr<Node> efalse = nullptr)
-                : expr(std::move(expr)), etrue(std::move(etrue)), efalse(std::move(efalse)) {
+            : expr(std::move(expr)), etrue(std::move(etrue)), efalse(std::move(efalse)) {
         }
 
         NodeType get_type() const override { return NodeType::If; }
@@ -288,6 +347,14 @@ namespace ast {
                                                    etrue->clone_upcasting());
             if (efalse) {
                 new_if->efalse = efalse->clone_upcasting();
+            }
+            return new_if;
+        }
+
+        std::unique_ptr<Node> move_upcasting() override {
+            auto new_if = std::make_unique<IfStmt>(std::move(expr), std::move(etrue));
+            if (efalse) {
+                new_if->efalse = std::move(efalse);
             }
             return new_if;
         }
@@ -301,15 +368,26 @@ namespace ast {
         std::unique_ptr<Block> body;
 
         ForStmt() = default;
-//        ForStmt(std::unique_ptr<Node> init, std::unique_ptr<Node> cond, std::unique_ptr<Node> inc,
-//                std::unique_ptr<Block> body) : init(std::move(init)),
-//                cond(std::move(cond)),
-//                inc(std::move(inc)),
-//                body(std::move(body)) {}
+
+        //        ForStmt(std::unique_ptr<Node> init, std::unique_ptr<Node> cond, std::unique_ptr<Node> inc,
+        //                std::unique_ptr<Block> body) : init(std::move(init)),
+        //                cond(std::move(cond)),
+        //                inc(std::move(inc)),
+        //                body(std::move(body)) {}
 
         NodeType get_type() const override { return NodeType::For; }
 
         std::unique_ptr<Node> clone_upcasting() const override {
+            throw "todo";
+        }
+
+        unique_ptr<Node> move_upcasting() override {
+            // return std::unique_ptr<ForStmt>(
+            //     std::move(init),
+            //     std::move(cond),
+            //     std::move(inc),
+            //     std::move(body)
+            //     );
             throw "todo";
         }
     };
@@ -328,9 +406,13 @@ namespace ast {
         std::unique_ptr<Node> clone_upcasting() const override {
             auto new_while = std::make_unique<WhileStmt>(expr->clone_upcasting(),
                                                          std::unique_ptr<Block>(
-                                                                 static_cast<Block *>(body->clone_upcasting().
-                                                                         release())));
+                                                             static_cast<Block *>(body->clone_upcasting().
+                                                                 release())));
             return new_while;
+        }
+
+        std::unique_ptr<Node> move_upcasting() override {
+            return std::make_unique<WhileStmt>(std::move(expr), std::move(body));
         }
     };
 
@@ -354,6 +436,10 @@ namespace ast {
 
         std::unique_ptr<Node> clone_upcasting() const override {
             return std::make_unique<UnaryExpr>(expr->clone_upcasting());
+        }
+
+        std::unique_ptr<Node> move_upcasting() override {
+            return std::make_unique<UnaryExpr>(std::move(expr));
         }
     };
 
@@ -405,6 +491,10 @@ namespace ast {
             return std::make_unique<BinaryExpr>(l->clone_upcasting(),
                                                 r->clone_upcasting());
         }
+
+        std::unique_ptr<Node> move_upcasting() override {
+            return std::make_unique<BinaryExpr>(std::move(l), std::move(r));
+        }
     };
 
     using AddExpr = BinaryExpr<BinaryOpType::ADD>;
@@ -424,9 +514,7 @@ namespace detail {
             default:
                 throw std::runtime_error("detail::get_type of ast::VarType with such type unimplemented");
         }
-
     }
 }
 
 #endif //CRYPT_AST_H
-
