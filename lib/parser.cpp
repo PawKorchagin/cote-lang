@@ -345,7 +345,7 @@ namespace parser {
     //otherwise: cur = function name
     std::unique_ptr<FunctionDef> parse_function() {
         if (!match(TOKEN_IDENTIFIER)) return parser_throws(error_msg("function name"));
-        std::string name = std::move(cur.identifier);
+        std::string name = std::move(prv.identifier);
         if (!match(TOKEN_LPAREN)) return parser_throws(error_msg("("));
         auto header = parse_fn_params();
         if (header == nullptr) return nullptr;

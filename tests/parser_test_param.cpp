@@ -9,7 +9,7 @@ using parser_no_exception_param_test_suite = TestWithParam<std::string>;
 
 TEST_P(parser_exception_param_test_suite, InvalidGroup) {
         const auto code = GetParam();
-        ASSERT_ANY_THROW(parse(code));
+        ASSERT_ANY_THROW(parse_throws_fromstr(code));
 }
 
 // --gtest_filter=*
@@ -26,8 +26,8 @@ INSTANTIATE_TEST_SUITE_P(
 );
 
 TEST_P(parser_exception_param_test_suite, CorrectGroup) {
-        const auto code = GetParam();
-        ASSERT_NO_THROW(parse(code));
+    const auto code = GetParam();
+    ASSERT_ANY_THROW(parse_throws_fromstr(code));
 }
 
 INSTANTIATE_TEST_SUITE_P(
