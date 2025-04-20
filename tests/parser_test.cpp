@@ -18,6 +18,7 @@ std::string parse_res(std::string x) {
 }
 
 TEST(CorrectParserExpressionTestWithAnswer, ExampleTest) {
+    ASSERT_NO_THROW(parse("x=y=z"));
     ASSERT_EQ(parse_res("1 - - 2"), "(1--(2))");
     ASSERT_EQ(parse_res(" 3 "), "3");
     ASSERT_EQ(parse_res(" 3 "), "3");

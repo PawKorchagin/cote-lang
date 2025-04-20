@@ -42,7 +42,7 @@ namespace parser {
         panic_mode = true;
 
         error_log.push_back(
-                std::to_string(cur.lines) + ":" + std::to_string(cur.cnt) + ": " + message);
+                std::to_string(cur.lines) + ":" + std::to_string(cur.cnt - 1) + ": " + message);
         return nullptr;
     }
 

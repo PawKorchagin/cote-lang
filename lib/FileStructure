@@ -29,4 +29,7 @@ struct Class {
 
 }
 
+When loading bytecode:
+
 //struct Foo{}
+
