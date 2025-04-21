@@ -19,6 +19,7 @@ namespace ast {
     enum class VarType {
         UNKNOWN,
         INT,
+        FN
         //:)
     };
 
@@ -64,26 +65,83 @@ namespace ast {
         Assign, // ?
     };
 
+    /**
+     * @brief Abstract base class for all AST nodes.
+     *
+     * Provides the interface for AST node manipulation and runtime type identification.
+     * All AST node types must inherit from this class.
+     */
     class Node {
     public:
-        virtual ~Node() = default;
-
+        /**
+         * @brief Returns string representation of the node.
+         *
+         * Intended for debug or pretty-printing.
+         *
+         * @returns string describing the node
+         */
         virtual std::string to_str1() const;
 
+        /**
+         * @brief Returns the specific node type.
+         *
+         * Used for downcasting or dispatching based on node semantics.
+         *
+         * @returns NodeType enum value
+         */
         virtual NodeType get_type() const = 0;
 
-        // upcasting unique_ptr<Derived> to unique_ptr<Node> with honest copying objects
+        /**
+         * @brief Clones the node polymorphically.
+         *
+         * Should create a deep copy of the node and return a base pointer.
+         * Used when the exact runtime type must be preserved but known only as Node.
+         *
+         * @returns unique_ptr<Node> with deep-copied content
+         */
         virtual std::unique_ptr<Node> clone_upcasting() const = 0;
 
+        /**
+         * @brief Moves ownership of the node polymorphically.
+         *
+         * Used in AST rewrites or transformations where structure can be modified.
+         *
+         * @returns unique_ptr<Node> transferring ownership of this node
+         */
         virtual std::unique_ptr<Node> move_upcasting() = 0;
 
+        /**
+         * @brief Equality operator.
+         *
+         * Performs structural comparison between nodes.
+         *
+         * @param other node to compare against
+         * @returns true if structurally equal
+         */
         bool operator==(const Node &other) const;
 
+        /**
+         * @brief Equality operator for pointer comparison.
+         *
+         * @param other pointer to another node
+         * @returns true if nodes are structurally equal
+         */
         bool operator==(const Node *) const;
 
+        /**
+         * @brief Inequality operator.
+         *
+         * @param other pointer to another node
+         * @returns true if nodes are structurally different
+         */
         bool operator!=(const Node *) const;
     };
 
+    /**
+     * @brief Represents a function signature (name and parameter names).
+     *
+     * Used in function definitions. Does not carry type information yet.
+     */
     class FunctionSignature : public Node {
     public:
         std::string name;
@@ -117,6 +175,15 @@ namespace ast {
         //TODO
     };
 
+    /**
+     * @class Block
+     * @brief Represents a block of code consisting of multiple statements or expressions.
+     *
+     * This node holds a sequence of other AST nodes, typically used to represent
+     * the body of functions, loops, or conditionals.
+     *
+     * @note Maintains ownership of all contained nodes.
+     */
     class Block : public Node {
     public:
         std::vector<std::unique_ptr<Node> > lines;
@@ -142,6 +209,17 @@ namespace ast {
         }
     };
 
+    /**
+     * @class FunctionDef
+     * @brief Represents a function definition consisting of a signature and body block.
+     *
+     * This node includes both the declaration (signature) and implementation (block)
+     * of the function. Signature may be constructed either from a FunctionSignature
+     * or a generic Node with appropriate type.
+     *
+     * @pre The `signature` and `block` pointers must not be null.
+     * @note Ownership of both the signature and the block is transferred.
+     */
     class FunctionDef : public Node {
     public:
         std::unique_ptr<Node> signature;
@@ -169,6 +247,16 @@ namespace ast {
         }
     };
 
+    /**
+     * @class FunctionCall
+     * @brief Represents a function call expression.
+     *
+     * Contains an expression representing the function being called
+     * and a list of argument expressions.
+     *
+     * @pre `name_expr` must not be null.
+     * @note Argument order is preserved.
+     */
     class FunctionCall : public Node {
     public:
         std::unique_ptr<Node> name_expr;
@@ -195,6 +283,15 @@ namespace ast {
         }
     };
 
+    /**
+     * @class MemberGet
+     * @brief Represents access to a member or property of an object.
+     *
+     * Used for expressions like `obj.property`.
+     *
+     * @pre `owner` must not be null.
+     * @throws std::runtime_error in unimplemented methods.
+     */
     class MemberGet : public Node {
     public:
         std::unique_ptr<Node> owner;
@@ -219,6 +316,14 @@ namespace ast {
         }
     };
 
+    /**
+     * @class ArrayGet
+     * @brief Represents indexed access to an array or similar container.
+     *
+     * Contains both the base expression and the index expression.
+     *
+     * @pre `name_expr` and `index` must not be null.
+     */
     class ArrayGet : public Node {
     public:
         std::unique_ptr<Node> name_expr;
@@ -240,6 +345,12 @@ namespace ast {
         }
     };
 
+    /**
+     * @class ReturnStmt
+     * @brief Represents a return statement with an optional return value.
+     *
+     * @pre `expr` must not be null.
+     */
     class ReturnStmt : public Node {
     public:
         std::unique_ptr<Node> expr;
@@ -258,12 +369,25 @@ namespace ast {
         }
     };
 
+    /**
+     * @class Program
+     * @brief Container node representing the top-level structure of a program.
+     *
+     * Stores all top-level declarations such as function definitions.
+     * Does not own or evaluate the contents directly.
+     */
     class Program {
     public:
         //function declaration (or const var declaration; TODO will be added later )
         std::vector<std::unique_ptr<FunctionDef> > declarations;
     };
 
+    /**
+     * @class IntLitExpr
+     * @brief Represents an integer literal expression.
+     *
+     * Holds a constant integer value.
+     */
     class IntLitExpr : public Node {
     public:
         const int64_t number;
@@ -305,6 +429,14 @@ namespace ast {
     };
 
     //actually any expression with identifier at first
+    /**
+     * @class VarExpr
+     * @brief Represents a variable usage or reference expression.
+     *
+     * May represent variables, functions, or other named entities.
+     *
+     * @note Variable type is stored separately for use in later semantic phases.
+     */
     class VarExpr : public Node {
     public:
         VarType type;
@@ -330,6 +462,14 @@ namespace ast {
         }
     };
 
+    /**
+     * @class IfStmt
+     * @brief Represents a conditional (if-else) statement.
+     *
+     * Contains the condition, true branch, and optional false branch.
+     *
+     * @pre `expr` and `etrue` must not be null.
+     */
     class IfStmt : public Node {
     public:
         std::unique_ptr<Node> expr;
@@ -360,6 +500,15 @@ namespace ast {
         }
     };
 
+    /**
+     * @class ForStmt
+     * @brief Represents a for-loop statement.
+     *
+     * Includes initialization, condition, increment, and loop body.
+     * The body must be a block.
+     *
+     * @note All members are optional and may be set manually after construction.
+     */
     class ForStmt : public Node {
     public:
         std::unique_ptr<Node> init;
@@ -392,6 +541,14 @@ namespace ast {
         }
     };
 
+    /**
+     * @class WhileStmt
+     * @brief Represents a while-loop statement.
+     *
+     * Contains the loop condition and the body to execute repeatedly.
+     *
+     * @pre `expr` and `body` must not be null.
+     */
     class WhileStmt : public Node {
     public:
         std::unique_ptr<Node> expr;
