@@ -92,8 +92,6 @@ namespace parser {
     constexpr int VALUE_EXPECTED = 2;
     constexpr int ANY_TOKEN_EXPECTED = OPERATOR_EXPECTED | VALUE_EXPECTED;
 
-    std::string token_to_string(TokenInfo tok, std::string temp_data);
-
     unique_ptr<ast::Node> parse_expression();
 
     unique_ptr<ast::FunctionDef> parse_function();

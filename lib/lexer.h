@@ -24,6 +24,9 @@ namespace parser {
 
     int get_tok(int token_info = ANY_TOKEN_EXPECTED);
     void init_lexer(std::istream &in);
+
+
+    std::string token_to_string(TokenInfo tok, std::string temp_data);
 }
 
 #endif //CRYPT_LEXER_H
