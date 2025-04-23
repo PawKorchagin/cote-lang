@@ -11,6 +11,7 @@
 //tif - ternary
 fn valOrCall(val) { if (isCallable(val)) return val(); else return val; }
 fn tif(cond, good, bad, other) {
+    x = () -> x;
     if (cond == null)
         return (cond, good, bad) -> {
             if (cond) return good;
@@ -61,8 +62,11 @@ fn lambdas() {
     a = (f).x;
     a = a -> b;
 
+    //x = (a, b, c);//TODO: reject like this
+    x = (a, b, c) -> y;
+    x = x -> z;
     empty_paren = () -> () -> 3;
-    ternary_max = (a, b) -> (a > b) -> a;
+    ternary_max = (a, b) -> x -> a;
     //ternary = (a, b) -> a == b ? a | b;
     //ternary_max = (a, b) -> (a > b) ? a | b;
     //ternary_abs = a -> a>0 ? a | -a;
@@ -109,7 +113,7 @@ fn lambdas() {
     } else {
         println("not even close");
     }
-    bad = "heelo" * (a, b, c) * ()->x * x -> x;
+    bad = "heelo" * (a, b, c) * (()->x) * (x -> x);
     literal = "hello world" * 2 + 3;//(
     literal = "hello world";
 }

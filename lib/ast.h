@@ -47,6 +47,7 @@ namespace ast {
     enum class NodeType {
         Block,
         FunctionDef,
+        FunctionSingature,
         FunctionCall,
         ArrayGet,
         Member,
@@ -62,6 +63,10 @@ namespace ast {
         BinaryMul,
         BinaryDiv,
         BinaryMinus,
+        BinaryGR,
+        BinaryLE,
+        BinaryLS,
+        BinaryGE,
         Assign, // ?
     };
 
@@ -154,15 +159,15 @@ namespace ast {
         }
 
         std::string to_str1() const override {
-            throw "todo";
+            throw std::runtime_error("todo");
         }
 
         NodeType get_type() const override {
-            throw "todo";
+            return NodeType::FunctionSingature;
         }
 
         unique_ptr<Node> clone_upcasting() const override {
-            throw "todo";
+            throw std::runtime_error("todo");
         }
 
         unique_ptr<Node> move_upcasting() override {
@@ -239,7 +244,7 @@ namespace ast {
         }
 
         std::unique_ptr<Node> clone_upcasting() const override {
-            throw "todo";
+            throw std::runtime_error("todo");
         }
 
         std::unique_ptr<Node> move_upcasting() override {
@@ -298,17 +303,17 @@ namespace ast {
         std::string property;
 
         std::string to_str1() const override {
-            throw "todo";
+            throw std::runtime_error("todo");
         }
 
         NodeType get_type() const override { return NodeType::Member; }
 
         std::unique_ptr<Node> clone_upcasting() const override {
-            throw "todo";
+            throw std::runtime_error("todo");
         }
 
         std::unique_ptr<Node> move_upcasting() override {
-            throw "todo";
+            throw std::runtime_error("todo");
         }
 
         MemberGet(std::unique_ptr<Node> owner, std::string property_name) : owner(std::move(owner)),
@@ -417,10 +422,10 @@ namespace ast {
 
         NodeType get_type() const override { return NodeType::StringLit; }
 
-        [[nodiscard]] std::string to_str1() const override { throw "todo"; }
+        [[nodiscard]] std::string to_str1() const override { throw std::runtime_error("todo"); }
 
         std::unique_ptr<Node> clone_upcasting() const override {
-            throw "todo";
+            throw std::runtime_error("todo");
         }
 
         std::unique_ptr<Node> move_upcasting() override {
@@ -527,7 +532,7 @@ namespace ast {
         NodeType get_type() const override { return NodeType::For; }
 
         std::unique_ptr<Node> clone_upcasting() const override {
-            throw "todo";
+            throw std::runtime_error("todo");
         }
 
         unique_ptr<Node> move_upcasting() override {
@@ -537,7 +542,7 @@ namespace ast {
             //     std::move(inc),
             //     std::move(body)
             //     );
-            throw "todo";
+            throw std::runtime_error("todo");
         }
     };
 
@@ -588,7 +593,7 @@ namespace ast {
                 case UnaryOpType::MINUS:
                     return NodeType::UnaryMinus;
             }
-            throw std::runtime_error("not implemented");
+            throw std::runtime_error("not implemented2");
         }
 
         std::unique_ptr<Node> clone_upcasting() const override {
@@ -620,8 +625,16 @@ namespace ast {
                     return NodeType::BinaryMinus;
                 case BinaryOpType::ASSIGN:
                     return NodeType::Assign;
+                case BinaryOpType::GR:
+                    return NodeType::BinaryGR;
+                case BinaryOpType::LE:
+                    return NodeType::BinaryLE;
+                case BinaryOpType::LS:
+                    return NodeType::BinaryLS;
+                case BinaryOpType::GE:
+                    return NodeType::BinaryGE;
                 default:
-                    throw std::runtime_error("not implemented");
+                    throw std::runtime_error("not implemented1");
             }
         }
 
