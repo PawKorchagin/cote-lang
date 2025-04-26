@@ -48,6 +48,9 @@ namespace {
     //cur.token = "->"
     template<typename T = Node>
     std::unique_ptr<T> ifn_lambda_body(std::unique_ptr<Node> lhs) {
+        if (lhs == nullptr || (lhs->get_type() != NodeType::FunctionSingature && lhs->get_type() != NodeType::Var)) {
+            return parser_throws(error_msg("lambda arguments before ->"));
+        }
         get_tok();
         return std::make_unique<FunctionDef>(std::move(lhs), match(TOKEN_LCURLY) ? parse_block() : parse_expression());
     }
