@@ -1,309 +1,427 @@
-//
-// Created by motya on 01.04.2025.
-//
-
 #include "vm.h"
 
-#include <cstdint>
-#include <cstdio>
+#include <cstdlib>
 #include <stdexcept>
-
-#include "misc.h"
-
-#define DISPATCH() workers[fetch() & low_6bits]()
-#define DISPATCH_FETCHED() workers[vm.cur]()
-
-#define J ((int32_t)(vm.cur >> interpreter::OPCODE_SIZE))
-#define C() ((vm.cur & argC) >> interpreter::OPCODE_SIZE)
-#define B() ((vm.cur & argB) >> (interpreter::OPCODE_SIZE + interpreter::SIZE_C))
-#define A() ((vm.cur & argA) >> (interpreter::OPCODE_SIZE + interpreter::SIZE_C + interpreter::SIZE_B))
-
-namespace {
-    using namespace interpreter;
-
-    constexpr uint32_t low_6bits = (1 << 6) - 1;
-
-    constexpr uint32_t argC = ((1 << SIZE_C) - 1) << OPCODE_SIZE;
-    constexpr uint32_t argB = ((1 << SIZE_B) - 1) << (SIZE_C + OPCODE_SIZE);
-    constexpr uint32_t argA = ((1 << SIZE_A) - 1) << (SIZE_B + SIZE_C + OPCODE_SIZE);
-    constexpr uint32_t argAX = ((1 << SIZE_AX) - 1) << OPCODE_SIZE;
-    constexpr uint32_t argJ = ((1 << SIZE_J) - 1) << OPCODE_SIZE;
-    constexpr uint32_t J_shift = ((1 << SIZE_J) - 1) >> 1;
-
-    typedef void (*service_f)();
-
-    interpreter::VMData vm;
-
-    void op_todo() {
-        throw std::runtime_error("operation " + std::to_string(vm.cur) + " not implemented");
-    }
-
-    void op_stop() {}
-
-    void op_return() {
-        op_todo();
-    }
-
-    void op_end() {
-        op_todo();
-    }
-
-    void op_push_constant();
-
-    void op_addi();
-
-    void op_subi();
-
-    void op_multi();
-
-    void op_divi();
-
-    void op_negate();
-
-    void op_jmpne();
-
-    void op_jmpeq();
-
-    void op_jmpge();
-
-    void op_jmpgt();
-
-    void op_jmple();
-
-    void op_jmplt();
-
-    void op_jmp();
-
-    void op_jmpt();
-
-    service_f workers[] = {
-            op_stop, op_end, op_return,                                 // Code block endings
-            op_push_constant, op_todo, op_todo,                                   // Pushes to stack
-            op_addi, op_subi, op_divi, op_multi, op_negate,            // In stack arithmetics
-            op_jmpne, op_jmpeq, op_jmplt, op_jmple, op_jmpgt, op_jmpge,  // Jumps
-            op_jmp, op_jmpt                                              // Jumps2
-    };
-
-    uint32_t fetch() {
-        // printf("op code: %i\n", vm.code[vm.ip] & low_6bits);
-        return vm.cur = vm.code[vm.ip++];
-    }
-
-    Value &peek(int offset = 0) {
-        return vm.stack[vm.sp - offset - 1];
-    }
-
-    std::pair<Value, Value> pop_two() {
-        vm.sp -= 2;
-        if (vm.sp < 0) {
-            throw std::runtime_error("tried to pop from empty stack");
-        }
-        return std::make_pair<>(peek(-1), peek(-2));
-    }
-
-    void run_program() {
-        DISPATCH();
-    }
-
-    void op_push_constant() {
-        vm.stack[vm.sp++] = vm.constant_pool[C()];
-        DISPATCH();
-    }
-
-    void op_addi() {
-        vm.sp--;
-        if (!(peek(0).mtype == ValueType::Int && peek(-1).mtype == ValueType::Int))
-            throw std::runtime_error("ERROR");
-        peek(0).mdata.asInt = peek(-1).mdata.asInt + peek(0).mdata.asInt;
-        DISPATCH();
-    }
-
-    void op_subi() {
-        vm.sp--;
-        if (!(peek(0).mtype == ValueType::Int && peek(-1).mtype == ValueType::Int))
-            throw std::runtime_error("ERROR");
-        peek(0).mdata.asInt = peek(-1).mdata.asInt - peek(0).mdata.asInt;
-        DISPATCH();
-    }
-
-    void op_multi() {
-        vm.sp--;
-        if (!(peek(0).mtype == ValueType::Int && peek(-1).mtype == ValueType::Int))
-            throw std::runtime_error("ERROR");
-        peek(0).mdata.asInt = peek(-1).mdata.asInt * peek(0).mdata.asInt;
-        DISPATCH();
-    }
-
-    void op_divi() {
-        vm.sp--;
-        if (!(peek(0).mtype == ValueType::Int && peek(-1).mtype == ValueType::Int))
-            throw std::runtime_error("ERROR");
-        else if (peek().mdata.asInt == 0)
-            throw std::runtime_error("Division by zero");
-        peek(0).mdata.asInt = peek(-1).mdata.asInt / peek(0).mdata.asInt;
-        DISPATCH();
-    }
-
-    void op_negate() {
-        peek().mdata.asInt = -peek().mdata.asInt;
-        DISPATCH();
-    }
-
-    void op_jmpne() {
-        std::pair<Value, Value> popped = pop_two();
-        vm.ip += J * int(nequal_val(popped.first, popped.second));
-        DISPATCH();
-    }
-
-    void op_jmpeq() {
-        std::pair<Value, Value> popped = pop_two();
-        vm.ip += J * int(equal_val(popped.first, popped.second));
-        DISPATCH();
-    }
-
-    void op_jmplt() {
-        std::pair<Value, Value> popped = pop_two();
-        vm.ip += J * int(less(popped.first, popped.second));
-        DISPATCH();
-    }
-
-    void op_jmple() {
-        std::pair<Value, Value> popped = pop_two();
-        vm.ip += J * int(less_equal(popped.first, popped.second));
-        DISPATCH();
-    }
-
-    void op_jmpge() {
-        std::pair<Value, Value> popped = pop_two();
-        vm.ip += J * int(greater_equal(popped.first, popped.second));
-        DISPATCH();
-    }
-
-    void op_jmpgt() {
-        std::pair<Value, Value> popped = pop_two();
-        vm.ip += J * int(greater(popped.first, popped.second));
-        DISPATCH();
-    }
-
-    void op_jmp() {
-        vm.ip += J;
-    }
-
-    void op_jmpt() {
-        vm.sp--;
-        vm.ip += J * (peek(-1).mdata.asInt != 0);
-    }
-}  // namespace
 
 namespace interpreter {
 
-    VMData& vm_instance()  { return vm; }
+VMData& vm_instance() {
+    static VMData instance;
+    return instance;
+}
 
-    void run() {
-        run_program();
-    }
+void run() {
+    VMData& vm = vm_instance();
 
-    bool equal_val(Value val1, Value val2) {
-        if (val1.mtype != val2.mtype)
-            return false;
+    while (true) {
+        uint32_t instr = vm.code[vm.ip++];
+        OpCode op      = static_cast<OpCode>(instr >> OPCODE_SHIFT);
 
-        switch (val1.mtype) {
-            case ValueType::Char:
-            case ValueType::Int:
-                return val1.mdata.asInt == val2.mdata.asInt;
-            case ValueType::Double:
-                return val1.mdata.asDouble == val2.mdata.asDouble;
+        uint8_t a   = (instr >> A_SHIFT) & A_ARG;
+        uint8_t b   = (instr >> B_SHIFT) & B_ARG;
+        uint8_t c   = instr & C_ARG;
+        uint32_t bx = instr & BX_ARG;
+
+        switch (op) {
+        case OP_LOAD:
+            op_load(vm, a, bx);
+            break;
+        case OP_MOVE:
+            op_move(vm, a, b);
+            break;
+        case OP_LOADNIL:
+            op_loadnil(vm, a);
+            break;
+        case OP_ADD:
+            op_add(vm, a, b, c);
+            break;
+        case OP_SUB:
+            op_sub(vm, a, b, c);
+            break;
+        case OP_MUL:
+            op_mul(vm, a, b, c);
+            break;
+        case OP_DIV:
+            op_div(vm, a, b, c);
+            break;
+        case OP_MOD:
+            op_mod(vm, a, b, c);
+            break;
+        case OP_NEG:
+            op_neg(vm, a, b);
+            break;
+        case OP_EQ:
+            op_eq(vm, a, b, c);
+            break;
+        case OP_LT:
+            op_lt(vm, a, b, c);
+            break;
+        case OP_LE:
+            op_le(vm, a, b, c);
+            break;
+        case OP_JMP: {
+            int32_t sbx = static_cast<int32_t>(instr & BX_ARG) - J_ZERO;
+            op_jmp(vm, sbx);
+            break;
+        }
+        case OP_JMPT: {
+            int32_t sbx = static_cast<int32_t>(instr & BX_ARG) - J_ZERO;
+            op_jmpt(vm, a, sbx);
+            break;
+        }
+        case OP_JMPF: {
+            int32_t sbx = static_cast<int32_t>(instr & BX_ARG) - J_ZERO;
+            op_jmpf(vm, a, sbx);
+            break;
+        }
+        case OP_CALL:
+            op_call(vm, a, b);
+            break;
+        case OP_RETURN:
+            op_return(vm, a);
+            break;
+        case OP_NEWOBJ:
+            op_newobj(vm, a, bx);
+            break;
+        case OP_GETFIELD:
+            op_getfield(vm, a, b, c);
+            break;
+        case OP_SETFIELD:
+            op_setfield(vm, a, b, c);
+            break;
+        case OP_HALT:
+            op_halt(vm);
+            return;
+        default:
+            throw std::runtime_error("Unknown opcode");
         }
     }
+}
 
-    bool nequal_val(Value val1, Value val2) {
-        return !equal_val(val1, val2);
+void op_load(VMData& vm, uint8_t reg, uint32_t const_idx) {
+    if (const_idx >= vm.constants.size()) {
+        throw std::out_of_range("Constant index out of range");
     }
+    vm.sp = std::max(static_cast<uint32_t>(reg), vm.sp);
+    vm.stack[vm.fp + reg] = vm.constants[const_idx];
+}
 
-    bool less(Value val1, Value val2) {
-        if (val1.mtype != val2.mtype)
-            throw std::runtime_error("Calling less on different types");
+void op_move(VMData& vm, uint8_t dst, uint8_t src) {
+    vm.stack[vm.fp + dst] = vm.stack[vm.fp + src];
+}
 
-        switch (val1.mtype) {
-            case ValueType::Char:
-            case ValueType::Int:
-                return val1.mdata.asInt < val2.mdata.asInt;
-            case ValueType::Double:
-                return val1.mdata.asDouble < val2.mdata.asDouble;
+void op_loadnil(VMData& vm, uint8_t reg) {
+    vm.stack[vm.fp + reg] = Value{};
+}
+
+void op_add(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
+    Value& v1             = vm.stack[vm.fp + src1];
+    Value& v2             = vm.stack[vm.fp + src2];
+    vm.stack[vm.fp + dst] = add_values(v1, v2);
+}
+
+void op_sub(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
+    Value& v1             = vm.stack[vm.fp + src1];
+    Value& v2             = vm.stack[vm.fp + src2];
+    vm.stack[vm.fp + dst] = sub_values(v1, v2);
+}
+
+void op_mul(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
+    Value& v1             = vm.stack[vm.fp + src1];
+    Value& v2             = vm.stack[vm.fp + src2];
+    vm.stack[vm.fp + dst] = mul_values(v1, v2);
+}
+
+void op_div(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
+    Value& v1             = vm.stack[vm.fp + src1];
+    Value& v2             = vm.stack[vm.fp + src2];
+    vm.stack[vm.fp + dst] = div_values(v1, v2);
+}
+
+void op_mod(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
+    Value& v1 = vm.stack[vm.fp + src1];
+    Value& v2 = vm.stack[vm.fp + src2];
+
+    if (v1.is_int() && v2.is_int()) {
+        if (v2.as.i32 == 0)
+            throw std::runtime_error("Division by zero");
+
+        Value res;
+        res.type = ValueType::Int;
+        res.as.i32 = v1.as.i32 % v2.as.i32;
+        vm.stack[vm.fp + dst] = res;
+    } else {
+        throw std::runtime_error("Modulo requires integer operands");
+    }
+}
+
+void op_neg(VMData& vm, uint8_t dst, uint8_t src) {
+    Value& v = vm.stack[vm.fp + src];
+    Value res;
+
+    if (v.is_int()) {
+        res.type = ValueType::Int;
+        res.as.i32 = -v.as.i32;
+    } else if (v.is_float()) {
+        res.type = ValueType::Float;
+        res.as.f32 = -v.as.f32;
+    } else {
+        throw std::runtime_error("Cannot negate non-numeric value");
+    }
+    vm.stack[vm.fp + dst] = res;
+}
+
+void op_eq(VMData& vm, const uint8_t dst, const uint8_t src1, const uint8_t src2) {
+    auto& [type1, data1] = vm.stack[vm.fp + src1];
+    auto& [type2, data2] = vm.stack[vm.fp + src2];
+
+    Value res;
+    res.type = ValueType::Int;
+    res.as.i32 = 0;
+
+    if (type1 == type2) {
+        switch (type1) {
+        case ValueType::Int:
+            res.as.i32 = data1.i32 == data2.i32;
+            break;
+        case ValueType::Float:
+            res.as.i32 = data1.f32 == data2.f32;
+            break;
+        case ValueType::Char:
+            res.as.i32 = data1.c == data2.c;
+            break;
+        case ValueType::Object:
+            res.as.i32 = data1.object_ptr == data2.object_ptr;
+            break;
+        case ValueType::Nil:
+            res.as.i32 = 1;
+            break;
+        default:
+            res.as.i32 = 0;
         }
     }
+    vm.stack[vm.fp + dst] = res;
+}
 
-    bool less_equal(Value val1, Value val2) {
-        if (val1.mtype != val2.mtype)
-            throw std::runtime_error("Calling less or equal on different types");
+void op_lt(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
+    const Value& v1 = vm.stack[vm.fp + src1];
+    const Value& v2 = vm.stack[vm.fp + src2];
+    Value res;
+    res.type = ValueType::Int;
 
-        switch (val1.mtype) {
-            case ValueType::Char:
-            case ValueType::Int:
-                return val1.mdata.asInt <= val2.mdata.asInt;
-            case ValueType::Double:
-                return val1.mdata.asDouble <= val2.mdata.asDouble;
-        }
+    if (v1.is_int() && v2.is_int())
+        res.as.i32 = v1.as.i32 < v2.as.i32;
+    else if (v1.is_float() && v2.is_float())
+        res.as.i32 = v1.as.f32 < v2.as.f32;
+    else if (v1.is_char() && v2.is_char())
+        res.as.i32 = v1.as.c < v2.as.c;
+    else
+        throw std::runtime_error("Comparison requires compatible types");
+
+    vm.stack[vm.fp + dst] = res;
+}
+
+void op_le(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
+    const Value& v1 = vm.stack[vm.fp + src1];
+    const Value& v2 = vm.stack[vm.fp + src2];
+    Value res;
+    res.type = ValueType::Int;
+
+    if (v1.is_int() && v2.is_int())
+        res.as.i32 = v1.as.i32 <= v2.as.i32;
+    else if (v1.is_float() && v2.is_float())
+        res.as.i32 = v1.as.f32 <= v2.as.f32;
+    else if (v1.is_char() && v2.is_char())
+        res.as.i32 = v1.as.c <= v2.as.c;
+    else
+        throw std::runtime_error("Comparison requires compatible types");
+
+    vm.stack[vm.fp + dst] = res;
+}
+
+void op_jmp(VMData& vm, int32_t offset) {
+    vm.ip += offset;
+}
+
+void op_jmpt(VMData& vm, uint8_t cond, int32_t offset) {
+    if (is_truthy(vm.stack[vm.fp + cond])) {
+        vm.ip += offset;
+    }
+}
+
+void op_jmpf(VMData& vm, uint8_t cond, int32_t offset) {
+    if (!is_truthy(vm.stack[vm.fp + cond])) {
+        vm.ip += offset;
+    }
+}
+
+void op_call(VMData& vm, uint8_t func_idx, uint8_t arg_count) {
+    if (func_idx >= FUNCTIONS_MAX) {
+        throw std::out_of_range("Function index out of range");
     }
 
-    bool greater(Value val1, Value val2) {
-        if (val1.mtype != val2.mtype)
-            throw std::runtime_error("Calling greater on different types");
-
-        switch (val1.mtype) {
-            case ValueType::Char:
-            case ValueType::Int:
-                return val1.mdata.asInt > val2.mdata.asInt;
-            case ValueType::Double:
-
-                return val1.mdata.asDouble > val2.mdata.asDouble;
-        }
+    Function& func = vm.functions[func_idx];
+    if (arg_count != func.arity) {
+        throw std::runtime_error("Argument count mismatch");
     }
 
-    bool greater_equal(Value val1, Value val2) {
-        if (val1.mtype != val2.mtype)
-            throw std::runtime_error("Calling greater on different types");
+    vm.call_stack.push(CallFrame{vm.ip, vm.fp});
 
-        switch (val1.mtype) {
-            case ValueType::Char:
-            case ValueType::Int:
-                return val1.mdata.asInt >= val2.mdata.asInt;
-            case ValueType::Double:
-                return val1.mdata.asDouble >= val2.mdata.asDouble;
-        }
+    vm.fp = vm.sp;
+    vm.sp += func.local_count;
+
+    vm.ip = func.entry_point;
+}
+
+void op_return(VMData& vm, uint8_t result_reg) {
+    if (vm.call_stack.empty()) {
+        op_halt(vm);
+        return;
     }
 
-    void example() {
-        vm.constant_pool[0] = Value(ValueType::Int, 3);
-        vm.constant_pool[1] = Value(ValueType::Int, 2);
-        vm.code[0] = OP_CONSTANT;
-        vm.code[1] = 0;
-        vm.code[2] = OP_CONSTANT;
-        vm.code[3] = 1;
-        vm.code[4] = OP_ADDI;
-        run_program();
-        if (!(peek(0).mtype == ValueType::Int && peek(0).mdata.asInt == 5)) {
-            throw std::runtime_error("oops");
-        }
+    // Save return value
+    Value result = vm.stack[vm.fp + result_reg];
+
+    // Restore previous frame
+    CallFrame frame = vm.call_stack.top();
+    vm.call_stack.pop();
+
+    vm.sp = vm.fp;            // Pop locals
+    vm.fp = frame.base_ptr;   // Restore frame pointer
+    vm.ip = frame.return_ip;  // Restore instruction pointer
+
+    // Push result to caller's stack
+    vm.stack[vm.fp] = result;
+}
+
+// TAG: GC maybe want to do smth here
+void op_newobj(VMData& vm, uint8_t dst, uint32_t context_idx) {
+    if (context_idx >= vm.contexts.size()) {
+        throw std::out_of_range("context index out of range");
+    }
+    if (vm.heap_size >= HEAP_MAX_SIZE) {
+        //TAG: GC
     }
 
-    void jmp_example() {
-        vm.constant_pool[0] = Value(ValueType::Int, 3);
-        vm.constant_pool[1] = Value(ValueType::Int, 2);
-        vm.constant_pool[2] = Value(ValueType::Int, 100000);
-        vm.constant_pool[3] = Value(ValueType::Int, 5);
-        vm.code[0] = OP_CONSTANT + 0;                            // 3
-        vm.code[1] = OP_CONSTANT + (1 << OPCODE_SIZE);           // 2
-        vm.code[2] = OP_CONSTANT + (3 << OPCODE_SIZE);           // 5
-        vm.code[3] = OP_JMPNE + ((1 + J_shift) << OPCODE_SIZE);  // skip next operation
-        vm.code[4] = OP_CONSTANT + (2 << OPCODE_SIZE);           // if not skipped pulls big number into stack
-        vm.code[5] = OP_CONSTANT + (1 << OPCODE_SIZE);           // 2
-        vm.code[6] = OP_ADDI;                                    // expected to add 3 and 2
-        run_program();
+    const ObjectContext field_count = vm.contexts[context_idx];
+    Object* obj = new Object{context_idx, std::vector<Value>(field_count)};
+    vm.heap[vm.heap_size] = obj;
 
-        if (!(peek().mtype == ValueType::Int && peek().mdata.asInt == 5)) {
-            throw std::runtime_error("jump example failed");
-        }
+    Value newobj;
+    newobj.type = ValueType::Object;
+    newobj.as.object_ptr = vm.heap_size;
+    vm.stack[vm.fp + dst] = newobj;
+
+    vm.heap_size++;
+}
+
+void op_getfield(VMData& vm, uint8_t dst, uint8_t obj, uint8_t field_idx) {
+    Value& obj_val  = vm.stack[vm.fp + obj];
+    Object* obj_ptr = vm.heap[obj_val.as.object_ptr];
+    if (field_idx >= obj_ptr->fields.size()) {
+        throw std::out_of_range("No such field");
     }
+
+    vm.stack[vm.fp + dst] = obj_ptr->fields[field_idx];
+}
+
+void op_setfield(VMData& vm, uint8_t obj, uint8_t field_idx, uint8_t src) {
+    Value& obj_val  = vm.stack[vm.fp + obj];
+    Object* obj_ptr = vm.heap[obj_val.as.object_ptr];
+    if (field_idx >= obj_ptr->fields.size()) {
+        throw std::out_of_range("No such field");
+    }
+
+    obj_ptr->fields[field_idx] = vm.stack[vm.fp + src];
+}
+
+void op_halt(VMData& vm) {
+    vm.ip = CODE_MAX_SIZE - 1;  // Stop execution
+}
+
+Value add_values(const Value& a, const Value& b) {
+    Value res;
+
+    if (a.is_int() && b.is_int()) {
+        res.type   = ValueType::Int;
+        res.as.i32 = a.as.i32 + b.as.i32;
+    } else {
+        res.type   = ValueType::Float;
+        float fa   = a.is_int() ? static_cast<float>(a.as.i32) : a.as.f32;
+        float fb   = b.is_int() ? static_cast<float>(b.as.i32) : b.as.f32;
+        res.as.f32 = fa + fb;
+    }
+
+    return res;
+}
+
+Value sub_values(const Value& a, const Value& b) {
+    Value res;
+
+    if (a.is_int() && b.is_int()) {
+        res.type   = ValueType::Int;
+        res.as.i32 = a.as.i32 - b.as.i32;
+    } else {
+        res.type   = ValueType::Float;
+        float fa   = a.is_int() ? static_cast<float>(a.as.i32) : a.as.f32;
+        float fb   = b.is_int() ? static_cast<float>(b.as.i32) : b.as.f32;
+        res.as.f32 = fa - fb;
+    }
+
+    return res;
+}
+
+Value mul_values(const Value& a, const Value& b) {
+    Value res;
+
+    if (a.is_int() && b.is_int()) {
+        res.type   = ValueType::Int;
+        res.as.i32 = a.as.i32 * b.as.i32;
+    } else {
+        res.type   = ValueType::Float;
+        float fa   = a.is_int() ? static_cast<float>(a.as.i32) : a.as.f32;
+        float fb   = b.is_int() ? static_cast<float>(b.as.i32) : b.as.f32;
+        res.as.f32 = fa * fb;
+    }
+
+    return res;
+}
+
+Value div_values(const Value& a, const Value& b) {
+    if (b.is_int() && b.as.i32 == 0)
+        throw std::runtime_error("Division by zero");
+    if (b.is_float() && b.as.f32 == 0.0f)
+        throw std::runtime_error("Division by zero");
+
+    Value res;
+    if (a.is_int() && b.is_int()) {
+        res.type   = ValueType::Int;
+        res.as.i32 = a.as.i32 / b.as.i32;
+    } else {
+        res.type   = ValueType::Float;
+        float fa   = a.is_int() ? static_cast<float>(a.as.i32) : a.as.f32;
+        float fb   = b.is_int() ? static_cast<float>(b.as.i32) : b.as.f32;
+        res.as.f32 = fa / fb;
+    }
+
+    return res;
+}
+
+bool is_truthy(const Value& val) {
+    if (val.is_nil())
+        return false;
+    if (val.is_int())
+        return val.as.i32 != 0;
+    if (val.is_float())
+        return val.as.f32 != 0.0f;
+    if (val.is_char())
+        return val.as.c != '\0';
+    return true;  // Objects are always truthy
+}
+
+void init_vm(std::istream& in) {
+    // Initialization logic would go here
+    // Load bytecode, constants, contextes, etc.
+}
 
 }  // namespace interpreter

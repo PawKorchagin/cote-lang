@@ -1,132 +1,241 @@
-//
-// Created by motya on 01.04.2025.
-//
-
 #ifndef CRYPT_VM_H
 #define CRYPT_VM_H
 
 #include <cstdint>
 #include <fstream>
+#include <stack>
+#include <vector>
 
 namespace interpreter {
-    using byte = uint8_t;
 
-// supports: int, double, {char, objects, array, null}?
-// something like this: https://www.lua.org/source/4.0/lopcodes.h.html
-//  or like this: https://github.com/munificent/craftinginterpreters/blob/master/c/chunk.h
-//  each instruction is 1 byte
-    enum OpCode {
+enum OpCode {
+    // Loads a constant into a register
+    // Args: a - destination register, bx - constant pool index
+    // Behavior: registers[a] = constants[bx]
+    OP_LOAD,
 
-        //== Code block endings
+    // Copies value between registers
+    // Args: a - destination register, b - source register
+    // Behavior: registers[a] = registers[b]
+    OP_MOVE,
 
-        OP_STOP,
-        OP_END,     // return from void function
-        OP_RETURN,  // returns from function
+    // Loads nil into a register
+    // Args: a - target register
+    // Behavior: registers[a] = nil
+    OP_LOADNIL,
 
-        //== Pushes to stack
+    // Adds two values
+    // Args: a - destination, b - first operand, c - second operand
+    // Behavior: registers[a] = registers[b] + registers[c] (int/float)
+    OP_ADD,
 
-        OP_CONSTANT,   // C -> pushes constant on the stack
-        OP_GET_LOCAL,  // pushes local var value TODO:
-        OP_SET_LOCAL,  // set local var value from stack TODO:
+    // Subtracts two values
+    // Args: Same as OP_ADD
+    // Behavior: registers[a] = registers[b] - registers[c]
+    OP_SUB,
 
-        //== In stack arithmetics
+    // Multiplies two values
+    // Args: Same as OP_ADD
+    // Behavior: registers[a] = registers[b] * registers[c]
+    OP_MUL,
 
-        OP_ADDI,
-        OP_SUBI,
-        OP_DIVI,
-        OP_MULI,
-        OP_NEGATE,
-        /*
-                OP_ADDD,
-                OP_SUBD,
-                OP_DIVD,
-                OP_MULD,
-                not needed right now
-        */
+    // Divides two values
+    // Args: Same as OP_ADD
+    // Behavior: registers[a] = registers[b] / registers[c]
+    OP_DIV,
 
-        //== Jumps
+    // Modulo operation (integers only)
+    // Args: Same as OP_ADD
+    // Behavior: registers[a] = registers[b] % registers[c]
+    OP_MOD,
 
-        // does pc += J if predicate on popped from stack is true
-        OP_JMPNE,  // J -> not equal
-        OP_JMPEQ,  // J -> equal
-        OP_JMPLT,  // J -> less
-        OP_JMPLE,  // J -> less or equals
-        OP_JMPGT,  // J -> greater
-        OP_JMPGE,  // J -> greater or equal
+    // Arithmetic negation
+    // Args: a - destination, b - source register
+    // Behavior: registers[a] = -registers[b]
+    OP_NEG,
 
-        OP_JMP,   // J -> does pc += J
-        OP_JMPT,  // J -> does pc += J if popped != 0
-        // OP_JMPF,//jump if false(or null)??? false == null????
+    // Equality comparison
+    // Args: a - result register (1/0), b - first operand, c - second operand
+    // Behavior: registers[a] = (registers[b] == registers[c]) ? 1 : 0
+    OP_EQ,
 
-        // TODO: clojures, classes, objects, arrays; (for, while - more specific)
+    // Less-than comparison
+    // Args: Same as OP_EQ
+    // Behavior: registers[a] = (registers[b] < registers[c]) ? 1 : 0
+    OP_LT,
 
-    };
-    enum class ValueType : uint8_t {
-        Int,
-        Double,
-        Char,
-    };
+    // Less-or-equal comparison
+    // Args: Same as OP_EQ
+    // Behavior: registers[a] = (registers[b] <= registers[c]) ? 1 : 0
+    OP_LE,
 
-    union ValueData {
-        int64_t asInt;
-        double asDouble;
+    // Unconditional jump
+    // Args: sbx - signed offset
+    // Behavior: ip += sbx
+    OP_JMP,
 
-        ValueData(int64_t asInt) : asInt(asInt) {}
-        // TODO: obj, array,...
-    };
+    // Jump if true
+    // Args: a - condition register, sbx - signed offset
+    // Behavior: if (registers[a]) ip += sbx
+    OP_JMPT,
 
-    struct Value {
-        ValueType mtype;
-        ValueData mdata;
+    // Jump if false
+    // Args: Same as OP_JMPT
+    // Behavior: if (!registers[a]) ip += sbx
+    OP_JMPF,
 
-        Value(ValueType mtype, ValueData mdata) : mtype(mtype), mdata(mdata) {}
+    // Function call
+    // Args: a - function index, b - argument count
+    // Behavior:
+    //   1. Pushes current ip/fp to call stack
+    //   2. Sets new fp = sp
+    //   3. sp += local_count
+    //   4. Jumps to function entry_point
+    OP_CALL,
 
-        Value() : Value(ValueType::Int, 1) {}
-    };
+    // Return from function
+    // Args: a - result register
+    // Behavior:
+    //   1. Restores ip/fp from call stack
+    //   2. Sets sp = fp
+    //   3. Stores result in caller's register 0
+    OP_RETURN,
 
-// Codes and arguments sizes
-    static constexpr int OPCODE_SIZE = 6;
-    static constexpr int SIZE_C = 9;
-    static constexpr int SIZE_B = 9;
-    static constexpr int SIZE_A = 8;
-    static constexpr int SIZE_AX = 26;
-    static constexpr int SIZE_J = 18;
+    // Creates new object
+    // Args: a - destination register, bx - class index
+    // Behavior:
+    //   1. Allocates heap memory
+    //   2. Initializes fields
+    //   3. registers[a] = object reference
+    OP_NEWOBJ,
 
-// Internal interpreter sizes
-    static constexpr int MAX_CONSTANTS = 1 << 8;
-    static constexpr int PROGRAM_STACK_SIZE = 1024;
-    struct VMData {
-        Value constant_pool[MAX_CONSTANTS];
-        int constant_count = 0;
-        uint32_t ip = 0, sp = 0;
-        uint32_t cur = 0;
-        uint32_t code[1024];  // actually will contain list of function - each has a pointer to a block of code
+    // Reads object field
+    // Args: a - destination, b - object register, c - field index
+    // Behavior: registers[a] = object(b).fields[c]
+    OP_GETFIELD,
 
-        Value stack[PROGRAM_STACK_SIZE];
-    };
+    // Writes object field
+    // Args: a - object register, b - field index, c - value register
+    // Behavior: object(a).fields[b] = registers[c]
+    OP_SETFIELD,
 
-    bool less(Value val1, Value val2);
+    // Stops execution
+    // Args: none
+    // Behavior: terminates VM execution
+    OP_HALT
+};
 
-    bool less_equal(Value val1, Value val2);
+enum class ValueType : uint8_t { Nil, Int, Float, Char, Object };
 
-    bool equal_val(Value val1, Value val2);
+struct Value {
+    ValueType type = ValueType::Nil;
+    union {
+        int32_t i32;
+        float f32;
+        char c;
+        uint32_t object_ptr;
+    } as{};
 
-    bool nequal_val(Value val1, Value val2);
+    bool is_nil() const { return type == ValueType::Nil; }
+    bool is_int() const { return type == ValueType::Int; }
+    bool is_float() const { return type == ValueType::Float; }
+    bool is_char() const { return type == ValueType::Char; }
+    bool is_object() const { return type == ValueType::Object; }
+};
 
-    bool greater(Value val1, Value val2);
+struct Object {
+    uint32_t context_index;
+    std::vector<Value> fields;
+};
 
-    bool greater_equal(Value val1, Value val2);
+struct Function {
+    uint32_t entry_point;
+    uint8_t arity;
+    uint8_t local_count;
+};
 
-    void run();
+typedef uint16_t ObjectContext;  // literally is just amount of fields, counted during compilation
 
-    void example();
+// Memory limits
+static constexpr uint32_t CODE_MAX_SIZE = 4096;
+static constexpr uint32_t STACK_SIZE    = 4096;
+static constexpr uint32_t HEAP_MAX_SIZE = 65536;
+static constexpr uint32_t FUNCTIONS_MAX = 256;
+static constexpr uint32_t CLASSES_MAX   = 256;
 
-    void jmp_example();
+// Dispatch constants
+static constexpr uint32_t A_ARG        = 0xFF;
+static constexpr uint32_t A_SHIFT      = 18;
+static constexpr uint32_t B_ARG        = 0x1FF;
+static constexpr uint32_t B_SHIFT      = 9;
+static constexpr uint32_t C_ARG        = 0x1FF;
+static constexpr uint32_t BX_ARG       = 0x3FFFF;
+static constexpr uint32_t OPCODE_SHIFT = 26;
+static constexpr uint32_t C_SHIFT      = 0;
+static constexpr uint32_t SBX_SHIFT    = 0;
+static constexpr uint32_t J_ZERO       = BX_ARG >> 1;
 
-    VMData& vm_instance();
+struct CallFrame {
+    uint32_t return_ip;
+    uint32_t base_ptr;
+};
 
-// inits from file(or any other stream); TODO (example - jvm)
-    void init_vm(std::istream &in);
+struct VMData {
+    //  Static data: must be filled before running vm
+    std::vector<Value> constants;
+    std::vector<ObjectContext> contexts;
+    Function functions[FUNCTIONS_MAX];
+
+    // Heap storage
+    Object* heap[HEAP_MAX_SIZE];
+    uint32_t heap_size = 0;
+
+    // Execution state
+    Value stack[STACK_SIZE];
+    uint32_t code[CODE_MAX_SIZE];
+
+    uint32_t ip = 0;  // Instruction pointer
+    uint32_t sp = 0;  // Stack pointer
+    uint32_t fp = 0;  // Frame pointer
+    std::stack<CallFrame> call_stack;
+};
+
+// Core VM functions
+void run();
+void init_vm(std::istream& in);
+VMData& vm_instance();
+
+// Helper functions
+Value add_values(const Value& a, const Value& b);
+Value sub_values(const Value& a, const Value& b);
+Value mul_values(const Value& a, const Value& b);
+Value div_values(const Value& a, const Value& b);
+bool is_truthy(const Value& val);
+Value convert_value(const Value& val, ValueType target_type);
+
+// Instruction implementations
+void op_load(VMData& vm, uint8_t reg, uint32_t const_idx);
+void op_move(VMData& vm, uint8_t dst, uint8_t src);
+void op_loadnil(VMData& vm, uint8_t reg);
+void op_add(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+void op_sub(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+void op_mul(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+void op_div(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+void op_mod(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+void op_neg(VMData& vm, uint8_t dst, uint8_t src);
+void op_eq(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+void op_lt(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+void op_le(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+void op_jmp(VMData& vm, int32_t offset);
+void op_jmpt(VMData& vm, uint8_t cond, int32_t offset);
+void op_jmpf(VMData& vm, uint8_t cond, int32_t offset);
+void op_call(VMData& vm, uint8_t func_idx, uint8_t arg_count);
+void op_return(VMData& vm, uint8_t result_reg);
+void op_newobj(VMData& vm, uint8_t dst, uint32_t class_idx);
+void op_getfield(VMData& vm, uint8_t dst, uint8_t obj, uint8_t field_idx);
+void op_setfield(VMData& vm, uint8_t obj, uint8_t field_idx, uint8_t src);
+void op_halt(VMData& vm);
+
 };  // namespace interpreter
 
 #endif  // CRYPT_VM_H
