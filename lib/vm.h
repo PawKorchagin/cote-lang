@@ -206,12 +206,18 @@ void init_vm(std::istream& in);
 VMData& vm_instance();
 
 // Helper functions
+uint32_t opcode(OpCode code, uint8_t a, uint32_t bx);
+uint32_t opcode(OpCode code, uint8_t a, uint8_t b, uint8_t c);
+uint32_t halt();
+uint32_t jmp(int32_t offset);
+
 Value add_values(const Value& a, const Value& b);
 Value sub_values(const Value& a, const Value& b);
 Value mul_values(const Value& a, const Value& b);
 Value div_values(const Value& a, const Value& b);
 bool is_truthy(const Value& val);
 Value convert_value(const Value& val, ValueType target_type);
+
 
 // Instruction implementations
 void op_load(VMData& vm, uint8_t reg, uint32_t const_idx);

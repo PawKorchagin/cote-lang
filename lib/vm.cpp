@@ -4,7 +4,6 @@
 #include <stdexcept>
 
 namespace interpreter {
-
 VMData& vm_instance() {
     static VMData instance;
     return instance;
@@ -102,7 +101,7 @@ void op_load(VMData& vm, uint8_t reg, uint32_t const_idx) {
     if (const_idx >= vm.constants.size()) {
         throw std::out_of_range("Constant index out of range");
     }
-    vm.sp = std::max(static_cast<uint32_t>(reg), vm.sp);
+    vm.sp                 = std::max(static_cast<uint32_t>(reg), vm.sp);
     vm.stack[vm.fp + reg] = vm.constants[const_idx];
 }
 
@@ -147,8 +146,8 @@ void op_mod(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
             throw std::runtime_error("Division by zero");
 
         Value res;
-        res.type = ValueType::Int;
-        res.as.i32 = v1.as.i32 % v2.as.i32;
+        res.type              = ValueType::Int;
+        res.as.i32            = v1.as.i32 % v2.as.i32;
         vm.stack[vm.fp + dst] = res;
     } else {
         throw std::runtime_error("Modulo requires integer operands");
@@ -160,10 +159,10 @@ void op_neg(VMData& vm, uint8_t dst, uint8_t src) {
     Value res;
 
     if (v.is_int()) {
-        res.type = ValueType::Int;
+        res.type   = ValueType::Int;
         res.as.i32 = -v.as.i32;
     } else if (v.is_float()) {
-        res.type = ValueType::Float;
+        res.type   = ValueType::Float;
         res.as.f32 = -v.as.f32;
     } else {
         throw std::runtime_error("Cannot negate non-numeric value");
@@ -176,7 +175,7 @@ void op_eq(VMData& vm, const uint8_t dst, const uint8_t src1, const uint8_t src2
     auto& [type2, data2] = vm.stack[vm.fp + src2];
 
     Value res;
-    res.type = ValueType::Int;
+    res.type   = ValueType::Int;
     res.as.i32 = 0;
 
     if (type1 == type2) {
@@ -300,16 +299,16 @@ void op_newobj(VMData& vm, uint8_t dst, uint32_t context_idx) {
         throw std::out_of_range("context index out of range");
     }
     if (vm.heap_size >= HEAP_MAX_SIZE) {
-        //TAG: GC
+        // TAG: GC
     }
 
     const ObjectContext field_count = vm.contexts[context_idx];
-    Object* obj = new Object{context_idx, std::vector<Value>(field_count)};
-    vm.heap[vm.heap_size] = obj;
+    Object* obj                     = new Object{context_idx, std::vector<Value>(field_count)};
+    vm.heap[vm.heap_size]           = obj;
 
     Value newobj;
-    newobj.type = ValueType::Object;
-    newobj.as.object_ptr = vm.heap_size;
+    newobj.type           = ValueType::Object;
+    newobj.as.object_ptr  = vm.heap_size;
     vm.stack[vm.fp + dst] = newobj;
 
     vm.heap_size++;
@@ -417,6 +416,23 @@ bool is_truthy(const Value& val) {
     if (val.is_char())
         return val.as.c != '\0';
     return true;  // Objects are always truthy
+}
+
+
+uint32_t opcode(OpCode code, uint8_t a, uint32_t bx) {
+    return (static_cast<int>(code) << OPCODE_SHIFT) | (a << A_SHIFT) | bx;
+}
+
+uint32_t opcode(OpCode code, uint8_t a, uint8_t b, uint8_t c) {
+    return (static_cast<int>(code) << OPCODE_SHIFT) | (a << A_SHIFT) | (b << B_SHIFT) | c;
+}
+
+uint32_t halt() {
+    return (static_cast<int>(OP_HALT) << OPCODE_SHIFT);
+}
+
+uint32_t jmp(int32_t offset) {
+    return (static_cast<int>(OP_JMP) << OPCODE_SHIFT) | (offset + J_ZERO);
 }
 
 void init_vm(std::istream& in) {
