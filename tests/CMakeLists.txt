@@ -19,6 +19,7 @@ add_executable(
         parser_test_param.cpp
         utils.h
         analyze_param_test.cpp
+        compile_test.cpp
 )
 
 target_link_libraries(crypt_test PRIVATE crypt_lib GTest::gtest_main)

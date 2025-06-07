@@ -95,34 +95,6 @@ namespace analysis {
                 analyze(std::move(binary_sub->r));
                 break;
             }
-            case NodeType::Assign: {
-                auto *expr = dynamic_cast<BinaryExpr<BinaryOpType::ASSIGN> *>(node.get());
-                auto left = analyze(std::move(expr->l));
-                auto right = analyze(std::move(expr->r));
-
-                // ?
-                if (!left) {
-                    throw lvalue_error("no lvalue presented");
-                }
-
-                // ?
-                if (!right) {
-                    throw rvalue_error("no rvalue presented");
-                }
-
-                if (left && left->get_type() != NodeType::Var) {
-                    throw lvalue_error("lvalue can be only variable, but got: TODO");
-                }
-
-                const auto* var = dynamic_cast<VarExpr*>(left.get());
-
-                // var can be unknown
-                // if (var->type == VarType::UNKNOWN) {
-                //     throw lvalue_error("unknow type of lvalue");
-                // }
-
-                break;
-            }
             case NodeType::IntLit:
                 break;
             case NodeType::Var:

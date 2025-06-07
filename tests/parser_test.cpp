@@ -7,6 +7,7 @@ TEST(FunctionFromFileTestSuite, FileTests) {
     EXPECT_NO_THROW(parse_program_throws("../../tests/sources/test1.ct"));
 }
 
+
 // ---Equals Tests---
 
 using CorrectParserExpressionTestWithAnswer = Test;
@@ -19,25 +20,25 @@ std::string parse_res(std::string x) {
 
 TEST(CorrectParserExpressionTestWithAnswer, ExampleTest) {
     ASSERT_NO_THROW(parse("x=y=z"));
-    ASSERT_EQ(parse_res("1 - - 2"), "(1--(2))");
+    ASSERT_EQ(parse_res("1 - - 2"), "(1--2)");
     ASSERT_EQ(parse_res(" 3 "), "3");
     ASSERT_EQ(parse_res(" 3 "), "3");
     ASSERT_EQ(parse_res("-3"), "-3");
-    ASSERT_EQ(parse_res(" - 3392032 "), "-(3392032)");
+    ASSERT_EQ(parse_res(" - 3392032 "), "-3392032");
     EXPECT_EQ(parse_res("-9223372036854775808"), "-9223372036854775808");
     EXPECT_EQ(parse_res("9223372036854775807"), "9223372036854775807");
     EXPECT_EQ(parse_res("-9223372036854775807"), "-9223372036854775807");
     ASSERT_EQ(parse_res("_1"), "_1");
     ASSERT_EQ(parse_res("_2vdsda232"), "_2vdsda232");
     ASSERT_EQ(parse_res("___h_1_21___212"), "___h_1_21___212");
-    ASSERT_EQ(parse_res("1 - - 2"), "(1--(2))");
-    ASSERT_EQ(parse_res(" - - 1"), "-(-(1))");
+    ASSERT_EQ(parse_res("1 - - 2"), "(1--2)");
+    ASSERT_EQ(parse_res(" - - 1"), "-(-1)");
     ASSERT_EQ(parse_res(" - -1"), "-(-1)");
-    ASSERT_EQ(parse_res("- 2-2"), "(-(2)-2)");
-    ASSERT_EQ(parse_res("- 2- 2"), "(-(2)-2)");
-    ASSERT_EQ(parse_res("- 2 -2"), "(-(2)-2)");
+    ASSERT_EQ(parse_res("- 2-2"), "(-2-2)");
+    ASSERT_EQ(parse_res("- 2- 2"), "(-2-2)");
+    ASSERT_EQ(parse_res("- 2 -2"), "(-2-2)");
     ASSERT_EQ(parse_res("-2 - -2"), "(-2--2)");
-    ASSERT_EQ(parse_res("-2 - - 2"), "(-2--(2))");
+    ASSERT_EQ(parse_res("-2 - - 2"), "(-2--2)");
     ASSERT_EQ(parse_res("(x)*y"), "(x*y)");
     ASSERT_EQ(parse_res("(x*y)*7"), "((x*y)*7)");
     ASSERT_EQ(parse_res("(((( (((x*7)*7))))))"), "((x*7)*7)");

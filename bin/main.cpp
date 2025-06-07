@@ -16,7 +16,7 @@ using namespace ast;
 
 inline auto parse(const std::string &text) {
     auto in = std::stringstream(text);
-    parser::init_parser(in);
+    parser::init_parser(in, new BytecodeEmitter());
     auto expr = parse_program();
     return expr;
 }
