@@ -85,7 +85,10 @@ enum OpCode {
     OP_JMPF,
 
     // Function call
-    // Args: a - function index, b - argument count
+    // Args:
+    // a - function index,
+    // b - index of register with first argument,
+    // c - argument count
     // Behavior:
     //   1. Pushes current ip/fp to call stack
     //   2. Sets new fp = sp
@@ -100,6 +103,11 @@ enum OpCode {
     //   2. Sets sp = fp
     //   3. Stores result in caller's register 0
     OP_RETURN,
+
+    // Return nil from function
+    // Behavior:
+    // Works like return, but writes NIL to R0
+    OP_RETURNNIL,
 
     // Creates new object
     // Args: a - destination register, bx - class index
@@ -161,7 +169,7 @@ static constexpr uint32_t CODE_MAX_SIZE = 4096;
 static constexpr uint32_t STACK_SIZE    = 4096;
 static constexpr uint32_t HEAP_MAX_SIZE = 65536;
 static constexpr uint32_t FUNCTIONS_MAX = 256;
-static constexpr uint32_t CLASSES_MAX   = 256;
+static constexpr uint32_t CALL_MAX_SIZE = 2000;
 
 // Dispatch constants
 static constexpr uint32_t A_ARG        = 0xFF;
@@ -205,7 +213,32 @@ void run();
 void init_vm(std::istream& in);
 VMData& vm_instance();
 
-// Helper functions
+// Helper functions (creating opcode)
+
+// For: OP_LOAD, OP_NEWOBJ
+uint32_t opcode(OpCode code, uint8_t a, uint32_t bx);
+
+// For: OP_MOVE(!better use move() to not mistake), OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD,
+//                OP_EQ, OP_LT, OP_LE, OP_GETFIELD, OP_SETFIELD
+uint32_t opcode(OpCode code, uint8_t a, uint8_t b, uint8_t c);
+
+// For: OP_RETURN
+//      OP_LOADNIL
+//      OP_NEG
+uint32_t opcode(OpCode code, uint8_t a);
+
+// For: OP_RETURNNIL, OP_HALT
+uint32_t opcode(OpCode code);
+
+uint32_t halt();
+uint32_t jmp(int32_t offset);
+uint32_t jmpt(uint8_t a, int32_t offset);
+uint32_t jmpf(uint8_t a, int32_t offset);
+uint32_t move(uint8_t a, uint8_t b);
+
+// Printing opcode
+void print_opcode(uint32_t instruction);
+
 Value add_values(const Value& a, const Value& b);
 Value sub_values(const Value& a, const Value& b);
 Value mul_values(const Value& a, const Value& b);
@@ -229,8 +262,9 @@ void op_le(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
 void op_jmp(VMData& vm, int32_t offset);
 void op_jmpt(VMData& vm, uint8_t cond, int32_t offset);
 void op_jmpf(VMData& vm, uint8_t cond, int32_t offset);
-void op_call(VMData& vm, uint8_t func_idx, uint8_t arg_count);
+void op_call(VMData& vm, uint8_t func_idx, uint8_t first_arg_ind, uint8_t num_args);
 void op_return(VMData& vm, uint8_t result_reg);
+void op_returnnil(VMData& vm);
 void op_newobj(VMData& vm, uint8_t dst, uint32_t class_idx);
 void op_getfield(VMData& vm, uint8_t dst, uint8_t obj, uint8_t field_idx);
 void op_setfield(VMData& vm, uint8_t obj, uint8_t field_idx, uint8_t src);
