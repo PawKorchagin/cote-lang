@@ -85,7 +85,10 @@ enum OpCode {
     OP_JMPF,
 
     // Function call
-    // Args: a - function index, b - argument count
+    // Args:
+    // a - function index,
+    // b - index of register with first argument,
+    // c - argument count
     // Behavior:
     //   1. Pushes current ip/fp to call stack
     //   2. Sets new fp = sp
@@ -210,15 +213,31 @@ void run();
 void init_vm(std::istream& in);
 VMData& vm_instance();
 
-// Helper functions
+// Helper functions (creating opcode)
+
+// For: OP_LOAD, OP_NEWOBJ
 uint32_t opcode(OpCode code, uint8_t a, uint32_t bx);
+
+// For: OP_MOVE(!better use move() to not mistake), OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD,
+//                OP_EQ, OP_LT, OP_LE, OP_GETFIELD, OP_SETFIELD
 uint32_t opcode(OpCode code, uint8_t a, uint8_t b, uint8_t c);
-uint32_t opcode(OpCode code, uint8_t a);  // RETURN, LOADNIL
-uint32_t opcode(OpCode code);             // RETURNNIL, HALT
+
+// For: OP_RETURN
+//      OP_LOADNIL
+//      OP_NEG
+uint32_t opcode(OpCode code, uint8_t a);
+
+// For: OP_RETURNNIL, OP_HALT
+uint32_t opcode(OpCode code);
+
 uint32_t halt();
 uint32_t jmp(int32_t offset);
 uint32_t jmpt(uint8_t a, int32_t offset);
 uint32_t jmpf(uint8_t a, int32_t offset);
+uint32_t move(uint8_t a, uint8_t b);
+
+// Printing opcode
+void print_opcode(uint32_t instruction);
 
 Value add_values(const Value& a, const Value& b);
 Value sub_values(const Value& a, const Value& b);

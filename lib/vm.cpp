@@ -1,6 +1,7 @@
 #include "vm.h"
 
 #include <cstdlib>
+#include <iostream>
 #include <stdexcept>
 
 namespace interpreter {
@@ -489,12 +490,101 @@ uint32_t jmpf(uint8_t a, int32_t offset) {
     return (static_cast<int>(OP_JMPF) << OPCODE_SHIFT) | (a << A_SHIFT) | (offset + J_ZERO);
 }
 
+uint32_t move(uint8_t a, uint8_t b) {
+    return (static_cast<int>(OP_JMPF) << OPCODE_SHIFT) | (a << A_SHIFT) | (b << B_SHIFT) | 0;
+}
+
 uint32_t opcode(OpCode code, uint8_t reg_index) {
     return (static_cast<int>(code) << OPCODE_SHIFT) | (reg_index << A_SHIFT);
 }
 
 uint32_t opcode(OpCode code) {
     return (static_cast<int>(code) << OPCODE_SHIFT) ;
+}
+
+void print_opcode(uint32_t instruction) {
+    // Extract arguments from instruction
+    uint8_t opcode = instruction >> OPCODE_SHIFT;
+    uint8_t a = (instruction >> A_SHIFT) & 0xFF;
+    uint8_t b = (instruction >> B_SHIFT) & 0xFF;
+    uint8_t c = (instruction >> C_SHIFT) & 0xFF;
+    uint16_t bx = (instruction >> SBX_SHIFT) & 0xFFFF;
+    uint16_t sbx = bx;
+
+    // Print opcode name and arguments in one switch
+    switch(opcode) {
+        case OP_LOAD:
+            std::cout << "LOAD        R" << (int)a << " = constants[" << bx << "]";
+            break;
+        case OP_MOVE:
+            std::cout << "MOVE        R" << (int)a << " = R" << (int)b;
+            break;
+        case OP_LOADNIL:
+            std::cout << "LOADNIL     R" << (int)a << " = nil";
+            break;
+        case OP_ADD:
+            std::cout << "ADD         R" << (int)a << " = R" << (int)b << " + R" << (int)c;
+            break;
+        case OP_SUB:
+            std::cout << "SUB         R" << (int)a << " = R" << (int)b << " - R" << (int)c;
+            break;
+        case OP_MUL:
+            std::cout << "MUL         R" << (int)a << " = R" << (int)b << " * R" << (int)c;
+            break;
+        case OP_DIV:
+            std::cout << "DIV         R" << (int)a << " = R" << (int)b << " / R" << (int)c;
+            break;
+        case OP_MOD:
+            std::cout << "MOD         R" << (int)a << " = R" << (int)b << " % R" << (int)c;
+            break;
+        case OP_NEG:
+            std::cout << "NEG         R" << (int)a << " = -R" << (int)b;
+            break;
+        case OP_EQ:
+            std::cout << "EQ          R" << (int)a << " = R" << (int)b << " == R" << (int)c;
+            break;
+        case OP_LT:
+            std::cout << "LT          R" << (int)a << " = R" << (int)b << " < R" << (int)c;
+            break;
+        case OP_LE:
+            std::cout << "LE          R" << (int)a << " = R" << (int)b << " <= R" << (int)c;
+            break;
+        case OP_JMP:
+            std::cout << "JMP         ip += " << sbx;
+            break;
+        case OP_JMPT:
+            std::cout << "JMPT        if R" << (int)a << " ip += " << sbx;
+            break;
+        case OP_JMPF:
+            std::cout << "JMPF        if !R" << (int)a << " ip += " << sbx;
+            break;
+        case OP_CALL:
+            std::cout << "CALL        func[" << (int)a << "](args R" << (int)b
+                      << "..R" << (int)(b + c - 1) << ")";
+            break;
+        case OP_RETURN:
+            std::cout << "RETURN      return R" << (int)a;
+            break;
+        case OP_RETURNNIL:
+            std::cout << "RETURNNIL   return nil";
+            break;
+        case OP_NEWOBJ:
+            std::cout << "NEWOBJ      R" << (int)a << " = new obj(class[" << bx << "])";
+            break;
+        case OP_GETFIELD:
+            std::cout << "GETFIELD    R" << (int)a << " = R" << (int)b << ".field[" << (int)c << "]";
+            break;
+        case OP_SETFIELD:
+            std::cout << "SETFIELD    R" << (int)a << ".field[" << (int)b << "] = R" << (int)c;
+            break;
+        case OP_HALT:
+            std::cout << "HALT        halt";
+            break;
+        default:
+            std::cout << "UNKNOWN     unknown opcode";
+            break;
+    }
+    std::cout << std::endl;
 }
 
 void init_vm(std::istream& in) {
