@@ -74,10 +74,13 @@ void run() {
             break;
         }
         case OP_CALL:
-            op_call(vm, a, b);
+            op_call(vm, a, b, c);
             break;
         case OP_RETURN:
             op_return(vm, a);
+            break;
+        case OP_RETURNNIL:
+            op_returnnil(vm);
             break;
         case OP_NEWOBJ:
             op_newobj(vm, a, bx);
@@ -97,44 +100,56 @@ void run() {
     }
 }
 
+void update_sp(VMData& vm, uint8_t reg) {
+    if (vm.fp == 0) {
+        vm.sp = std::max(static_cast<uint32_t>(reg), vm.sp);
+    }
+}
+
 void op_load(VMData& vm, uint8_t reg, uint32_t const_idx) {
     if (const_idx >= vm.constants.size()) {
         throw std::out_of_range("Constant index out of range");
     }
-    vm.sp                 = std::max(static_cast<uint32_t>(reg), vm.sp);
+    update_sp(vm, reg);
     vm.stack[vm.fp + reg] = vm.constants[const_idx];
 }
 
 void op_move(VMData& vm, uint8_t dst, uint8_t src) {
     vm.stack[vm.fp + dst] = vm.stack[vm.fp + src];
+    update_sp(vm, dst);
 }
 
 void op_loadnil(VMData& vm, uint8_t reg) {
     vm.stack[vm.fp + reg] = Value{};
+    update_sp(vm, reg);
 }
 
 void op_add(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
     Value& v1             = vm.stack[vm.fp + src1];
     Value& v2             = vm.stack[vm.fp + src2];
     vm.stack[vm.fp + dst] = add_values(v1, v2);
+    update_sp(vm, dst);
 }
 
 void op_sub(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
     Value& v1             = vm.stack[vm.fp + src1];
     Value& v2             = vm.stack[vm.fp + src2];
     vm.stack[vm.fp + dst] = sub_values(v1, v2);
+    update_sp(vm, dst);
 }
 
 void op_mul(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
     Value& v1             = vm.stack[vm.fp + src1];
     Value& v2             = vm.stack[vm.fp + src2];
     vm.stack[vm.fp + dst] = mul_values(v1, v2);
+    update_sp(vm, dst);
 }
 
 void op_div(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
     Value& v1             = vm.stack[vm.fp + src1];
     Value& v2             = vm.stack[vm.fp + src2];
     vm.stack[vm.fp + dst] = div_values(v1, v2);
+    update_sp(vm, dst);
 }
 
 void op_mod(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
@@ -149,6 +164,7 @@ void op_mod(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
         res.type              = ValueType::Int;
         res.as.i32            = v1.as.i32 % v2.as.i32;
         vm.stack[vm.fp + dst] = res;
+        update_sp(vm, dst);
     } else {
         throw std::runtime_error("Modulo requires integer operands");
     }
@@ -168,6 +184,7 @@ void op_neg(VMData& vm, uint8_t dst, uint8_t src) {
         throw std::runtime_error("Cannot negate non-numeric value");
     }
     vm.stack[vm.fp + dst] = res;
+    update_sp(vm, dst);
 }
 
 void op_eq(VMData& vm, const uint8_t dst, const uint8_t src1, const uint8_t src2) {
@@ -200,6 +217,7 @@ void op_eq(VMData& vm, const uint8_t dst, const uint8_t src1, const uint8_t src2
         }
     }
     vm.stack[vm.fp + dst] = res;
+    update_sp(vm, dst);
 }
 
 void op_lt(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
@@ -218,6 +236,7 @@ void op_lt(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
         throw std::runtime_error("Comparison requires compatible types");
 
     vm.stack[vm.fp + dst] = res;
+    update_sp(vm, dst);
 }
 
 void op_le(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
@@ -236,6 +255,7 @@ void op_le(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2) {
         throw std::runtime_error("Comparison requires compatible types");
 
     vm.stack[vm.fp + dst] = res;
+    update_sp(vm, dst);
 }
 
 void op_jmp(VMData& vm, int32_t offset) {
@@ -254,19 +274,28 @@ void op_jmpf(VMData& vm, uint8_t cond, int32_t offset) {
     }
 }
 
-void op_call(VMData& vm, uint8_t func_idx, uint8_t arg_count) {
+void op_call(VMData& vm, uint8_t func_idx, uint8_t first_arg_ind, uint8_t num_args) {
     if (func_idx >= FUNCTIONS_MAX) {
         throw std::out_of_range("Function index out of range");
     }
 
     Function& func = vm.functions[func_idx];
-    if (arg_count != func.arity) {
+    if (num_args != func.arity) {
         throw std::runtime_error("Argument count mismatch");
     }
 
+    if (vm.call_stack.size() >= CALL_MAX_SIZE) {
+        throw std::runtime_error("Call stack overflow");
+    }
     vm.call_stack.push(CallFrame{vm.ip, vm.fp});
 
-    vm.fp = vm.sp;
+    // elements from R(first_arg_ind) to R(first_arg_ind + num_args)
+    // copied to first registers in function
+    for (uint8_t i = 1; i <= num_args; i++) {
+        vm.stack[vm.sp + i + 1] = vm.stack[vm.fp + first_arg_ind + i - 1];
+    }
+
+    vm.fp = vm.sp + 1;
     vm.sp += func.local_count;
 
     vm.ip = func.entry_point;
@@ -278,19 +307,37 @@ void op_return(VMData& vm, uint8_t result_reg) {
         return;
     }
 
-    // Save return value
     Value result = vm.stack[vm.fp + result_reg];
 
     // Restore previous frame
     CallFrame frame = vm.call_stack.top();
     vm.call_stack.pop();
 
-    vm.sp = vm.fp;            // Pop locals
+    vm.sp = vm.fp - 1;            // Pop locals
     vm.fp = frame.base_ptr;   // Restore frame pointer
     vm.ip = frame.return_ip;  // Restore instruction pointer
 
-    // Push result to caller's stack
+    // result in reg0 of current fp
     vm.stack[vm.fp] = result;
+}
+
+void op_returnnil(VMData& vm) {
+    if (vm.call_stack.empty()) {
+        op_halt(vm);
+        return;
+    }
+
+    // Restore previous frame
+    CallFrame frame = vm.call_stack.top();
+    vm.call_stack.pop();
+
+    vm.sp = vm.fp - 1;            // Pop locals
+    vm.fp = frame.base_ptr;   // Restore frame pointer
+    vm.ip = frame.return_ip;  // Restore instruction pointer
+
+    Value res;
+    res.type = ValueType::Nil;
+    vm.stack[vm.fp] = res;
 }
 
 // TAG: GC maybe want to do smth here
@@ -418,7 +465,6 @@ bool is_truthy(const Value& val) {
     return true;  // Objects are always truthy
 }
 
-
 uint32_t opcode(OpCode code, uint8_t a, uint32_t bx) {
     return (static_cast<int>(code) << OPCODE_SHIFT) | (a << A_SHIFT) | bx;
 }
@@ -433,6 +479,22 @@ uint32_t halt() {
 
 uint32_t jmp(int32_t offset) {
     return (static_cast<int>(OP_JMP) << OPCODE_SHIFT) | (offset + J_ZERO);
+}
+
+uint32_t jmpt(uint8_t a, int32_t offset) {
+    return (static_cast<int>(OP_JMPT) << OPCODE_SHIFT) | (a << A_SHIFT) | (offset + J_ZERO);
+}
+
+uint32_t jmpf(uint8_t a, int32_t offset) {
+    return (static_cast<int>(OP_JMPF) << OPCODE_SHIFT) | (a << A_SHIFT) | (offset + J_ZERO);
+}
+
+uint32_t opcode(OpCode code, uint8_t reg_index) {
+    return (static_cast<int>(code) << OPCODE_SHIFT) | (reg_index << A_SHIFT);
+}
+
+uint32_t opcode(OpCode code) {
+    return (static_cast<int>(code) << OPCODE_SHIFT) ;
 }
 
 void init_vm(std::istream& in) {

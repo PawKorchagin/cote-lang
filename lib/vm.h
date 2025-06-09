@@ -101,6 +101,11 @@ enum OpCode {
     //   3. Stores result in caller's register 0
     OP_RETURN,
 
+    // Return nil from function
+    // Behavior:
+    // Works like return, but writes NIL to R0
+    OP_RETURNNIL,
+
     // Creates new object
     // Args: a - destination register, bx - class index
     // Behavior:
@@ -161,7 +166,7 @@ static constexpr uint32_t CODE_MAX_SIZE = 4096;
 static constexpr uint32_t STACK_SIZE    = 4096;
 static constexpr uint32_t HEAP_MAX_SIZE = 65536;
 static constexpr uint32_t FUNCTIONS_MAX = 256;
-static constexpr uint32_t CLASSES_MAX   = 256;
+static constexpr uint32_t CALL_MAX_SIZE = 2000;
 
 // Dispatch constants
 static constexpr uint32_t A_ARG        = 0xFF;
@@ -208,8 +213,12 @@ VMData& vm_instance();
 // Helper functions
 uint32_t opcode(OpCode code, uint8_t a, uint32_t bx);
 uint32_t opcode(OpCode code, uint8_t a, uint8_t b, uint8_t c);
+uint32_t opcode(OpCode code, uint8_t a);  // RETURN, LOADNIL
+uint32_t opcode(OpCode code);             // RETURNNIL, HALT
 uint32_t halt();
 uint32_t jmp(int32_t offset);
+uint32_t jmpt(uint8_t a, int32_t offset);
+uint32_t jmpf(uint8_t a, int32_t offset);
 
 Value add_values(const Value& a, const Value& b);
 Value sub_values(const Value& a, const Value& b);
@@ -217,7 +226,6 @@ Value mul_values(const Value& a, const Value& b);
 Value div_values(const Value& a, const Value& b);
 bool is_truthy(const Value& val);
 Value convert_value(const Value& val, ValueType target_type);
-
 
 // Instruction implementations
 void op_load(VMData& vm, uint8_t reg, uint32_t const_idx);
@@ -235,8 +243,9 @@ void op_le(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
 void op_jmp(VMData& vm, int32_t offset);
 void op_jmpt(VMData& vm, uint8_t cond, int32_t offset);
 void op_jmpf(VMData& vm, uint8_t cond, int32_t offset);
-void op_call(VMData& vm, uint8_t func_idx, uint8_t arg_count);
+void op_call(VMData& vm, uint8_t func_idx, uint8_t first_arg_ind, uint8_t num_args);
 void op_return(VMData& vm, uint8_t result_reg);
+void op_returnnil(VMData& vm);
 void op_newobj(VMData& vm, uint8_t dst, uint32_t class_idx);
 void op_getfield(VMData& vm, uint8_t dst, uint8_t obj, uint8_t field_idx);
 void op_setfield(VMData& vm, uint8_t obj, uint8_t field_idx, uint8_t src);
