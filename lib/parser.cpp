@@ -303,18 +303,20 @@ namespace parser {
 
         if (match(TOKEN_LCURLY)) {
             parse_block();
-        } else parse_statement(); //TODO: why here was parse_expression????
+        } else parse_statement();
 
 
+        //TODO: test if with else if
         if (is_panic()) return;
         if (match(TOKEN_ELSE)) {
+            const int cur_id2 = jmp_uid++;
+            emitter->jmp_label(cur_id2);
+            emitter->label(cur_id1);
             if (match(TOKEN_IF)) {
-                throw std::runtime_error("not supported for now");
-                //if_statement();
+//                throw std::runtime_error("not supported for now");
+                if_statement();
+                emitter->label(cur_id2);
             } else {
-                const int cur_id2 = jmp_uid++;
-                emitter->jmp_label(cur_id2);
-                emitter->label(cur_id1);
                 if (match(TOKEN_LCURLY)) {
                     parse_block();
                 } else parse_statement();
@@ -515,4 +517,3 @@ namespace parser {
     }
 
 }
-//TODO: panic on error and output many errors

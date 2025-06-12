@@ -1,8 +1,9 @@
 fn main() {
     p1 = 0;
     p2 = 1;
-    n = 0;
-    if (n == 0) n = 10;
+    n = 1;
+    if (n == 0) n = 20;
+    else if (n == 1) n = 10;
     else n = 20;
     if (n == 20)
         return 0;
