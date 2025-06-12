@@ -131,17 +131,6 @@ Value nil_val() {
     return val;
 }
 
-VMData& initVM() {
-    VMData& vm = vm_instance();
-    vm         = VMData();
-
-    vm.ip = 0;  // Start at first instruction
-    vm.fp = 0;  // Frame pointer at base
-    vm.sp = 0;  // Stack pointer
-
-    return vm;
-}
-
 TEST(OpcodeCreationTest, OpcodeTest) {
     VMData& vm = initVM();
 

@@ -30,6 +30,7 @@ namespace ast {
         DIV,
         MOD,
         ASSIGN,
+        NEQ,
         EQ,
         LE,
         LS,
@@ -42,6 +43,7 @@ namespace ast {
 
     enum class UnaryOpType {
         MINUS,
+        NOT,
     };
 
     enum class NodeType {
@@ -62,11 +64,15 @@ namespace ast {
         BinaryPlus,
         BinaryMul,
         BinaryDiv,
+        BinaryMod,
         BinaryMinus,
         BinaryGR,
         BinaryLE,
         BinaryLS,
         BinaryGE,
+        BinaryEQ,
+        BinaryNEQ,
+        Assign,
     };
 
     /**
@@ -629,8 +635,20 @@ namespace ast {
                     return NodeType::BinaryLS;
                 case BinaryOpType::GE:
                     return NodeType::BinaryGE;
+                case BinaryOpType::ASSIGN:
+                    return NodeType::Assign;
+                case BinaryOpType::MOD:
+                    return NodeType::BinaryMod;
+                case BinaryOpType::EQ:
+                    return NodeType::BinaryEQ;
+                case BinaryOpType::NEQ:
+                    return NodeType::BinaryNEQ;
+                case BinaryOpType::AND:
+                case BinaryOpType::OR:
                 default:
                     throw std::runtime_error("not implemented1");
+                case BinaryOpType::UNKNOWN:
+                    throw std::runtime_error("unknown");
             }
         }
 

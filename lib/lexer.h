@@ -30,9 +30,14 @@ namespace parser {
         TOKEN_WHILE,
         TOKEN_RETURN,
         TOKEN_ASSIGN,
+        TOKEN_PLUS_EQ,
+        TOKEN_MINUS_EQ,
+        TOKEN_MUL_EQ,
+        TOKEN_DIV_EQ,
         TOKEN_AND,
         TOKEN_OR,
         TOKEN_EQ,
+        TOKEN_NEQ,
         TOKEN_LS,
         TOKEN_LE,
         TOKEN_GR,
@@ -41,7 +46,7 @@ namespace parser {
         TOKEN_COMMA,
         TOKEN_DOT,
         TOKEN_UNKNOWN,
-        TOKEN_COMMENT,
+        TOKEN_COMMENT,//internal
     };
 
     struct TokenData {

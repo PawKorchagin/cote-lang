@@ -5,6 +5,8 @@
 #include "lexer.h"
 #include <vector>
 #include <string>
+#include <stdexcept>
+
 namespace parser {
     bool panic_mode = false;
     std::vector<std::string> error_log;
@@ -40,10 +42,7 @@ namespace parser {
     std::nullptr_t parser_throws(const std::string &message) {
         if (panic_mode) return nullptr;
         panic_mode = true;
-
-        error_log.push_back(
-                std::to_string(cur.lines) + ":" + std::to_string(cur.cnt - 1) + ": " + message);
-        return nullptr;
+        throw std::runtime_error(std::to_string(cur.lines) + ":" + std::to_string(cur.cnt - 1) + ": " + message);
     }
 
     std::string error_msg(const std::string &text) {

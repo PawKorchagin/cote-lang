@@ -55,11 +55,8 @@ namespace parser {
         return cur.token = TOKEN_INT_LIT;
     }
 
-    template<bool readFirst = true>
     int parse_token2(char second, int res1, int res2) {
-        if constexpr (readFirst) {
-            cur_char = in.get();
-        }
+        cur_char = in.get();
         if (cur_char == second) return helper_return_char(res2);
         return cur.token = res1;
     }
@@ -83,7 +80,7 @@ namespace parser {
 
     int tok_string_literal() {
         cur.identifier.clear();
-        while((cur_char = in.get()) !=  '"' && cur_char != EOF) {
+        while ((cur_char = in.get()) != '"' && cur_char != EOF) {
             cur.identifier.push_back(static_cast<char>(cur_char));
         }
         if (cur_char != EOF) cur_char = in.get();
@@ -98,15 +95,20 @@ namespace parser {
             return tok_identifier();
         if (cur_char == '"') return tok_string_literal();
         switch (cur_char) {
-            case EOF: return cur.token = TOKEN_EOF;
-            case '(': return helper_return_char(TOKEN_LPAREN);
-            case ')': return helper_return_char(TOKEN_RPAREN);
-            case '}': return helper_return_char(TOKEN_RCURLY);
-            case '{': return helper_return_char(TOKEN_LCURLY);
+            case EOF:
+                return cur.token = TOKEN_EOF;
+            case '(':
+                return helper_return_char(TOKEN_LPAREN);
+            case ')':
+                return helper_return_char(TOKEN_RPAREN);
+            case '}':
+                return helper_return_char(TOKEN_RCURLY);
+            case '{':
+                return helper_return_char(TOKEN_LCURLY);
             case ',':
                 return helper_return_char(TOKEN_COMMA);
             case '+':
-                return helper_return_char(TOKEN_ADD);
+                return parse_token2('=', TOKEN_ADD, TOKEN_PLUS_EQ);
             case '.':
                 return helper_return_char(TOKEN_DOT);
             case '%':
@@ -114,21 +116,26 @@ namespace parser {
             case '-':
                 cur_char = in.get();
                 if (cur_char == '-')
-                    return parser_throws("illegal token --"), cur.token = TOKEN_UNKNOWN;
-                return parse_token2<false>('>', TOKEN_SUB, TOKEN_ARROW);
+                    parser_throws("illegal token --");
+                if (cur_char == '>') return helper_return_char(TOKEN_ARROW);
+                if (cur_char == '=') return helper_return_char(TOKEN_MINUS_EQ);
+                return cur.token = TOKEN_SUB;
             case '*':
-                return helper_return_char(TOKEN_MUL);
+                return parse_token2('=', TOKEN_MUL, TOKEN_MUL_EQ);
             case '/':
                 cur_char = in.get();
                 if (cur_char == '/') {
                     while (cur_char != '\n') cur_char = in.get();
-                    return TOKEN_COMMENT;
+                    return cur.token = TOKEN_COMMENT;
                 }
+                if (cur_char == '=') return helper_return_char(TOKEN_DIV_EQ);
                 return cur.token = TOKEN_DIV;
             case '[':
                 return helper_return_char(TOKEN_LBRACKET);
             case ']':
                 return helper_return_char(TOKEN_RBRACKET);
+            case '!':
+                return parse_token2('=', TOKEN_UNKNOWN, TOKEN_NEQ);
             case '=':
                 return parse_token2('=', TOKEN_ASSIGN, TOKEN_EQ);
             case ';':
@@ -138,8 +145,9 @@ namespace parser {
             case '>':
                 return parse_token2('=', TOKEN_GR, TOKEN_GE);
             default:
-                return parser_throws("unknown token " + std::string(1, (char)cur_char)), helper_return_char(
-                        TOKEN_UNKNOWN);
+                parser_throws("unknown token " + std::string(1, (char) cur_char));
+                helper_return_char(TOKEN_UNKNOWN);
+                return TOKEN_UNKNOWN;
 
         }
     }
@@ -158,11 +166,15 @@ namespace parser {
             return cur.token;
         }
         prv = std::move(cur);
-        while (isspace(cur_char)) cur_char = in.get();
         do {
+            while (isspace(cur_char)) cur_char = in.get();
             cur.lines = in.plines();
             cur.cnt = in.pcnt();
             get_tok_core();
+            if (cur.token == TOKEN_UNKNOWN) {
+                parser_throws("unknown token " + std::string(1, (char) cur_char)), helper_return_char(
+                        TOKEN_UNKNOWN);
+            }
         } while (cur.token == TOKEN_COMMENT);
         return cur.token;
     }

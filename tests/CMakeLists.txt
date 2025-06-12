@@ -18,7 +18,6 @@ add_executable(
         vm_test.cpp
         parser_test_param.cpp
         utils.h
-        analyze_param_test.cpp
         compile_test.cpp
 )
 
