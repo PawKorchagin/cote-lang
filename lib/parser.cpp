@@ -17,7 +17,7 @@ namespace {
     using namespace ast;
     using namespace parser;
 
-    BytecodeEmitter *emitter;
+    interpreter::BytecodeEmitter *emitter;
     VarManager vars;
     int lambda_count = 0;
     int jmp_uid = 0;//TODO: reset
@@ -40,7 +40,7 @@ namespace {
         while (true) {
             if (!check_add()) return false;
             if (match(end_token)) return true;
-            if (!match(TOKEN_COMMA)) return parser_throws(error_msg(", in parameter list")), false;
+            if (!match(TOKEN_COMMA)) parser_throws(error_msg(", in parameter list"));
         }
     }
 
@@ -51,7 +51,7 @@ namespace {
         if (!first.empty()) res->params.push_back(first);
         if (!parse_param_list(TOKEN_RPAREN, [&]() {
             if (cur.token != TOKEN_IDENTIFIER)
-                return parser_throws(error_msg("identifier in function definition")), false;
+                parser_throws(error_msg("identifier in function definition"));
             res->params.push_back(cur.identifier);
             get_tok();
             return true;
@@ -63,9 +63,8 @@ namespace {
     //cur.token = "->"
     template<typename T = Node>
     std::unique_ptr<T> ifn_lambda_body(std::unique_ptr<Node> lhs) {
-        if (lhs == nullptr || (lhs->get_type() != NodeType::FunctionSingature && lhs->get_type() != NodeType::Var)) {
-            return parser_throws(error_msg("lambda arguments before ->"));
-        }
+        if (lhs == nullptr || (lhs->get_type() != NodeType::FunctionSingature && lhs->get_type() != NodeType::Var))
+            parser_throws(error_msg("lambda arguments before ->"));
         get_tok();
 
         //TODO: not supported because of the parse_block change for now
@@ -85,13 +84,12 @@ namespace {
         if (cur.identifier.size() > 1 && cur.identifier[0] == '-') {
             if (cur.identifier.size() > 20 ||
                 cur.identifier.size() == 20 && cur.identifier > "-9223372036854775808")
-                return parser_throws("Invalid number format: " + cur.identifier);
+                parser_throws("Invalid number format: " + cur.identifier);
             mul = -1;
             start = 1;
         } else if (cur.identifier.size() > 19 ||
-                   cur.identifier.size() == 19 && cur.identifier > "9223372036854775807") {
-            return parser_throws("Invalid number format: " + cur.identifier);
-        }
+                   cur.identifier.size() == 19 && cur.identifier > "9223372036854775807")
+            parser_throws("Invalid number format: " + cur.identifier);
         int64_t res = 0;
         for (int i = start; i < cur.identifier.size(); ++i) {
             res *= 10ll;
@@ -127,13 +125,13 @@ namespace {
     std::unique_ptr<Node> ifn_arrayget(std::unique_ptr<Node> lhs) {
         get_tok();
         auto x = parse_expression();
-        if (!x || !match(TOKEN_RBRACKET)) return parser_throws(error_msg("]"));
+        if (!x || !match(TOKEN_RBRACKET)) parser_throws(error_msg("]"));
         return std::make_unique<ArrayGet>(std::move(lhs), std::move(x));
     }
 
     std::unique_ptr<Node> ifn_member(std::unique_ptr<Node> lhs) {
         get_tok();
-        if (!match(TOKEN_IDENTIFIER)) return parser_throws(error_msg("member name after ."));
+        if (!match(TOKEN_IDENTIFIER)) parser_throws(error_msg("member name after ."));
         return std::make_unique<MemberGet>(std::move(lhs), prv.identifier);
     }
 
@@ -170,7 +168,12 @@ namespace {
     /* TOKEN_WHILE */      {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_RETURN */     {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_ASSIGN */     {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_PLUS_EQ */    {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_MINUS_EQ */   {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_DIV_EQ */     {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_MUL_EQ */     {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_EQ */         {nullptr,   ifn_binary,    PREC_EQ},
+    /* TOKEN_NEQ */        {nullptr,   ifn_binary,    PREC_EQ},
     /* TOKEN_AND */        {nullptr,   ifn_binary,    PREC_AND},
     /* TOKEN_OR */         {nullptr,   ifn_binary,    PREC_OR},
     /* TOKEN_LS */         {nullptr,   ifn_binary,    PREC_CMP},
@@ -187,7 +190,7 @@ namespace {
 
     std::unique_ptr<Node> pfn_grouping() {
         if (!match(TOKEN_LPAREN))
-            return parser_throws(
+            parser_throws(
                     error_msg("("));
         //either (), (<identifier>), (<identifier>, ...)
         if (cur.token == TOKEN_RPAREN) {
@@ -204,7 +207,7 @@ namespace {
 
         auto expr = parse_expression();
         if (cur.token != TOKEN_RPAREN)
-            return parser_throws(
+            parser_throws(
                     error_msg(")"));
         get_tok();
         return expr;
@@ -242,19 +245,22 @@ namespace {
                 return std::make_unique<BinaryExpr<BinaryOpType::OR>>(std::move(lhs), std::move(rhs));
             case TOKEN_MOD:
                 return std::make_unique<BinaryExpr<BinaryOpType::MOD>>(std::move(lhs), std::move(rhs));
+            case TOKEN_NEQ:
+                return std::make_unique<BinaryExpr<BinaryOpType::NEQ>>(std::move(lhs), std::move(rhs));
             default:
-                return parser_throws("Unknown binary operator | or internal error");
+                parser_throws("Unknown binary operator | or internal error");
         }
+        return nullptr;
     }
 
     unique_ptr<Node> parse_precedence(int prec) {
         if (rules[cur.token].prefix == nullptr)
-            return parser_throws(error_msg("identifier"));
+            parser_throws(error_msg("identifier"));
         auto lhs = rules[cur.token].prefix();
         int op = cur.token;
         while (lhs && prec <= rules[op].precedence) {
             if (rules[op].infix == nullptr)
-                return parser_throws(error_msg("operator"));
+                parser_throws(error_msg("operator"));
             lhs = rules[op].infix(std::move(lhs));
             op = cur.token;
         }
@@ -268,7 +274,6 @@ namespace parser {
     }
 
 
-    //Note: doesn't close the scope
     void parse_block() {
         vars.new_scope();
         while (true) {
@@ -279,7 +284,6 @@ namespace parser {
                     return;
                 case TOKEN_EOF:
                     parser_throws("expected } but found EOF");
-                    return;
                 default:
                     parse_statement();
                     if (is_panic()) return;
@@ -289,81 +293,149 @@ namespace parser {
 
     //cur_tok = '('
     void if_statement() {
-        if (!match(TOKEN_LPAREN)) {
+        if (!match(TOKEN_LPAREN))
             parser_throws(error_msg("( after if keyword"));
-            return;
-        }
         if (!epush(parse_expression())) return;
-        if (!match(TOKEN_RPAREN)) {
+        if (!match(TOKEN_RPAREN))
             parser_throws(error_msg("closing ) in if statement"));
-            return;
-        }
         const int cur_id1 = jmp_uid++;
         emitter->jmpf_label(vars.pop_var(), cur_id1);
 
         if (match(TOKEN_LCURLY)) {
             parse_block();
-        } else parse_statement(); //TODO: why here was parse_expression????
+        } else parse_statement();
 
 
+        //TODO: test if with else if
         if (is_panic()) return;
         if (match(TOKEN_ELSE)) {
+            const int cur_id2 = jmp_uid++;
+            emitter->jmp_label(cur_id2);
+            emitter->label(cur_id1);
             if (match(TOKEN_IF)) {
-                throw std::runtime_error("not supported for now");
-                //if_statement();
+//                throw std::runtime_error("not supported for now");
+                if_statement();
+                emitter->label(cur_id2);
             } else {
-                const int cur_id2 = jmp_uid++;
-                emitter->jmp_label(cur_id2);
-                emitter->label(cur_id1);
                 if (match(TOKEN_LCURLY)) {
                     parse_block();
                 } else parse_statement();
                 emitter->label(cur_id2);
                 //elsebody = match(TOKEN_LCURLY) ? parse_block() : parse_statement();
             }
-        }
-        emitter->label(cur_id1);
+        } else emitter->label(cur_id1);
     }
 
     std::unique_ptr<ast::Node> parse_expr_sc() {
         auto res = parse_expression();
-        if (!match(TOKEN_SEMICOLON)) return parser_throws(error_msg("; after expression"));
+        if (!match(TOKEN_SEMICOLON))
+            parser_throws(error_msg("; after expression"));
         return res;
     }
 
-//    template<typename F, typename T>
-//    std::unique_ptr<Node> parse_typical_statement(F cond, T make_res, std::string err1, std::string err2) {
-//        if (!match(TOKEN_LPAREN)) return parser_throws(error_msg(err1));
-//        auto res = cond();
-//        if (res == nullptr) return nullptr;
-//
-//        if (!match(TOKEN_RPAREN)) return parser_throws(error_msg("closing ) in while statement"));
-//        auto body = match(TOKEN_LCURLY) ? parse_block() : parse_statement();
-//        if (body == nullptr) return nullptr;
-//        return make_res(std::move(res), std::move(body));
-//    }
-
     void parse_while() {
-        throw std::runtime_error("TODO");
-//        return parse_typical_statement(parse_expression, [](std::unique_ptr<Node> expr, std::unique_ptr<Node> body) {
-//            return std::make_unique<WhileStmt>(std::move(expr), std::move(body));
-//        }, "( after while", ") in while statement");
+        if (!match(TOKEN_LPAREN))
+            parser_throws(error_msg("( after while"));
+        int start_id = jmp_uid++;
+        int end_id = jmp_uid++;
+        emitter->label(start_id);
+        vars.new_scope();
+        if (!epush(parse_expression())) return;
+        emitter->jmpf_label(vars.pop_var(), end_id);
+        if (!match(TOKEN_RPAREN))
+            parser_throws(error_msg(") in while statement"));
+        if (match(TOKEN_LCURLY)) {
+            parse_block();
+        } else {
+            parse_statement();
+        }
+        emitter->jmp_label(start_id);
+        emitter->label(end_id);
+        vars.close_scope();
+    }
+
+
+    //if is_assignment: pushes assingment;
+    //           else: pushes res, pops back;
+    void push_assign(std::unique_ptr<Node> val, int is_assignment) {
+        if (!is_assignment) {
+            epush(std::move(val));
+            vars.pop_var();
+            return;
+        }
+        auto curv = dynamic_cast<BinaryExpr<BinaryOpType::ASSIGN> *>(val.release());
+        auto lhs = std::move(curv->l);
+        auto rhs = std::move(curv->r);
+        delete curv;
+        if (!epush(std::move(rhs))) {
+            return;
+        }
+        if (lhs->get_type() != ast::NodeType::Var)
+            parser_throws(error_msg("todo16"));
+        const std::string &m_name = dynamic_cast<VarExpr *>(lhs.get())->name;
+        const int res = vars.get_var(m_name);
+        //if variable not found, then we create new at the same place and it has almost no scope
+        if (res == -1) {
+            vars.pop_var();
+            vars.push_var(m_name);
+            return;
+        }
+        if (is_assignment == 1) emitter->emit_move(res, vars.pop_var());
+        else if (is_assignment == 2) emitter->emit_add(res, vars.pop_var(), res);
+        else if (is_assignment == 3) emitter->emit_sub(res, vars.pop_var(), res);
+        else if (is_assignment == 4) emitter->emit_mul(res, vars.pop_var(), res);
+        else if (is_assignment == 5) emitter->emit_div(res, vars.pop_var(), res);
+    }
+
+    //parses <expressiona>: ?(<lvalue> =) <expression> ;
+    //true if result is a binary expression(assingment)
+    std::unique_ptr<Node> parse_assignment(int &res) {
+        res = 0;
+        auto lhs = parse_expression();
+        if (!lhs || match(TOKEN_SEMICOLON)) { return lhs; }
+        res = test(TOKEN_ASSIGN)
+              + 2 * test(TOKEN_PLUS_EQ)
+              + 3 * test(TOKEN_MINUS_EQ)
+              + 4 * test(TOKEN_MUL_EQ)
+              + 5 * test(TOKEN_DIV_EQ);
+        if (res == 0)
+            parser_throws(error_msg("; after expression"));
+        get_tok();
+        auto rhs = parse_expression();
+        if (!rhs) return res = 0, nullptr;
+        return std::make_unique<BinaryExpr<BinaryOpType::ASSIGN>>(std::move(lhs), std::move(rhs));
+    }
+
+    void parse_push_assign() {
+        int res = 0;
+        auto x = parse_assignment(res);
+        push_assign(std::move(x), res);
     }
 
     void parse_for() {
-        throw std::runtime_error("TODO");
-//        return parse_typical_statement([]() -> std::unique_ptr<ForStmt> {
-//            std::unique_ptr<ForStmt> s = std::make_unique<ForStmt>();
-//            s->init = parse_expr_sc();
-//            if (s->init == nullptr) return nullptr;
-//            s->cond = parse_expr_sc();
-//            if (s->cond == nullptr) return nullptr;
-//            s->inc = parse_expression();
-//            if (s->inc == nullptr) return nullptr;
-//            return s;
-//        }, [](std::unique_ptr<Node> expr, std::unique_ptr<Node> body) {
-//            return std::make_unique<WhileStmt>(std::move(expr), std::move(body));
-//        }, "( after for", ") in for statement");
+        vars.new_scope();
+        if (!match(TOKEN_LPAREN)) parser_throws(error_msg("( after for"));
+        if (!match(TOKEN_SEMICOLON)) {
+            parse_push_assign();
+            if (!match(TOKEN_SEMICOLON))
+                parser_throws(error_msg("expected ; after assignment"));
+        }
+
+        int start_id = jmp_uid++;
+        int end_id = jmp_uid++;
+        emitter->label(start_id);
+        if (!epush(parse_expr_sc())) return;
+        emitter->jmpf_label(vars.pop_var(), end_id);
+        //HERE: should be parse_assingment
+        int is_assignment = 0;
+        auto incExpr = parse_assignment(is_assignment);
+        if (!match(TOKEN_RPAREN)) parser_throws(error_msg(")"));
+        if (match(TOKEN_LCURLY)) parse_block();
+        else parse_statement();
+        push_assign(std::move(incExpr), is_assignment);
+        emitter->jmp_label(start_id);
+        emitter->label(end_id);
+        vars.close_scope();
     }
 
 
@@ -374,32 +446,13 @@ namespace parser {
         else if (match(TOKEN_WHILE)) parse_while();
         else if (match(TOKEN_RETURN)) parse_return();
         else {
-            auto lhs = parse_expression();
-            if (lhs == nullptr) return;
-            if (match(TOKEN_SEMICOLON)) { return; }
-            if (!match(TOKEN_ASSIGN)) {
-                parser_throws(error_msg("; after expression"));
-                return;
-            }
-            if (!epush(parse_expression())) return;
-            if (!match(TOKEN_SEMICOLON)) { return; }
-            if (lhs->get_type() != ast::NodeType::Var) {
-                parser_throws(error_msg("todo16"));
-                return;
-            }
-            const std::string &m_name = dynamic_cast<VarExpr *>(lhs.get())->name;
-            const int res = vars.get_var(m_name);
-            //if variable not found, then we create new at the same place and it has almost no scope
-            if (res == -1) {
-                vars.pop_var();
-                vars.push_var(m_name);
-                return;
-            }
-            emitter->emit_move(res, vars.pop_var());
+            parse_push_assign();
+            if (!match(TOKEN_SEMICOLON))
+                parser_throws(error_msg("expected ; after assignment"));
         }
     }
 
-    ast::Program parse_program() {
+    ast::Program parse_program(interpreter::VMData &vm) {
         Program res;
         while (cur.token != TOKEN_EOF) {
             bool had_errors = is_panic();
@@ -413,6 +466,7 @@ namespace parser {
             } else parser_throws(error_msg("function definition"));
         }
         emitter->resolve();
+        emitter->initVM(vm);
         res.instructions = std::move(emitter->code);
         delete emitter;
         return res;
@@ -421,39 +475,30 @@ namespace parser {
     //if anonymous: cur = first argument
     //otherwise: cur = function name
     void parse_function() {
-        if (!match(TOKEN_IDENTIFIER)) {
+        if (!match(TOKEN_IDENTIFIER))
             parser_throws(error_msg("function name"));
-            return;
-        }
         std::string name = std::move(prv.identifier);
-        if (!match(TOKEN_LPAREN)) {
+        if (!match(TOKEN_LPAREN))
             parser_throws(error_msg("("));
-            return;
-        }
         auto header = parse_fn_params();
         if (header == nullptr) { return; }
-        if (!match(TOKEN_LCURLY)) {
+        if (!match(TOKEN_LCURLY))
             parser_throws(error_msg("{ in function body"));
-            return;
-        }
         emitter->begin_func(name, header->params.size());
         for (auto &cur: header->params) {
             auto it = vars.get_var(cur);
-            if (it != -1) {
+            if (it != -1)
                 parser_throws(std::format("illegal argument names, argument {} already exsists", cur));
-                return;
-            }
             vars.push_var(cur);
         }
         parse_block();
         //add return in case control flow leaks
-        emitter->emit_loadnil(vars.push_var());
-        emitter->emit_return(vars.pop_var());
+        emitter->emit_retnil();
         emitter->end_func();
     }
 
 
-    void init_parser(std::istream &in, BytecodeEmitter *emit) {
+    void init_parser(std::istream &in, interpreter::BytecodeEmitter *emit) {
         init_lexer(in);
         emitter = emit;
         init_exceptions();
@@ -461,7 +506,9 @@ namespace parser {
 
     bool epush(std::unique_ptr<ast::Node> expr) {
         if (expr == nullptr) return false;
-        return parser::eval_expr(parser::check_expr(std::move(expr), *emitter, vars), *emitter, vars);
+        if (!parser::eval_expr(parser::check_expr(std::move(expr), *emitter, vars), *emitter, vars))
+            throw std::runtime_error("error parsing expression");
+        return true;
     }
 
     void parse_return() {
@@ -470,4 +517,3 @@ namespace parser {
     }
 
 }
-//TODO: panic on error and output many errors

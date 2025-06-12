@@ -189,6 +189,8 @@ namespace interpreter {
     };
 
     struct VMData {
+        //--for debug---
+        int code_size = 0;
         //  Static data: must be filled before running vm
         std::vector<Value> constants;
         std::vector<ObjectContext> contexts;
@@ -210,7 +212,6 @@ namespace interpreter {
 
 // Core VM functions
     void run();
-    void init_vm(std::istream& in);
     VMData& vm_instance();
 
 // Helper functions (creating opcode)

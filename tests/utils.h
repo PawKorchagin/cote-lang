@@ -60,17 +60,16 @@ inline std::string ins_to_string(uint32_t instr) {
         case OP_LE:
             return std::format("leq [{}] [{}] [{}]", a, b, c);
         case OP_JMP: {
-            return std::format("jmp {}", bx);
+            return std::format("jmp {}", (int32_t)bx - (int32_t)J_ZERO);
         }
         case OP_JMPT: {
-            return std::format("jmpt [{}] {}", a, bx);
+            return std::format("jmpt [{}] {}", a, (int32_t)bx - (int32_t)J_ZERO);
         }
         case OP_JMPF: {
-            return std::format("jmpf [{}] {}", a, bx);
+            return std::format("jmpf [{}] {}", a, (int32_t)bx - (int32_t)J_ZERO);
         }
         case OP_CALL:
-            throw std::runtime_error("not supported");
-            break;
+            return std::format("call f{} [{}]...[{}]", a, b, c);
         case OP_RETURN:
             return std::format("ret [{}]", a);
             break;
@@ -80,6 +79,8 @@ inline std::string ins_to_string(uint32_t instr) {
         case OP_HALT:
             throw std::runtime_error("todo");
             break;
+        case OP_RETURNNIL:
+            return std::format("ret nil");
         default:
             throw std::runtime_error("Unknown opcode");
     }
@@ -104,13 +105,24 @@ inline void print_func_body(std::vector<uint32_t> &code) {
 template<typename T = decltype(parse_expression)>
 inline auto parse(const std::string &text, T func = parse_expression) {
     auto in = std::stringstream(text);
-    parser::init_parser(in, new BytecodeEmitter());
+    parser::init_parser(in, new interpreter::BytecodeEmitter());
     auto expr = func();
     if (expr == nullptr) {
         std::cerr << text << " - " << get_errors().front() << std::endl;
         throw std::runtime_error("parser failed: " + get_errors().front());
     }
     return expr;
+}
+
+inline interpreter::VMData& initVM() {
+    interpreter::VMData& vm = interpreter::vm_instance();
+    vm         = interpreter::VMData();
+
+    vm.ip = 0;  // Start at first instruction
+    vm.fp = 0;  // Frame pointer at base
+    vm.sp = 0;  // Stack pointer
+
+    return vm;
 }
 
 /**
@@ -123,8 +135,8 @@ inline auto parse(const std::string &text, T func = parse_expression) {
      * @throws std::runtime_error if parse errors occurs
 */
 inline void parse_program_throws(std::istream &fin, const std::string &file_name = "code") {
-    parser::init_parser(fin, new BytecodeEmitter());
-    ast::Program p = parser::parse_program();
+    parser::init_parser(fin, new interpreter::BytecodeEmitter());
+    ast::Program p = parser::parse_program(interpreter::vm_instance());
     if (!parser::get_errors().empty()) {
         for (auto x: get_errors()) {
             std::cerr << file_name << ":" << x << std::endl;

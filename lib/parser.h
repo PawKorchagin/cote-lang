@@ -28,15 +28,15 @@ namespace parser {
 
     enum Precedence {
         PREC_NONE,
-        PREC_ASSIGN,
-        PREC_OR,
-        PREC_AND,
-        PREC_EQ,
-        PREC_CMP,
-        PREC_ADD,
-        PREC_FACTOR,
-        PREC_UNARY,
-        PREC_CALL,
+        PREC_ASSIGN,// () -> {}
+        PREC_OR,// or
+        PREC_AND,// and
+        PREC_EQ,// == !=
+        PREC_CMP,// <= < > >=
+        PREC_ADD,// + -
+        PREC_FACTOR,// * /
+        PREC_UNARY,// - !(maybe)
+        PREC_CALL,// [] () . TODO: ?., ?:
         PREC_PRIMARY
     };
     struct RuleInfo {
@@ -58,9 +58,9 @@ namespace parser {
 
     void parse_annotations();
 
-    ast::Program parse_program();
+    ast::Program parse_program(interpreter::VMData& vm);
 
-    void init_parser(std::istream& in, BytecodeEmitter* emitter);
+    void init_parser(std::istream& in, interpreter::BytecodeEmitter* emitter);
 
     bool epush(std::unique_ptr<ast::Node> expr);
 }

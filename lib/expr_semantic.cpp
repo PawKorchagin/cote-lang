@@ -9,7 +9,8 @@ namespace {
 
 }
 
-bool parser::eval_expr(std::unique_ptr<ast::Node> expr, BytecodeEmitter& emitter, parser::VarManager& vars) {
+bool
+parser::eval_expr(std::unique_ptr<ast::Node> expr, interpreter::BytecodeEmitter &emitter, parser::VarManager &vars) {
     using namespace ast;
     if (expr == nullptr) return false;
     switch (expr->get_type()) {
@@ -19,8 +20,24 @@ bool parser::eval_expr(std::unique_ptr<ast::Node> expr, BytecodeEmitter& emitter
             return parser_throws(error_msg("todo1")) != nullptr;
         case NodeType::FunctionSingature:
             return parser_throws(error_msg("todo2")) != nullptr;
-        case NodeType::FunctionCall:
-            return parser_throws(error_msg("todo3")) != nullptr;
+        case NodeType::FunctionCall: {
+            throw std::runtime_error("not supported3 for now");
+            auto name = std::move(dynamic_cast<FunctionCall *>(expr.get())->name_expr);
+            if (name->get_type() != ast::NodeType::Var) throw std::runtime_error("simple function support");
+            auto sname = dynamic_cast<VarExpr *>(expr.get())->name;
+            if (sname != "print") throw std::runtime_error("unknown function name");
+            int start = vars.last() + 1;
+            int cnt = 0;
+            for (auto &cur: dynamic_cast<FunctionCall *>(expr.get())->args) {
+                cnt++;
+                if (!eval_expr(std::move(cur), emitter, vars)) {
+                    return false;
+                }
+            }
+
+            emitter.emit_call(0, start, 1);
+
+        }
         case NodeType::ArrayGet:
             return parser_throws(error_msg("todo4")) != nullptr;
         case NodeType::Member:
@@ -72,10 +89,19 @@ bool parser::eval_expr(std::unique_ptr<ast::Node> expr, BytecodeEmitter& emitter
             emitter.emit_sub(vars.last() - 1, vars.last() - 1, vars.last());
             vars.pop_var();
             break;
+
         case NodeType::BinaryGR:
-            return parser_throws(error_msg("todo12")) != nullptr;
+            eval_expr(std::move(dynamic_cast<BinaryExpr<BinaryOpType::GR> *>(expr.get())->l), emitter, vars);
+            eval_expr(std::move(dynamic_cast<BinaryExpr<BinaryOpType::GR> *>(expr.get())->r), emitter, vars);
+            emitter.emit_less(vars.last() - 1, vars.last(), vars.last() - 1);
+            vars.pop_var();
+            break;
         case NodeType::BinaryLE:
-            return parser_throws(error_msg("todo13")) != nullptr;
+            eval_expr(std::move(dynamic_cast<BinaryExpr<BinaryOpType::LE> *>(expr.get())->l), emitter, vars);
+            eval_expr(std::move(dynamic_cast<BinaryExpr<BinaryOpType::LE> *>(expr.get())->r), emitter, vars);
+            emitter.emit_leq(vars.last() - 1, vars.last() - 1, vars.last());
+            vars.pop_var();
+            break;
         case NodeType::BinaryLS:
             eval_expr(std::move(dynamic_cast<BinaryExpr<BinaryOpType::LS> *>(expr.get())->l), emitter, vars);
             eval_expr(std::move(dynamic_cast<BinaryExpr<BinaryOpType::LS> *>(expr.get())->r), emitter, vars);
@@ -83,12 +109,32 @@ bool parser::eval_expr(std::unique_ptr<ast::Node> expr, BytecodeEmitter& emitter
             vars.pop_var();
             break;
         case NodeType::BinaryGE:
-            return parser_throws(error_msg("todo15")) != nullptr;
+            eval_expr(std::move(dynamic_cast<BinaryExpr<BinaryOpType::GE> *>(expr.get())->l), emitter, vars);
+            eval_expr(std::move(dynamic_cast<BinaryExpr<BinaryOpType::GE> *>(expr.get())->r), emitter, vars);
+            emitter.emit_leq(vars.last() - 1, vars.last(), vars.last() - 1);
+            vars.pop_var();
+            break;
+        case NodeType::BinaryEQ:
+            eval_expr(std::move(dynamic_cast<BinaryExpr<BinaryOpType::EQ> *>(expr.get())->l), emitter, vars);
+            eval_expr(std::move(dynamic_cast<BinaryExpr<BinaryOpType::EQ> *>(expr.get())->r), emitter, vars);
+            emitter.emit_eq(vars.last() - 1, vars.last() - 1, vars.last());
+            vars.pop_var();
+            break;
+        case NodeType::BinaryNEQ:
+            eval_expr(std::move(dynamic_cast<BinaryExpr<BinaryOpType::NEQ> *>(expr.get())->l), emitter, vars);
+            eval_expr(std::move(dynamic_cast<BinaryExpr<BinaryOpType::NEQ> *>(expr.get())->r), emitter, vars);
+            emitter.emit_eq(vars.last() - 1, vars.last() - 1, vars.last());
+            //TODO: NOT_EQ or NOT
+            throw std::runtime_error("misha implement NOT_EQ or NOT");
+//            emitter.emit_not()
+            vars.pop_var();
+            break;
     }
     return true;
 }
 
-std::unique_ptr<ast::Node> parser::check_expr(std::unique_ptr<ast::Node> expr, BytecodeEmitter &emitter, parser::VarManager &vars) {
+std::unique_ptr<ast::Node>
+parser::check_expr(std::unique_ptr<ast::Node> expr, interpreter::BytecodeEmitter &emitter, parser::VarManager &vars) {
     using namespace ast;
     if (expr == nullptr) return expr;
     switch (expr->get_type()) {
@@ -99,7 +145,7 @@ std::unique_ptr<ast::Node> parser::check_expr(std::unique_ptr<ast::Node> expr, B
         case NodeType::FunctionSingature:
             return parser_throws(error_msg("todo2"));
         case NodeType::FunctionCall:
-            return parser_throws(error_msg("todo3"));
+            return std::move(expr);
         case NodeType::ArrayGet:
             return parser_throws(error_msg("todo4"));
         case NodeType::Member:
@@ -120,24 +166,20 @@ std::unique_ptr<ast::Node> parser::check_expr(std::unique_ptr<ast::Node> expr, B
         case NodeType::For:
             return parser_throws(error_msg("todo11"));
         case NodeType::UnaryMinus:
-            return std::move(expr);
         case NodeType::BinaryPlus:
-            return std::move(expr);
         case NodeType::BinaryMul:
-            return std::move(expr);
         case NodeType::BinaryDiv:
-            return std::move(expr);
         case NodeType::BinaryMinus:
-            return std::move(expr);
         case NodeType::BinaryGR:
-            return parser_throws(error_msg("todo12"));
         case NodeType::BinaryLE:
-            return parser_throws(error_msg("todo13"));
         case NodeType::BinaryLS:
-            return std::move(expr);
         case NodeType::BinaryGE:
+        case NodeType::BinaryEQ:
+        case NodeType::BinaryNEQ:
             return std::move(expr);
         default:
             throw std::runtime_error("unknown error");
+        case NodeType::Assign:
+            throw std::runtime_error("internal error: illegal expression");
     }
 }
