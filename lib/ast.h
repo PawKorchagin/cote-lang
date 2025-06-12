@@ -67,7 +67,6 @@ namespace ast {
         BinaryLE,
         BinaryLS,
         BinaryGE,
-        Assign, // ?
     };
 
     /**
@@ -384,7 +383,7 @@ namespace ast {
     class Program {
     public:
         //function declaration (or const var declaration; TODO will be added later )
-        std::vector<std::unique_ptr<FunctionDef> > declarations;
+        std::vector<uint32_t> instructions;
     };
 
     /**
@@ -397,8 +396,7 @@ namespace ast {
     public:
         const int64_t number;
 
-        explicit IntLitExpr(int64_t val) : number(val) {
-        }
+        explicit IntLitExpr(int64_t val) : number(val) {}
 
         NodeType get_type() const override { return NodeType::IntLit; }
 
@@ -623,8 +621,6 @@ namespace ast {
                     return NodeType::BinaryDiv;
                 case BinaryOpType::SUB:
                     return NodeType::BinaryMinus;
-                case BinaryOpType::ASSIGN:
-                    return NodeType::Assign;
                 case BinaryOpType::GR:
                     return NodeType::BinaryGR;
                 case BinaryOpType::LE:

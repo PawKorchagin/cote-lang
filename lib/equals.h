@@ -93,8 +93,6 @@ namespace ast {
             case NodeType::BinaryMul: EQ_BINARY_HELPER_F(BinaryOpType::MUL);
             case NodeType::BinaryMinus: EQ_BINARY_HELPER_F(BinaryOpType::SUB);
             case NodeType::BinaryDiv: EQ_BINARY_HELPER_F(BinaryOpType::DIV);
-            case NodeType::Assign:
-                throw std::runtime_error("why? bc unimplemented assign in equals");
         }
         return false;
     }

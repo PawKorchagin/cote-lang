@@ -4,9 +4,46 @@
 
 #ifndef CRYPT_LEXER_H
 #define CRYPT_LEXER_H
-
-#include "parser.h"
+#include <string>
 namespace parser {
+    enum TokenInfo {
+        TOKEN_EOF = 0,
+        TOKEN_ADD,
+        TOKEN_SUB,
+        TOKEN_MUL,
+        TOKEN_DIV,
+        TOKEN_MOD,
+        TOKEN_IDENTIFIER,
+        TOKEN_INT_LIT,
+        TOKEN_STR_LIT,
+        TOKEN_LBRACKET,
+        TOKEN_RBRACKET,
+        TOKEN_LPAREN,
+        TOKEN_RPAREN,
+        TOKEN_LCURLY,
+        TOKEN_RCURLY,
+        TOKEN_FN,
+        TOKEN_ARROW,
+        TOKEN_IF,
+        TOKEN_ELSE,
+        TOKEN_FOR,
+        TOKEN_WHILE,
+        TOKEN_RETURN,
+        TOKEN_ASSIGN,
+        TOKEN_AND,
+        TOKEN_OR,
+        TOKEN_EQ,
+        TOKEN_LS,
+        TOKEN_LE,
+        TOKEN_GR,
+        TOKEN_GE,
+        TOKEN_SEMICOLON,
+        TOKEN_COMMA,
+        TOKEN_DOT,
+        TOKEN_UNKNOWN,
+        TOKEN_COMMENT,
+    };
+
     struct TokenData {
         std::string identifier = "";
         int token = 0;
@@ -22,7 +59,7 @@ namespace parser {
 
     void roll_back();
 
-    int get_tok(int token_info = ANY_TOKEN_EXPECTED);
+    int get_tok();
     void init_lexer(std::istream &in);
 
 

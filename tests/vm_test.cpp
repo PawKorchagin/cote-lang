@@ -87,20 +87,20 @@ void run1(const std::vector<Value>& constants, BytecodeHolder& h, const std::vec
         for (size_t i = 0; i < expected_stack.size(); ++i) {
             ASSERT_TRUE(vm.stack[i].type == expected_stack[i].type);
             switch (expected_stack[i].type) {
-            case ValueType::Int:
-                ASSERT_TRUE(vm.stack[i].as.i32 == expected_stack[i].as.i32);
-                break;
-            case ValueType::Float:
-                ASSERT_TRUE(vm.stack[i].as.f32 == expected_stack[i].as.f32);
-                break;
-            case ValueType::Char:
-                ASSERT_TRUE(vm.stack[i].as.c == expected_stack[i].as.c);
-                break;
-            case ValueType::Object:
-                ASSERT_TRUE(vm.stack[i].as.object_ptr == expected_stack[i].as.object_ptr);
-                break;
-            case ValueType::Nil:
-                break;
+                case ValueType::Int:
+                    ASSERT_TRUE(vm.stack[i].as.i32 == expected_stack[i].as.i32);
+                    break;
+                case ValueType::Float:
+                    ASSERT_TRUE(vm.stack[i].as.f32 == expected_stack[i].as.f32);
+                    break;
+                case ValueType::Char:
+                    ASSERT_TRUE(vm.stack[i].as.c == expected_stack[i].as.c);
+                    break;
+                case ValueType::Object:
+                    ASSERT_TRUE(vm.stack[i].as.object_ptr == expected_stack[i].as.object_ptr);
+                    break;
+                case ValueType::Nil:
+                    break;
             }
         }
     });

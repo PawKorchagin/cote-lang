@@ -48,18 +48,10 @@ namespace parser {
 
     int tok_number() {
         cur.identifier.clear();
-        cur.identifier.push_back(static_cast<char>(cur_char));
-        if (cur_char == '-') {
-            cur_char = in.get();
-            if (cur_char == '-') return parser_throws("illegal token --"), cur.token = TOKEN_UNKNOWN;
-            if (cur_char == '>') return helper_return_char(TOKEN_ARROW);
-            if (!isdigit(cur_char)) return cur.token = TOKEN_SUB;
-        }
-        else cur_char = in.get();
-        while (isdigit(cur_char)) {
+        do {
             cur.identifier.push_back(static_cast<char>(cur_char));
             cur_char = in.get();
-        }
+        } while (isdigit(cur_char));
         return cur.token = TOKEN_INT_LIT;
     }
 
@@ -99,9 +91,8 @@ namespace parser {
     }
 
 
-    int get_tok_core(int token_info) {
-        while (isspace(cur_char)) cur_char = in.get();
-        if (isdigit(cur_char) || (token_info & VALUE_EXPECTED) && cur_char == '-')
+    int get_tok_core() {
+        if (isdigit(cur_char))
             return tok_number();
         if (isalpha(cur_char) || cur_char == '_')
             return tok_identifier();
@@ -131,7 +122,7 @@ namespace parser {
                 cur_char = in.get();
                 if (cur_char == '/') {
                     while (cur_char != '\n') cur_char = in.get();
-                    return get_tok(token_info);
+                    return TOKEN_COMMENT;
                 }
                 return cur.token = TOKEN_DIV;
             case '[':
@@ -159,7 +150,7 @@ namespace parser {
         prv.token = TOKEN_UNKNOWN;
     }
 
-    int get_tok(int token_info) {
+    int get_tok() {
         if (nxt.token != -1) {
             cur = std::move(nxt);
             prv = std::move(cur);
@@ -168,9 +159,12 @@ namespace parser {
         }
         prv = std::move(cur);
         while (isspace(cur_char)) cur_char = in.get();
-        cur.lines = in.plines();
-        cur.cnt = in.pcnt();
-        return get_tok_core(token_info);
+        do {
+            cur.lines = in.plines();
+            cur.cnt = in.pcnt();
+            get_tok_core();
+        } while (cur.token == TOKEN_COMMENT);
+        return cur.token;
     }
 
     void init_lexer(std::istream &input_stream) {

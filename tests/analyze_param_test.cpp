@@ -8,7 +8,7 @@
 
 inline auto parse_from_string(const std::string &text) {
     auto in = std::stringstream(text);
-    parser::init_parser(in);
+    parser::init_parser(in, new BytecodeEmitter());
     auto expr = parse_program();
     return expr;
 }
@@ -17,33 +17,33 @@ using str_semantics_suite = TestWithParam<std::pair<std::string, std::string> >;
 
 using namespace ast;
 
-inline auto run(const std::string &s) {
-    for (const auto &program = parse_from_string(s);
-         const auto &fn: program.declarations) {
-        auto tree = fn->clone_upcasting();
-        analysis::analyze(std::move(tree));
-    }
-}
+//inline auto run(const std::string &s) {
+//    for (const auto &program = parse_from_string(s);
+//         const auto &fn: program.declarations) {
+//        auto tree = fn->clone_upcasting();
+//        analysis::analyze(std::move(tree));
+//    }
+//}
 
-TEST_P(str_semantics_suite, lvalue_issues) {
-    auto &[incorrect, fixed] = GetParam();
-    EXPECT_THROW({
-                 for (const auto &program = parse_from_string(incorrect);
-                     const auto &fn: program.declarations) {
-                 // auto tree = fn->move_upcasting();
-                 analysis::analyze(fn->move_upcasting());
-                 }
-                 }, lvalue_error
-    );
-    EXPECT_NO_THROW({
-        for (const auto &program = parse_from_string(fixed);
-            const auto &fn: program.declarations) {
-        // auto tree = fn->move_upcasting();
-        analysis::analyze(fn->move_upcasting());
-        }
-        }
-    );
-}
+//TEST_P(str_semantics_suite, lvalue_issues) {
+//    auto &[incorrect, fixed] = GetParam();
+//    EXPECT_THROW({
+//                 for (const auto &program = parse_from_string(incorrect);
+//                     const auto &fn: program.declarations) {
+//                 // auto tree = fn->move_upcasting();
+//                 analysis::analyze(fn->move_upcasting());
+//                 }
+//                 }, lvalue_error
+//    );
+//    EXPECT_NO_THROW({
+//        for (const auto &program = parse_from_string(fixed);
+//            const auto &fn: program.declarations) {
+//        // auto tree = fn->move_upcasting();
+//        analysis::analyze(fn->move_upcasting());
+//        }
+//        }
+//    );
+//}
 
 // TEST_P(str_semantics_suite, rvalue_issues) {
 //     EXPECT_THROW(

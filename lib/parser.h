@@ -9,6 +9,7 @@
 #include <exception>
 #include <memory>
 #include "ast.h"
+#include "bytecode_emitter.h"
 
 class AlwaysException : std::exception {
     std::string what;
@@ -18,15 +19,7 @@ public:
         what = s;
     }
 };
-//TODO:
-// - panic on statements
-// - for loop support
-// - class support?
-// - if expression support
-// - short syntax for functions
-// - parse null?
-// - return from function syntax
-// - test parser features
+
 namespace parser {
 
     typedef std::unique_ptr<ast::Node> (*PrefixRule)();
@@ -52,59 +45,24 @@ namespace parser {
         int precedence;
         bool left_assoc = true;
     };
-    enum TokenInfo {
-        TOKEN_EOF = 0,
-        TOKEN_ADD,
-        TOKEN_SUB,
-        TOKEN_MUL,
-        TOKEN_DIV,
-        TOKEN_MOD,
-        TOKEN_IDENTIFIER,
-        TOKEN_INT_LIT,
-        TOKEN_STR_LIT,
-        TOKEN_LBRACKET,
-        TOKEN_RBRACKET,
-        TOKEN_LPAREN,
-        TOKEN_RPAREN,
-        TOKEN_LCURLY,
-        TOKEN_RCURLY,
-        TOKEN_FN,
-        TOKEN_ARROW,
-        TOKEN_IF,
-        TOKEN_ELSE,
-        TOKEN_FOR,
-        TOKEN_WHILE,
-        TOKEN_RETURN,
-        TOKEN_ASSIGN,
-        TOKEN_AND,
-        TOKEN_OR,
-        TOKEN_EQ,
-        TOKEN_LS,
-        TOKEN_LE,
-        TOKEN_GR,
-        TOKEN_GE,
-        TOKEN_SEMICOLON,
-        TOKEN_COMMA,
-        TOKEN_DOT,
-        TOKEN_UNKNOWN,
-    };
-    constexpr int OPERATOR_EXPECTED = 1;
-    constexpr int VALUE_EXPECTED = 2;
-    constexpr int ANY_TOKEN_EXPECTED = OPERATOR_EXPECTED | VALUE_EXPECTED;
-
+//TODO: forbid x = (y = z) expressions
     unique_ptr<ast::Node> parse_expression();
 
-    unique_ptr<ast::FunctionDef> parse_function();
+    void parse_function();
 
-    unique_ptr<ast::Block> parse_block();
+    void parse_return();
 
-    unique_ptr<ast::Node> parse_statement();
+    void parse_block();
+
+    void parse_statement();
 
     void parse_annotations();
 
     ast::Program parse_program();
 
-    void init_parser(std::istream& in);
+    void init_parser(std::istream& in, BytecodeEmitter* emitter);
+
+    bool epush(std::unique_ptr<ast::Node> expr);
 }
 
 
