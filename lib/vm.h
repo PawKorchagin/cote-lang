@@ -4,9 +4,11 @@
 #include <cstdint>
 #include <fstream>
 #include <stack>
+#include <unordered_map>
 #include <vector>
 
 namespace interpreter {
+    struct VMData;
 
     enum OpCode {
         // Loads a constant into a register
@@ -55,9 +57,13 @@ namespace interpreter {
         OP_NEG,
 
         // Equality comparison
-        // Args: a - result register (1/0), b - first operand, c - second operand
+        // Args: a - result register, b - first operand, c - second operand
         // Behavior: registers[a] = (registers[b] == registers[c]) ? 1 : 0
         OP_EQ,
+
+        // Args: a - result register, b - first operand, c - second operand
+        // Behavior: registers[a] = (registers[b] != registers[c]) ? 1 : 0
+        OP_NEQ,
 
         // Less-than comparison
         // Args: Same as OP_EQ
@@ -96,6 +102,22 @@ namespace interpreter {
         //   4. Jumps to function entry_point
         OP_CALL,
 
+        // Calls native function from `natives`
+        // Args:
+        // a - native function index
+        // Behavior:
+        // natives[a](vm)
+        OP_NATIVE_CALL,
+
+        // Call function dynamically
+        // Args:
+        // a - register index with callable value
+        // b - index of register with first argument,
+        // c - argument count
+        // Behavior:
+        // call functions[register[a]] b c
+        OP_INVOKEDYNAMIС,
+
         // Return from function
         // Args: a - result register
         // Behavior:
@@ -133,15 +155,17 @@ namespace interpreter {
         OP_HALT
     };
 
-    enum class ValueType : uint8_t { Nil, Int, Float, Char, Object };
+    enum class ValueType : uint8_t { Nil, Int, Float, Char, Object, Callable };
 
     struct Value {
         ValueType type = ValueType::Nil;
+        uint16_t class_ptr = 0; //only for objects
         union {
             int32_t i32;
             float f32;
             char c;
-            uint32_t object_ptr;
+            uint8_t callable;
+            uint32_t object_ptr{};
         } as{};
 
         bool is_nil() const { return type == ValueType::Nil; }
@@ -149,10 +173,10 @@ namespace interpreter {
         bool is_float() const { return type == ValueType::Float; }
         bool is_char() const { return type == ValueType::Char; }
         bool is_object() const { return type == ValueType::Object; }
+        bool is_callable() const { return type == ValueType::Callable; }
     };
 
     struct Object {
-        uint32_t context_index;
         std::vector<Value> fields;
     };
 
@@ -162,7 +186,10 @@ namespace interpreter {
         uint8_t local_count;
     };
 
-    typedef uint16_t ObjectContext;  // literally is just amount of fields, counted during compilation
+    typedef void(*NativeFunction)(VMData&);
+    struct ObjClass {
+        std::pmr::unordered_map<std::string, int> indexes;
+    };
 
 // Memory limits
     static constexpr uint32_t CODE_MAX_SIZE = 4096;
@@ -193,8 +220,9 @@ namespace interpreter {
         int code_size = 0;
         //  Static data: must be filled before running vm
         std::vector<Value> constants;
-        std::vector<ObjectContext> contexts;
+        std::vector<ObjClass> classes;
         Function functions[FUNCTIONS_MAX];
+        NativeFunction natives[FUNCTIONS_MAX];
 
         // Heap storage
         Object* heap[HEAP_MAX_SIZE];
@@ -258,12 +286,15 @@ namespace interpreter {
     void op_mod(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
     void op_neg(VMData& vm, uint8_t dst, uint8_t src);
     void op_eq(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+    void op_neq(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
     void op_lt(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
     void op_le(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
     void op_jmp(VMData& vm, int32_t offset);
     void op_jmpt(VMData& vm, uint8_t cond, int32_t offset);
     void op_jmpf(VMData& vm, uint8_t cond, int32_t offset);
     void op_call(VMData& vm, uint8_t func_idx, uint8_t first_arg_ind, uint8_t num_args);
+    void op_native_call(VMData& vm, uint8_t func_idx);
+    void op_invokedyn(VMData& vm, uint8_t a, uint8_t b, uint8_t c);
     void op_return(VMData& vm, uint8_t result_reg);
     void op_returnnil(VMData& vm);
     void op_newobj(VMData& vm, uint8_t dst, uint32_t class_idx);

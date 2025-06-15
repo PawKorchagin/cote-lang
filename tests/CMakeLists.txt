@@ -17,6 +17,7 @@ add_executable(
         parser_test.cpp
         vm_test.cpp
         parser_test_param.cpp
+        jit_tests.cpp
         utils.h
         compile_test.cpp
 )

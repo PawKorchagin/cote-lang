@@ -172,8 +172,11 @@ fn get_primes(n) {
     return arr;
 }
 
-
+fn closure_ex(x) {
+    return [x] y -> x + y;
+}
 fn main() {
+    y = [x] (a, b) -> a + b;
     y = x = 2 + 3 * 4;
     if (y == 3) {
         while (1) {

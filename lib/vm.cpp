@@ -55,6 +55,9 @@ namespace interpreter {
                 case OP_EQ:
                     op_eq(vm, a, b, c);
                     break;
+                case OP_NEQ:
+                    op_neq(vm, a, b, c);
+                    break;
                 case OP_LT:
                     op_lt(vm, a, b, c);
                     break;
@@ -78,6 +81,12 @@ namespace interpreter {
                 }
                 case OP_CALL:
                     op_call(vm, a, b, c);
+                    break;
+                case OP_NATIVE_CALL:
+                    op_native_call(vm, a);
+                    break;
+                case OP_INVOKEDYNAMIС:
+                    op_invokedyn(vm, a, b, c);
                     break;
                 case OP_RETURN:
                     op_return(vm, a);
@@ -103,56 +112,44 @@ namespace interpreter {
         }
     }
 
-    void update_sp(VMData &vm, uint8_t reg) {
-        if (vm.fp == 0) {
-            vm.sp = std::max(static_cast<uint32_t>(reg), vm.sp);
-        }
-    }
 
     void op_load(VMData &vm, uint8_t reg, uint32_t const_idx) {
         if (const_idx >= vm.constants.size()) {
             throw std::out_of_range("Constant index out of range");
         }
-        update_sp(vm, reg);
         vm.stack[vm.fp + reg] = vm.constants[const_idx];
     }
 
     void op_move(VMData &vm, uint8_t dst, uint8_t src) {
         vm.stack[vm.fp + dst] = vm.stack[vm.fp + src];
-        update_sp(vm, dst);
     }
 
     void op_loadnil(VMData &vm, uint8_t reg) {
         vm.stack[vm.fp + reg] = Value{};
-        update_sp(vm, reg);
     }
 
     void op_add(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
         Value &v1 = vm.stack[vm.fp + src1];
         Value &v2 = vm.stack[vm.fp + src2];
         vm.stack[vm.fp + dst] = add_values(v1, v2);
-        update_sp(vm, dst);
     }
 
     void op_sub(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
         Value &v1 = vm.stack[vm.fp + src1];
         Value &v2 = vm.stack[vm.fp + src2];
         vm.stack[vm.fp + dst] = sub_values(v1, v2);
-        update_sp(vm, dst);
     }
 
     void op_mul(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
         Value &v1 = vm.stack[vm.fp + src1];
         Value &v2 = vm.stack[vm.fp + src2];
         vm.stack[vm.fp + dst] = mul_values(v1, v2);
-        update_sp(vm, dst);
     }
 
     void op_div(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
         Value &v1 = vm.stack[vm.fp + src1];
         Value &v2 = vm.stack[vm.fp + src2];
         vm.stack[vm.fp + dst] = div_values(v1, v2);
-        update_sp(vm, dst);
     }
 
     void op_mod(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
@@ -167,7 +164,6 @@ namespace interpreter {
             res.type = ValueType::Int;
             res.as.i32 = v1.as.i32 % v2.as.i32;
             vm.stack[vm.fp + dst] = res;
-            update_sp(vm, dst);
         } else {
             throw std::runtime_error("Modulo requires integer operands");
         }
@@ -187,12 +183,11 @@ namespace interpreter {
             throw std::runtime_error("Cannot negate non-numeric value");
         }
         vm.stack[vm.fp + dst] = res;
-        update_sp(vm, dst);
     }
 
     void op_eq(VMData &vm, const uint8_t dst, const uint8_t src1, const uint8_t src2) {
-        auto &[type1, data1] = vm.stack[vm.fp + src1];
-        auto &[type2, data2] = vm.stack[vm.fp + src2];
+        auto &[type1, ignored, data1] = vm.stack[vm.fp + src1];
+        auto &[type2, ignored2, data2] = vm.stack[vm.fp + src2];
 
         Value res;
         res.type = ValueType::Int;
@@ -221,7 +216,11 @@ namespace interpreter {
             }
         }
         vm.stack[vm.fp + dst] = res;
-        update_sp(vm, dst);
+    }
+
+    void op_neq(VMData &vm, const uint8_t dst, const uint8_t src1, const uint8_t src2) {
+        op_eq(vm, dst, src1, src2);
+        vm.stack[vm.fp + dst].as.i32 = ~vm.stack[vm.fp + dst].as.i32 & 1;
     }
 
     void op_lt(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
@@ -240,7 +239,6 @@ namespace interpreter {
             throw std::runtime_error("Comparison requires compatible types");
 
         vm.stack[vm.fp + dst] = res;
-        update_sp(vm, dst);
     }
 
     void op_le(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
@@ -259,7 +257,6 @@ namespace interpreter {
             throw std::runtime_error("Comparison requires compatible types");
 
         vm.stack[vm.fp + dst] = res;
-        update_sp(vm, dst);
     }
 
     void op_jmp(VMData &vm, int32_t offset) {
@@ -293,15 +290,7 @@ namespace interpreter {
         }
         vm.call_stack.push(CallFrame{vm.ip, vm.fp});
 
-        // elements from R(first_arg_ind) to R(first_arg_ind + num_args)
-        // copied to first registers in function
-        for (uint8_t i = 1; i <= num_args; i++) {
-            vm.stack[vm.sp + i + 1] = vm.stack[vm.fp + first_arg_ind + i - 1];
-        }
-
-        vm.fp = vm.sp + 1;
-        vm.sp += func.local_count;
-
+        vm.fp = vm.fp + first_arg_ind;
         vm.ip = func.entry_point;
     }
 
@@ -317,7 +306,6 @@ namespace interpreter {
         CallFrame frame = vm.call_stack.top();
         vm.call_stack.pop();
 
-        vm.sp = vm.fp - 1;            // Pop locals
         vm.fp = frame.base_ptr;   // Restore frame pointer
         vm.ip = frame.return_ip;  // Restore instruction pointer
 
@@ -335,7 +323,6 @@ namespace interpreter {
         CallFrame frame = vm.call_stack.top();
         vm.call_stack.pop();
 
-        vm.sp = vm.fp - 1;            // Pop locals
         vm.fp = frame.base_ptr;   // Restore frame pointer
         vm.ip = frame.return_ip;  // Restore instruction pointer
 
@@ -345,21 +332,22 @@ namespace interpreter {
     }
 
 // TAG: GC maybe want to do smth here
-    void op_newobj(VMData &vm, uint8_t dst, uint32_t context_idx) {
-        if (context_idx >= vm.contexts.size()) {
+    void op_newobj(VMData &vm, uint8_t dst, uint32_t class_idx) {
+        if (class_idx >= vm.classes.size()) {
             throw std::out_of_range("context index out of range");
         }
         if (vm.heap_size >= HEAP_MAX_SIZE) {
             // TAG: GC
         }
 
-        const ObjectContext field_count = vm.contexts[context_idx];
-        Object *obj = new Object{context_idx, std::vector<Value>(field_count)};
+        const ObjClass context = vm.classes[class_idx];
+        auto *obj = new Object{std::vector<Value>(context.indexes.size())};
         vm.heap[vm.heap_size] = obj;
 
         Value newobj;
         newobj.type = ValueType::Object;
         newobj.as.object_ptr = vm.heap_size;
+        newobj.class_ptr = class_idx;
         vm.stack[vm.fp + dst] = newobj;
 
         vm.heap_size++;
@@ -456,6 +444,20 @@ namespace interpreter {
 
         return res;
     }
+
+    void op_native_call(VMData& vm, uint8_t func_idx) {
+        vm.natives[func_idx](vm);
+    }
+
+    void op_invokedyn(VMData& vm, uint8_t a, uint8_t b, uint8_t c) {
+        Value callable = vm.stack[a];
+        if (!callable.is_callable()) {
+            throw std::runtime_error("No expected callable");
+        }
+
+        op_call(vm, callable.as.callable, b, c);
+    }
+
 
     bool is_truthy(const Value &val) {
         if (val.is_nil())
