@@ -21,12 +21,9 @@ parser::eval_expr(std::unique_ptr<ast::Node> expr, interpreter::BytecodeEmitter 
         case NodeType::FunctionSingature:
             return parser_throws(error_msg("todo2")) != nullptr;
         case NodeType::FunctionCall: {
-            throw std::runtime_error("not supported3 for now");
             auto name = std::move(dynamic_cast<FunctionCall *>(expr.get())->name_expr);
-            if (name->get_type() != ast::NodeType::Var) throw std::runtime_error("simple function support");
-            auto sname = dynamic_cast<VarExpr *>(expr.get())->name;
-            if (sname != "print") throw std::runtime_error("unknown function name");
-            int start = vars.last() + 1;
+            eval_expr(std::move(name), emitter, vars);
+            int start = vars.last();
             int cnt = 0;
             for (auto &cur: dynamic_cast<FunctionCall *>(expr.get())->args) {
                 cnt++;
@@ -34,9 +31,7 @@ parser::eval_expr(std::unique_ptr<ast::Node> expr, interpreter::BytecodeEmitter 
                     return false;
                 }
             }
-
-            emitter.emit_call(0, start, 1);
-
+            emitter.emit_call(start, start + 1, cnt);
         }
         case NodeType::ArrayGet:
             return parser_throws(error_msg("todo4")) != nullptr;

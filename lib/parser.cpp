@@ -19,7 +19,7 @@ namespace {
 
     interpreter::BytecodeEmitter *emitter;
     VarManager vars;
-    int lambda_count = 0;
+    std::vector<LoopManager> loops;
     int jmp_uid = 0;//TODO: reset
 
     bool match(int token_type) {
@@ -58,19 +58,6 @@ namespace {
         }))
             return nullptr;
         return res;
-    }
-
-    //cur.token = "->"
-    template<typename T = Node>
-    std::unique_ptr<T> ifn_lambda_body(std::unique_ptr<Node> lhs) {
-        if (lhs == nullptr || (lhs->get_type() != NodeType::FunctionSingature && lhs->get_type() != NodeType::Var))
-            parser_throws(error_msg("lambda arguments before ->"));
-        get_tok();
-
-        //TODO: not supported because of the parse_block change for now
-        return std::make_unique<FunctionDef>(std::move(lhs),
-                                             match(TOKEN_LCURLY) ? parse_expression() : parse_expression());
-//        return std::make_unique<FunctionDef>(std::move(lhs), match(TOKEN_LCURLY) ? parse_block() : parse_expression());
     }
 
     std::unique_ptr<Node> pfn_identifier() {
@@ -161,7 +148,8 @@ namespace {
     /* TOKEN_LCURLY */     {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_RCURLY */     {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_FN */         {nullptr,   nullptr,    PREC_NONE},
-    /* TOKEN_ARROW */      {nullptr,   ifn_lambda_body,    PREC_ASSIGN, false},
+    /* TOKEN_CONTINUE */   {nullptr,   nullptr,    PREC_NONE},
+    /* TOKEN_BREAK */      {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_IF */         {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_ELSE */       {nullptr,   nullptr,    PREC_NONE},
     /* TOKEN_FOR */        {nullptr,   nullptr,    PREC_NONE},
@@ -270,7 +258,7 @@ namespace {
 namespace parser {
 
     unique_ptr<Node> parse_expression() {
-        return parse_precedence(PREC_ASSIGN);
+        return parse_precedence(PREC_TEMP);
     }
 
 
@@ -338,8 +326,9 @@ namespace parser {
             parser_throws(error_msg("( after while"));
         int start_id = jmp_uid++;
         int end_id = jmp_uid++;
-        emitter->label(start_id);
+        loops.emplace_back(start_id, end_id);
         vars.new_scope();
+        emitter->label(start_id);
         if (!epush(parse_expression())) return;
         emitter->jmpf_label(vars.pop_var(), end_id);
         if (!match(TOKEN_RPAREN))
@@ -351,7 +340,9 @@ namespace parser {
         }
         emitter->jmp_label(start_id);
         emitter->label(end_id);
+
         vars.close_scope();
+        loops.pop_back();
     }
 
 
@@ -413,7 +404,6 @@ namespace parser {
     }
 
     void parse_for() {
-        vars.new_scope();
         if (!match(TOKEN_LPAREN)) parser_throws(error_msg("( after for"));
         if (!match(TOKEN_SEMICOLON)) {
             parse_push_assign();
@@ -423,6 +413,9 @@ namespace parser {
 
         int start_id = jmp_uid++;
         int end_id = jmp_uid++;
+        loops.emplace_back(start_id, end_id);
+        vars.new_scope();
+
         emitter->label(start_id);
         if (!epush(parse_expr_sc())) return;
         emitter->jmpf_label(vars.pop_var(), end_id);
@@ -435,7 +428,22 @@ namespace parser {
         push_assign(std::move(incExpr), is_assignment);
         emitter->jmp_label(start_id);
         emitter->label(end_id);
+
         vars.close_scope();
+        loops.pop_back();
+    }
+
+    void parse_continue() {
+        if (!match(TOKEN_SEMICOLON)) parser_throws(";");
+        if (loops.empty()) parser_throws(parser_throws("continue without loop; continue statements are allowed only inside loops"));
+        emitter->jmp_label(loops.back().label_start);
+    }
+
+
+    void parse_break() {
+        if (!match(TOKEN_SEMICOLON)) parser_throws(";");
+        if (loops.empty()) parser_throws(parser_throws("break without loop; break statements are allowed only inside loops"));
+        emitter->jmp_label(loops.back().label_end);
     }
 
 
@@ -445,6 +453,8 @@ namespace parser {
         else if (match(TOKEN_FOR)) parse_for();
         else if (match(TOKEN_WHILE)) parse_while();
         else if (match(TOKEN_RETURN)) parse_return();
+        else if (match(TOKEN_BREAK)) parse_continue();
+        else if (match(TOKEN_CONTINUE)) parse_continue();
         else {
             parse_push_assign();
             if (!match(TOKEN_SEMICOLON))

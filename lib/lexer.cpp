@@ -70,6 +70,8 @@ namespace parser {
         if (cur.identifier == "and") return cur.token = TOKEN_AND;
         if (cur.identifier == "or") return cur.token = TOKEN_OR;
         if (cur.identifier == "fn") return cur.token = TOKEN_FN;
+        if (cur.identifier == "break") return cur.token = TOKEN_BREAK;
+        if (cur.identifier == "continue") return cur.token = TOKEN_BREAK;
         if (cur.identifier == "if") return cur.token = TOKEN_IF;
         if (cur.identifier == "for") return cur.token = TOKEN_FOR;
         if (cur.identifier == "while") return cur.token = TOKEN_WHILE;
@@ -117,7 +119,6 @@ namespace parser {
                 cur_char = in.get();
                 if (cur_char == '-')
                     parser_throws("illegal token --");
-                if (cur_char == '>') return helper_return_char(TOKEN_ARROW);
                 if (cur_char == '=') return helper_return_char(TOKEN_MINUS_EQ);
                 return cur.token = TOKEN_SUB;
             case '*':
@@ -241,8 +242,6 @@ namespace parser {
                 return "]";
             case TOKEN_RBRACKET:
                 return "[";
-            case TOKEN_ARROW:
-                return "->";
             case TOKEN_DOT:
                 return ".";
             case TOKEN_MOD:
@@ -255,6 +254,22 @@ namespace parser {
                 return "or";
             case TOKEN_STR_LIT:
                 return '"' + temp_data + '"';
+            case TOKEN_CONTINUE:
+                break;
+            case TOKEN_BREAK:
+                break;
+            case TOKEN_PLUS_EQ:
+                break;
+            case TOKEN_MINUS_EQ:
+                break;
+            case TOKEN_MUL_EQ:
+                break;
+            case TOKEN_DIV_EQ:
+                break;
+            case TOKEN_NEQ:
+                break;
+            case TOKEN_COMMENT:
+                break;
         }
         throw std::runtime_error("token_to_string failed - internal error");
     }

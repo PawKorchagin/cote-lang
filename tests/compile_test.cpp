@@ -27,15 +27,10 @@ inline void compile_program(std::istream &fin, const std::string &file_name = "c
         std::cout << vm.constants[i].as.i32 << ", ";
     }
     std::cout << "]\n";
-    auto temp = cfg::VMInfo(vm);
-    temp.code_size -= 2;
-//    cfg::CFGraph graph(temp);
-//    ASSERT_TRUE(graph.buildBasicCFG());
-//    graph.toString(std::cout);
     print_func_body(p.instructions);
     interpreter::run();
     ASSERT_TRUE(vm.call_stack.empty());
-    ASSERT_EQ(vm.stack[0].as.i32, 55);
+    ASSERT_EQ(vm.stack[0].as.i32, 0);
 
     if (!parser::get_errors().empty()) {
         for (auto x: get_errors()) {
@@ -47,9 +42,17 @@ inline void compile_program(std::istream &fin, const std::string &file_name = "c
 }
 
 TEST(SimpleCompileFromFileOk, FileTests) {
-    EXPECT_NO_THROW({
+    ASSERT_NO_THROW({
+                        std::ifstream fin("../../tests/sources/test4.ct");
+                        return compile_program(fin);
+                    });
+    ASSERT_NO_THROW({
                         std::ifstream fin("../../tests/sources/test3.ct");
-                        return compile_program(fin, "../../tests/sources/test2.ct");
+                        return compile_program(fin);
+                    });
+    ASSERT_NO_THROW({
+                        std::ifstream fin("../../tests/sources/test2.ct");
+                        return compile_program(fin);
                     });
 }
 

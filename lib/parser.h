@@ -28,7 +28,7 @@ namespace parser {
 
     enum Precedence {
         PREC_NONE,
-        PREC_ASSIGN,// () -> {}
+        PREC_TEMP,
         PREC_OR,// or
         PREC_AND,// and
         PREC_EQ,// == !=

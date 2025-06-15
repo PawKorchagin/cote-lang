@@ -116,7 +116,7 @@ namespace interpreter {
         // c - argument count
         // Behavior:
         // call functions[register[a]] b c
-        OP_INVOKEDYNAMIС,
+        OP_INVOKEDYNAMIC,
 
         // Return from function
         // Args: a - result register

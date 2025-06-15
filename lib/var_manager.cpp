@@ -26,3 +26,5 @@ int parser::VarManager::get_var(std::string name) {
         return -1;
     return it->second;
 }
+
+parser::LoopManager::LoopManager(int labelStart, int labelEnd) : label_start(labelStart), label_end(labelEnd) {}

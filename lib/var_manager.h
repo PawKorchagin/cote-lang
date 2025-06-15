@@ -11,6 +11,12 @@
 #include "bytecode_emitter.h"
 
 namespace parser {
+    struct LoopManager{
+        int label_start;
+        int label_end;
+
+        LoopManager(int labelStart = 0, int labelEnd = 0);
+    };
     struct VarManager {
         std::unordered_map<std::string, int> var_names;
         std::vector<std::vector<std::string>> locals;

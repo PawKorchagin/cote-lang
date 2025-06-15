@@ -28,6 +28,7 @@ namespace interpreter {
         void emit_retnil();
         void emit_call(int funcid, int reg, int count);
 
+
         // Adds two values
         // Args: a - destination, b - first operand, c - second operand
         // Behavior: registers[a] = registers[b] + registers[c] (int/float)

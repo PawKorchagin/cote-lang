@@ -85,7 +85,7 @@ namespace interpreter {
                 case OP_NATIVE_CALL:
                     op_native_call(vm, a);
                     break;
-                case OP_INVOKEDYNAMIС:
+                case OP_INVOKEDYNAMIC:
                     op_invokedyn(vm, a, b, c);
                     break;
                 case OP_RETURN:

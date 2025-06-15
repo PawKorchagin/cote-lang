@@ -168,7 +168,7 @@ void interpreter::BytecodeEmitter::emit_retnil() {
 }
 
 void interpreter::BytecodeEmitter::emit_call(int funcid, int reg, int count) {
-    code.push_back(opcode(OpCode::OP_CALL, funcid, reg, count));
+    code.push_back(opcode(OpCode::OP_INVOKEDYNAMIC, funcid, reg, count));
 }
 
 
