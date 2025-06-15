@@ -112,56 +112,44 @@ void run() {
         }
     }
 
-    void update_sp(VMData &vm, uint8_t reg) {
-        if (vm.fp == 0) {
-            vm.sp = std::max(static_cast<uint32_t>(reg), vm.sp);
-        }
-    }
 
     void op_load(VMData &vm, uint8_t reg, uint32_t const_idx) {
         if (const_idx >= vm.constants.size()) {
             throw std::out_of_range("Constant index out of range");
         }
-        update_sp(vm, reg);
         vm.stack[vm.fp + reg] = vm.constants[const_idx];
     }
 
     void op_move(VMData &vm, uint8_t dst, uint8_t src) {
         vm.stack[vm.fp + dst] = vm.stack[vm.fp + src];
-        update_sp(vm, dst);
     }
 
     void op_loadnil(VMData &vm, uint8_t reg) {
         vm.stack[vm.fp + reg] = Value{};
-        update_sp(vm, reg);
     }
 
     void op_add(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
         Value &v1 = vm.stack[vm.fp + src1];
         Value &v2 = vm.stack[vm.fp + src2];
         vm.stack[vm.fp + dst] = add_values(v1, v2);
-        update_sp(vm, dst);
     }
 
     void op_sub(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
         Value &v1 = vm.stack[vm.fp + src1];
         Value &v2 = vm.stack[vm.fp + src2];
         vm.stack[vm.fp + dst] = sub_values(v1, v2);
-        update_sp(vm, dst);
     }
 
     void op_mul(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
         Value &v1 = vm.stack[vm.fp + src1];
         Value &v2 = vm.stack[vm.fp + src2];
         vm.stack[vm.fp + dst] = mul_values(v1, v2);
-        update_sp(vm, dst);
     }
 
     void op_div(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
         Value &v1 = vm.stack[vm.fp + src1];
         Value &v2 = vm.stack[vm.fp + src2];
         vm.stack[vm.fp + dst] = div_values(v1, v2);
-        update_sp(vm, dst);
     }
 
     void op_mod(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
@@ -176,7 +164,6 @@ void run() {
             res.type = ValueType::Int;
             res.as.i32 = v1.as.i32 % v2.as.i32;
             vm.stack[vm.fp + dst] = res;
-            update_sp(vm, dst);
         } else {
             throw std::runtime_error("Modulo requires integer operands");
         }
@@ -196,7 +183,6 @@ void run() {
             throw std::runtime_error("Cannot negate non-numeric value");
         }
         vm.stack[vm.fp + dst] = res;
-        update_sp(vm, dst);
     }
 
     void op_eq(VMData &vm, const uint8_t dst, const uint8_t src1, const uint8_t src2) {
@@ -230,7 +216,6 @@ void run() {
             }
         }
         vm.stack[vm.fp + dst] = res;
-        update_sp(vm, dst);
     }
 
     void op_neq(VMData &vm, const uint8_t dst, const uint8_t src1, const uint8_t src2) {
@@ -254,7 +239,6 @@ void run() {
             throw std::runtime_error("Comparison requires compatible types");
 
         vm.stack[vm.fp + dst] = res;
-        update_sp(vm, dst);
     }
 
     void op_le(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
@@ -273,7 +257,6 @@ void run() {
             throw std::runtime_error("Comparison requires compatible types");
 
         vm.stack[vm.fp + dst] = res;
-        update_sp(vm, dst);
     }
 
     void op_jmp(VMData &vm, int32_t offset) {
@@ -307,15 +290,7 @@ void run() {
         }
         vm.call_stack.push(CallFrame{vm.ip, vm.fp});
 
-        // elements from R(first_arg_ind) to R(first_arg_ind + num_args)
-        // copied to first registers in function
-        for (uint8_t i = 1; i <= num_args; i++) {
-            vm.stack[vm.sp + i + 1] = vm.stack[vm.fp + first_arg_ind + i - 1];
-        }
-
-        vm.fp = vm.sp + 1;
-        vm.sp += func.local_count;
-
+        vm.fp = vm.fp + first_arg_ind;
         vm.ip = func.entry_point;
     }
 
@@ -331,7 +306,6 @@ void run() {
         CallFrame frame = vm.call_stack.top();
         vm.call_stack.pop();
 
-        vm.sp = vm.fp - 1;            // Pop locals
         vm.fp = frame.base_ptr;   // Restore frame pointer
         vm.ip = frame.return_ip;  // Restore instruction pointer
 
@@ -349,7 +323,6 @@ void run() {
         CallFrame frame = vm.call_stack.top();
         vm.call_stack.pop();
 
-        vm.sp = vm.fp - 1;            // Pop locals
         vm.fp = frame.base_ptr;   // Restore frame pointer
         vm.ip = frame.return_ip;  // Restore instruction pointer
 
