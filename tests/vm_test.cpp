@@ -64,7 +64,7 @@ void run_checked(const std::vector<Value>& constants, BytecodeHolder& h, T check
     vm         = VMData();  // Reset VM
 
     // Setup constants
-    vm.constants = constants;
+    vm.constanti = constants;
 
     // Copy bytecode
     h.emit(OP_HALT << 26);  // Ensure halt at end
@@ -109,13 +109,13 @@ Value nil_val() {
 TEST(OpcodeCreationTest, OpcodeTest) {
     VMData& vm = initVM();
 
-    vm.constants = {int_val(10), int_val(20), int_val(30)};
+    vm.constanti = {int_val(10), int_val(20), int_val(30)};
 
-    vm.code[0] = opcode(OP_LOAD, 1, 0);     // R1 = C0
-    vm.code[1] = opcode(OP_LOAD, 2, 1);     // R2 = C1
+    vm.code[0] = opcode(OP_LOADINT, 1, 0);     // R1 = C0
+    vm.code[1] = opcode(OP_LOADINT, 2, 1);     // R2 = C1
     vm.code[2] = opcode(OP_MOVE, 1, 2, 0);  // R1 = R2
     vm.code[3] = jmp(1);                         // ip += 1
-    vm.code[3] = opcode(OP_LOAD, 1, 3);     // R1 = C3 skip
+    vm.code[3] = opcode(OP_LOADINT, 1, 3);     // R1 = C3 skip
     vm.code[3] = halt();                              //end
 
     run();
@@ -126,9 +126,9 @@ TEST(OpcodeCreationTest, OpcodeTest) {
 TEST(VmLoadTest, BasicOperation) {
     VMData& vm = initVM();
 
-    vm.constants = {int_val(10), int_val(20), int_val(30)};
+    vm.constanti = {int_val(10), int_val(20), int_val(30)};
 
-    vm.code[0] = (OP_LOAD << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;
+    vm.code[0] = (OP_LOADINT << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;
     vm.code[1] = (OP_HALT << OPCODE_SHIFT);
 
     run();
@@ -140,10 +140,10 @@ TEST(VmLoadTest, BasicOperation) {
 TEST(VmMoveTest, BasicOperation) {
     VMData& vm = initVM();
 
-    vm.constants = {int_val(10), int_val(20), int_val(30)};
+    vm.constanti = {int_val(10), int_val(20), int_val(30)};
 
-    vm.code[0] = (OP_LOAD << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;
-    vm.code[1] = (OP_LOAD << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;
+    vm.code[0] = (OP_LOADINT << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;
+    vm.code[1] = (OP_LOADINT << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;
     vm.code[2] = (OP_MOVE << OPCODE_SHIFT) | (1 << A_SHIFT) | (2 << B_SHIFT);
     vm.code[3] = (OP_HALT << OPCODE_SHIFT);
 
@@ -156,10 +156,10 @@ TEST(VmMoveTest, BasicOperation) {
 TEST(VmArithmeticTest, AdditionOperation) {
     VMData& vm = initVM();
 
-    vm.constants = {int_val(10), int_val(20)};
+    vm.constanti = {int_val(10), int_val(20)};
 
-    vm.code[0] = (OP_LOAD << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                  // R1 = 10
-    vm.code[1] = (OP_LOAD << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                  // R2 = 20
+    vm.code[0] = (OP_LOADINT << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                  // R1 = 10
+    vm.code[1] = (OP_LOADINT << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                  // R2 = 20
     vm.code[2] = (OP_ADD << OPCODE_SHIFT) | (3 << A_SHIFT) | (1 << B_SHIFT) | 2;  // R3 = R1 + R2
     vm.code[3] = (OP_HALT << OPCODE_SHIFT);
 
@@ -183,10 +183,10 @@ TEST(VmLoadNilTest, BasicOperation) {
 TEST(VmArithmeticTest, SubtractionOperation) {
     VMData& vm = initVM();
 
-    vm.constants = {int_val(30), int_val(10)};
+    vm.constanti = {int_val(30), int_val(10)};
 
-    vm.code[0] = (OP_LOAD << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                               // R1 = 30
-    vm.code[1] = (OP_LOAD << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                               // R2 = 10
+    vm.code[0] = (OP_LOADINT << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                               // R1 = 30
+    vm.code[1] = (OP_LOADINT << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                               // R2 = 10
     vm.code[2] = (OP_SUB << OPCODE_SHIFT) | (3 << A_SHIFT) | (1 << B_SHIFT) | (2 << C_SHIFT);  // R3 = R1 - R2
     vm.code[3] = (OP_HALT << OPCODE_SHIFT);
 
@@ -199,10 +199,10 @@ TEST(VmArithmeticTest, SubtractionOperation) {
 TEST(VmArithmeticTest, MultiplicationOperation) {
     VMData& vm = initVM();
 
-    vm.constants = {int_val(5), int_val(6)};
+    vm.constanti = {int_val(5), int_val(6)};
 
-    vm.code[0] = (OP_LOAD << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                               // R1 = 5
-    vm.code[1] = (OP_LOAD << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                               // R2 = 6
+    vm.code[0] = (OP_LOADINT << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                               // R1 = 5
+    vm.code[1] = (OP_LOADINT << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                               // R2 = 6
     vm.code[2] = (OP_MUL << OPCODE_SHIFT) | (3 << A_SHIFT) | (1 << B_SHIFT) | (2 << C_SHIFT);  // R3 = R1 * R2
     vm.code[3] = (OP_HALT << OPCODE_SHIFT);
 
@@ -215,10 +215,10 @@ TEST(VmArithmeticTest, MultiplicationOperation) {
 TEST(VmArithmeticTest, DivisionOperation) {
     VMData& vm = initVM();
 
-    vm.constants = {int_val(20), int_val(5)};
+    vm.constanti = {int_val(20), int_val(5)};
 
-    vm.code[0] = (OP_LOAD << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                               // R1 = 20
-    vm.code[1] = (OP_LOAD << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                               // R2 = 5
+    vm.code[0] = (OP_LOADINT << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                               // R1 = 20
+    vm.code[1] = (OP_LOADINT << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                               // R2 = 5
     vm.code[2] = (OP_DIV << OPCODE_SHIFT) | (3 << A_SHIFT) | (1 << B_SHIFT) | (2 << C_SHIFT);  // R3 = R1 / R2
     vm.code[3] = (OP_HALT << OPCODE_SHIFT);
 
@@ -231,10 +231,10 @@ TEST(VmArithmeticTest, DivisionOperation) {
 TEST(VmArithmeticTest, ModuloOperation) {
     VMData& vm = initVM();
 
-    vm.constants = {int_val(10), int_val(3)};
+    vm.constanti = {int_val(10), int_val(3)};
 
-    vm.code[0] = (OP_LOAD << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                               // R1 = 10
-    vm.code[1] = (OP_LOAD << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                               // R2 = 3
+    vm.code[0] = (OP_LOADINT << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                               // R1 = 10
+    vm.code[1] = (OP_LOADINT << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                               // R2 = 3
     vm.code[2] = (OP_MOD << OPCODE_SHIFT) | (3 << A_SHIFT) | (1 << B_SHIFT) | (2 << C_SHIFT);  // R3 = R1 % R2
     vm.code[3] = (OP_HALT << OPCODE_SHIFT);
 
@@ -247,9 +247,9 @@ TEST(VmArithmeticTest, ModuloOperation) {
 TEST(VmArithmeticTest, NegationOperation) {
     VMData& vm = initVM();
 
-    vm.constants = {int_val(42)};
+    vm.constanti = {int_val(42)};
 
-    vm.code[0] = (OP_LOAD << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;              // R1 = 42
+    vm.code[0] = (OP_LOADINT << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;              // R1 = 42
     vm.code[1] = (OP_NEG << OPCODE_SHIFT) | (2 << A_SHIFT) | (1 << B_SHIFT);  // R2 = -R1
     vm.code[2] = (OP_HALT << OPCODE_SHIFT);
 
@@ -262,11 +262,11 @@ TEST(VmArithmeticTest, NegationOperation) {
 TEST(VmComparisonTest, EqualityOperation) {
     VMData& vm = initVM();
 
-    vm.constants = {int_val(10), int_val(10), int_val(20)};
+    vm.constanti = {int_val(10), int_val(10), int_val(20)};
 
-    vm.code[0] = (OP_LOAD << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                              // R1 = 10
-    vm.code[1] = (OP_LOAD << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                              // R2 = 10
-    vm.code[2] = (OP_LOAD << OPCODE_SHIFT) | (3 << A_SHIFT) | 2;                              // R3 = 20
+    vm.code[0] = (OP_LOADINT << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                              // R1 = 10
+    vm.code[1] = (OP_LOADINT << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                              // R2 = 10
+    vm.code[2] = (OP_LOADINT << OPCODE_SHIFT) | (3 << A_SHIFT) | 2;                              // R3 = 20
     vm.code[3] = (OP_EQ << OPCODE_SHIFT) | (4 << A_SHIFT) | (1 << B_SHIFT) | (2 << C_SHIFT);  // R4 = (R1 == R2)
     vm.code[4] = (OP_EQ << OPCODE_SHIFT) | (5 << A_SHIFT) | (1 << B_SHIFT) | (3 << C_SHIFT);  // R5 = (R1 == R3)
     vm.code[5] = (OP_HALT << OPCODE_SHIFT);
@@ -280,11 +280,11 @@ TEST(VmComparisonTest, EqualityOperation) {
 TEST(VmComparisonTest, NEqualityOperation) {
     VMData& vm = initVM();
 
-    vm.constants = {int_val(10), int_val(10), int_val(20)};
+    vm.constanti = {int_val(10), int_val(10), int_val(20)};
 
-    vm.code[0] = (OP_LOAD << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                              // R1 = 10
-    vm.code[1] = (OP_LOAD << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                              // R2 = 10
-    vm.code[2] = (OP_LOAD << OPCODE_SHIFT) | (3 << A_SHIFT) | 2;                              // R3 = 20
+    vm.code[0] = (OP_LOADINT << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                              // R1 = 10
+    vm.code[1] = (OP_LOADINT << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                              // R2 = 10
+    vm.code[2] = (OP_LOADINT << OPCODE_SHIFT) | (3 << A_SHIFT) | 2;                              // R3 = 20
     vm.code[3] = (OP_NEQ << OPCODE_SHIFT) | (4 << A_SHIFT) | (1 << B_SHIFT) | (2 << C_SHIFT);  // R4 = (R1 != R2)
     vm.code[4] = (OP_NEQ << OPCODE_SHIFT) | (5 << A_SHIFT) | (1 << B_SHIFT) | (3 << C_SHIFT);  // R5 = (R1 != R3)
     vm.code[5] = (OP_HALT << OPCODE_SHIFT);
@@ -298,10 +298,10 @@ TEST(VmComparisonTest, NEqualityOperation) {
 TEST(VmComparisonTest, LessThanOperation) {
     VMData& vm = initVM();
 
-    vm.constants = {int_val(10), int_val(20)};
+    vm.constanti = {int_val(10), int_val(20)};
 
-    vm.code[0] = (OP_LOAD << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                              // R1 = 10
-    vm.code[1] = (OP_LOAD << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                              // R2 = 20
+    vm.code[0] = (OP_LOADINT << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                              // R1 = 10
+    vm.code[1] = (OP_LOADINT << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                              // R2 = 20
     vm.code[2] = (OP_LT << OPCODE_SHIFT) | (3 << A_SHIFT) | (1 << B_SHIFT) | (2 << C_SHIFT);  // R3 = (R1 < R2)
     vm.code[3] = (OP_LT << OPCODE_SHIFT) | (4 << A_SHIFT) | (2 << B_SHIFT) | (1 << C_SHIFT);  // R4 = (R2 < R1)
     vm.code[4] = (OP_HALT << OPCODE_SHIFT);
@@ -315,12 +315,12 @@ TEST(VmComparisonTest, LessThanOperation) {
 TEST(VmJumpTest, UnconditionalJump) {
     VMData& vm = initVM();
 
-    vm.constants = {int_val(1), int_val(2)};
+    vm.constanti = {int_val(1), int_val(2)};
 
     // This test jumps over the second LOAD instruction
-    vm.code[0] = (OP_LOAD << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;          // R1 = 1
+    vm.code[0] = (OP_LOADINT << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;          // R1 = 1
     vm.code[1] = (OP_JMP << OPCODE_SHIFT) | ((1 + J_ZERO) << SBX_SHIFT);  // Jump +2
-    vm.code[2] = (OP_LOAD << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;          // R2 = 2 (should be skipped)
+    vm.code[2] = (OP_LOADINT << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;          // R2 = 2 (should be skipped)
     vm.code[3] = (OP_HALT << OPCODE_SHIFT);
 
     run();
@@ -333,16 +333,16 @@ TEST(VmJumpTest, UnconditionalJump) {
 TEST(VmJumpTest, ConditionalJump) {
     VMData& vm = initVM();
 
-    vm.constants = {int_val(1), int_val(0), int_val(42)};
+    vm.constanti = {int_val(1), int_val(0), int_val(42)};
 
     // Test both JMPT and JMPF
-    vm.code[0] = (OP_LOAD << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                            // R1 = 1 (true)
-    vm.code[1] = (OP_LOAD << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                            // R2 = 0 (false)
+    vm.code[0] = (OP_LOADINT << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;                            // R1 = 1 (true)
+    vm.code[1] = (OP_LOADINT << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;                            // R2 = 0 (false)
     vm.code[2] = (OP_JMPT << OPCODE_SHIFT) | (1 << A_SHIFT) | ((1 + J_ZERO) << SBX_SHIFT);  // if (R1) jump +2
     vm.code[3] = (OP_HALT << OPCODE_SHIFT);                                                 // Should be skipped
     vm.code[4] = (OP_JMPF << OPCODE_SHIFT) | (2 << A_SHIFT) | ((1 + J_ZERO) << SBX_SHIFT);  // if (!R2) jump +2
     vm.code[5] = (OP_HALT << OPCODE_SHIFT);                                                 // Should be skipped
-    vm.code[6] = (OP_LOAD << OPCODE_SHIFT) | (3 << A_SHIFT) | 2;                            // R3 = 42
+    vm.code[6] = (OP_LOADINT << OPCODE_SHIFT) | (3 << A_SHIFT) | 2;                            // R3 = 42
     vm.code[7] = (OP_HALT << OPCODE_SHIFT);
 
     run();
@@ -358,11 +358,11 @@ TEST(VmObjectTest, BasicObjectOperations) {
     obj.indexes =  {{"x", 1}, {"y", 2}, {"z", 3}};
     vm.classes = {obj};
 
-    vm.constants = {int_val(10), int_val(20)};
+    vm.constanti = {int_val(10), int_val(20)};
 
     vm.code[0] = (OP_NEWOBJ << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;  // R1 = new object (context 0)
-    vm.code[1] = (OP_LOAD << OPCODE_SHIFT) | (2 << A_SHIFT) | 0;    // R2 = 10 (from constants)
-    vm.code[2] = (OP_LOAD << OPCODE_SHIFT) | (3 << A_SHIFT) | 1;    // R3 = 20
+    vm.code[1] = (OP_LOADINT << OPCODE_SHIFT) | (2 << A_SHIFT) | 0;    // R2 = 10 (from constants)
+    vm.code[2] = (OP_LOADINT << OPCODE_SHIFT) | (3 << A_SHIFT) | 1;    // R3 = 20
 
     // Set fields
     vm.code[3] = (OP_SETFIELD << OPCODE_SHIFT) | (1 << A_SHIFT) | (0 << B_SHIFT) | (2 << C_SHIFT);  // obj.field0 = R2
@@ -393,14 +393,13 @@ TEST(VmFunctionTest, BasicFunctionCall) {
     Function add_func{};
     add_func.entry_point = 5;  // Points to the ADD instruction
     add_func.arity       = 2;
-    add_func.local_count = 3;  // 2 args + 1 local
 
     vm.functions[0] = add_func;
 
     // Main code
-    vm.constants = {int_val(10), int_val(20)};
-    vm.code[0]   = (OP_LOAD << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;               // R1 = 10 (arg1)
-    vm.code[1]   = (OP_LOAD << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;               // R2 = 20 (arg2)
+    vm.constanti = {int_val(10), int_val(20)};
+    vm.code[0]   = (OP_LOADINT << OPCODE_SHIFT) | (1 << A_SHIFT) | 0;               // R1 = 10 (arg1)
+    vm.code[1]   = (OP_LOADINT << OPCODE_SHIFT) | (2 << A_SHIFT) | 1;               // R2 = 20 (arg2)
     // call func 0 with args from R(1) to R(2)
     vm.code[2]   = opcode(OP_CALL, 0, 1, 2);
     // call 2 times to ensure that sp not changed
@@ -426,14 +425,13 @@ TEST(VmFunctionTest, StackPointerManagement) {
     Function func{};
     func.entry_point = 5;
     func.arity = 2;
-    func.local_count = 4;  // 2 args + 2 locals
 
     vm.functions[0] = func;
 
     // Main code
-    vm.constants = {int_val(10), int_val(20), int_val(0)}; // 0 will be used as nil
-    vm.code[0] = opcode(OP_LOAD, 1, 0);  // R1 = 10
-    vm.code[1] = opcode(OP_LOAD, 2, 1);  // R2 = 20
+    vm.constanti = {int_val(10), int_val(20), int_val(0)}; // 0 will be used as nil
+    vm.code[0] = opcode(OP_LOADINT, 1, 0);  // R1 = 10
+    vm.code[1] = opcode(OP_LOADINT, 2, 1);  // R2 = 20
     vm.code[2] = opcode(OP_CALL, 0, 1, 2); // call func(10,20)
     vm.code[3] = opcode(OP_HALT);
 
@@ -455,25 +453,24 @@ TEST(VmFunctionTest, RecursiveFunction) {
     Function sum_func{};
     sum_func.entry_point = 5;
     sum_func.arity = 1;
-    sum_func.local_count = 2;  // 1 arg + 1 local
 
     vm.functions[0] = sum_func;
 
     // Main code and constants
-    vm.constants = {int_val(1), int_val(5)}; // 0=1, 1=5
-    vm.code[0] = opcode(OP_LOAD, 1, 1);  // R1 = 5
+    vm.constanti = {int_val(1), int_val(5)}; // 0=1, 1=5
+    vm.code[0] = opcode(OP_LOADINT, 1, 1);  // R1 = 5
     vm.code[1] = opcode(OP_CALL, 0, 1, 1); // sum(5)
     vm.code[2] = opcode(OP_HALT);
 
     // Function code
     // if (n <= 1) return 1
-    vm.code[5] = opcode(OP_LOAD, 2, 0);  // R2 = 1
+    vm.code[5] = opcode(OP_LOADINT, 2, 0);  // R2 = 1
     vm.code[6] = opcode(OP_LE, 3, 1, 2); // R3 = (R1 <= 1)
     vm.code[7] = jmpf(3, 3);  // if !R3 jump +3
-    vm.code[8] = opcode(OP_LOAD, 0, 0);  // R0 = 1
+    vm.code[8] = opcode(OP_LOADINT, 0, 0);  // R0 = 1
     vm.code[9] = opcode(OP_RETURN, 0);   // return 1
     // else return n + sum(n-1)
-    vm.code[10] = opcode(OP_LOAD, 2, 0); // R2 = 1
+    vm.code[10] = opcode(OP_LOADINT, 2, 0); // R2 = 1
     vm.code[11] = opcode(OP_SUB, 4, 1, 2); // R4 = n-1
     vm.code[12] = opcode(OP_CALL, 0, 4, 1); // sum(n-1)
     vm.code[13] = opcode(OP_ADD, 0, 1, 0); // R0 = n + sum(n-1)
@@ -492,25 +489,24 @@ TEST(VmFunctionTest, Factorial) {
     Function fact_func{};
     fact_func.entry_point = 5;
     fact_func.arity = 1;
-    fact_func.local_count = 2;  // 1 arg + 1 local
 
     vm.functions[0] = fact_func;
 
     // Main code and constants
-    vm.constants = {int_val(1), int_val(6)}; // 0=1, 1=6
-    vm.code[0] = opcode(OP_LOAD, 1, 1);  // R1 = 6
+    vm.constanti = {int_val(1), int_val(6)}; // 0=1, 1=6
+    vm.code[0] = opcode(OP_LOADINT, 1, 1);  // R1 = 6
     vm.code[1] = opcode(OP_CALL, 0, 1, 1); // fact(6)
     vm.code[2] = opcode(OP_HALT);
 
     // Function code
     // if (n <= 1) return 1
-    vm.code[5] = opcode(OP_LOAD, 2, 0);  // R2 = 1
+    vm.code[5] = opcode(OP_LOADINT, 2, 0);  // R2 = 1
     vm.code[6] = opcode(OP_LE, 3, 1, 2); // R3 = (R1 <= 1)
     vm.code[7] = jmpf(3, 3);  // if !R3 jump +3
-    vm.code[8] = opcode(OP_LOAD, 0, 0);  // R0 = 1
+    vm.code[8] = opcode(OP_LOADINT, 0, 0);  // R0 = 1
     vm.code[9] = opcode(OP_RETURN, 0);   // return 1
     // else return n * fact(n-1)
-    vm.code[10] = opcode(OP_LOAD, 2, 0); // R2 = 1
+    vm.code[10] = opcode(OP_LOADINT, 2, 0); // R2 = 1
     vm.code[11] = opcode(OP_SUB, 4, 1, 2); // R4 = n-1
     vm.code[12] = opcode(OP_CALL, 0, 4, 1); // fact(n-1)
     vm.code[13] = opcode(OP_MUL, 0, 1, 0); // R0 = n * fact(n-1)
@@ -529,7 +525,6 @@ TEST(VmFunctionTest, VoidFunction) {
     Function void_func{};
     void_func.entry_point = 5;
     void_func.arity = 0;
-    void_func.local_count = 0;  // just R0
 
     vm.functions[0] = void_func;
 
@@ -554,17 +549,16 @@ TEST(VmFunctionTest, NoArgsFunction) {
     Function const_func{};
     const_func.entry_point = 5;
     const_func.arity = 0;
-    const_func.local_count = 0;  // just R0
 
     vm.functions[0] = const_func;
-    vm.constants = {int_val(42)};
+    vm.constanti = {int_val(42)};
 
     // Main code
     vm.code[0] = opcode(OP_CALL, 0, 1, 0); // call const_func()
     vm.code[1] = opcode(OP_HALT);
 
     // Function code
-    vm.code[5] = opcode(OP_LOAD, 0, 0); // R0 = 42
+    vm.code[5] = opcode(OP_LOADINT, 0, 0); // R0 = 42
     vm.code[6] = opcode(OP_RETURN, 0);   // return R0
 
     run();
@@ -581,19 +575,17 @@ TEST(VmFunctionTest, NestedCalls) {
     Function func_a{};
     func_a.entry_point = 5;
     func_a.arity = 1;
-    func_a.local_count = 2;
 
     Function func_b{};
     func_b.entry_point = 10;
     func_b.arity = 1;
-    func_b.local_count = 2;
 
     vm.functions[0] = func_a;
     vm.functions[1] = func_b;
-    vm.constants = {int_val(10)};
+    vm.constanti = {int_val(10)};
 
     // Main code
-    vm.code[0] = opcode(OP_LOAD, 1, 0);  // R1 = 10
+    vm.code[0] = opcode(OP_LOADINT, 1, 0);  // R1 = 10
     vm.code[1] = opcode(OP_CALL, 0, 1, 1); // call A(10)
     vm.code[2] = opcode(OP_HALT);
 
@@ -603,7 +595,7 @@ TEST(VmFunctionTest, NestedCalls) {
     vm.code[7] = opcode(OP_RETURN, 0);      // return R0
 
     // Function B code
-    vm.code[10] = opcode(OP_LOAD, 2, 0);   // R2 = 10
+    vm.code[10] = opcode(OP_LOADINT, 2, 0);   // R2 = 10
     vm.code[11] = opcode(OP_ADD, 0, 1, 2);  // R0 = arg + 10
     vm.code[12] = opcode(OP_RETURN, 0);     // return R0
 
@@ -620,25 +612,24 @@ TEST(VmFunctionTest, DeepRecursion) {
     Function countdown{};
     countdown.entry_point = 5;
     countdown.arity = 1;
-    countdown.local_count = 2;
 
     vm.functions[0] = countdown;
-    vm.constants = {int_val(1), int_val(CALL_MAX_SIZE)};
+    vm.constanti = {int_val(1), int_val(CALL_MAX_SIZE)};
 
     // Main code - start with 100
-    vm.code[0] = opcode(OP_LOAD, 1, 1);  // R1 = MAX
+    vm.code[0] = opcode(OP_LOADINT, 1, 1);  // R1 = MAX
     vm.code[1] = opcode(OP_CALL, 0, 1, 1); // countdown(MAX)
     vm.code[2] = opcode(OP_HALT);
 
     // Function code
     // if (n <= 1) return 1
-    vm.code[5] = opcode(OP_LOAD, 2, 0);  // R2 = 1
+    vm.code[5] = opcode(OP_LOADINT, 2, 0);  // R2 = 1
     vm.code[6] = opcode(OP_LE, 3, 1, 2); // R3 = (R1 <= 1)
     vm.code[7] = jmpf(3, 3);  // if !R3 jump +3
-    vm.code[8] = opcode(OP_LOAD, 0, 0);  // R0 = 1
+    vm.code[8] = opcode(OP_LOADINT, 0, 0);  // R0 = 1
     vm.code[9] = opcode(OP_RETURN, 0);   // return 1
     // else return countdown(n-1)
-    vm.code[10] = opcode(OP_LOAD, 2, 0); // R2 = 1
+    vm.code[10] = opcode(OP_LOADINT, 2, 0); // R2 = 1
     vm.code[11] = opcode(OP_SUB, 4, 1, 2); // R4 = n-1
     vm.code[12] = opcode(OP_CALL, 0, 4, 1); // countdown(n-1)
     vm.code[13] = opcode(OP_RETURN, 0);    // return result
@@ -652,10 +643,10 @@ TEST(VmFunctionTest, DeepRecursion) {
 TEST(VmArithmeticTest, FloatOperations) {
     VMData& vm = initVM();
 
-    vm.constants = {float_val(3.5f), float_val(1.5f)};
+    vm.constanti = {float_val(3.5f), float_val(1.5f)};
 
-    vm.code[0] = opcode(OP_LOAD, 1, 0);  // R1 = 3.5
-    vm.code[1] = opcode(OP_LOAD, 2, 1);  // R2 = 1.5
+    vm.code[0] = opcode(OP_LOADINT, 1, 0);  // R1 = 3.5
+    vm.code[1] = opcode(OP_LOADINT, 2, 1);  // R2 = 1.5
     vm.code[2] = opcode(OP_ADD, 3, 1, 2);  // R3 = R1 + R2 (5.0)
     vm.code[3] = opcode(OP_SUB, 4, 1, 2);  // R4 = R1 - R2 (2.0)
     vm.code[4] = opcode(OP_MUL, 5, 1, 2);  // R5 = R1 * R2 (5.25)
@@ -674,10 +665,10 @@ TEST(VmArithmeticTest, FloatOperations) {
 TEST(VmArithmeticTest, MixedTypeArithmetic) {
     VMData& vm = initVM();
 
-    vm.constants = {int_val(5), float_val(2.5f)};
+    vm.constanti = {int_val(5), float_val(2.5f)};
 
-    vm.code[0] = opcode(OP_LOAD, 1, 0);  // R1 = 5 (int)
-    vm.code[1] = opcode(OP_LOAD, 2, 1);  // R2 = 2.5 (float)
+    vm.code[0] = opcode(OP_LOADINT, 1, 0);  // R1 = 5 (int)
+    vm.code[1] = opcode(OP_LOADINT, 2, 1);  // R2 = 2.5 (float)
     vm.code[2] = opcode(OP_ADD, 3, 1, 2);  // R3 = R1 + R2 (7.5)
     vm.code[3] = opcode(OP_HALT);
 
@@ -691,10 +682,10 @@ TEST(VmArithmeticTest, MixedTypeArithmetic) {
 TEST(VmArithmeticTest, DivisionByZero) {
     VMData& vm = initVM();
 
-    vm.constants = {int_val(10), int_val(0)};
+    vm.constanti = {int_val(10), int_val(0)};
 
-    vm.code[0] = opcode(OP_LOAD, 1, 0);  // R1 = 10
-    vm.code[1] = opcode(OP_LOAD, 2, 1);  // R2 = 0
+    vm.code[0] = opcode(OP_LOADINT, 1, 0);  // R1 = 10
+    vm.code[1] = opcode(OP_LOADINT, 2, 1);  // R2 = 0
     vm.code[2] = opcode(OP_DIV, 3, 1, 2);  // Should throw
 
     EXPECT_THROW(run(), std::runtime_error);
@@ -704,10 +695,10 @@ TEST(VmArithmeticTest, DivisionByZero) {
 TEST(VmOperationsTest, CharOperations) {
     VMData& vm = initVM();
 
-    vm.constants = {char_val('a'), char_val('b')};
+    vm.constanti = {char_val('a'), char_val('b')};
 
-    vm.code[0] = opcode(OP_LOAD, 1, 0);  // R1 = 'a'
-    vm.code[1] = opcode(OP_LOAD, 2, 1);  // R2 = 'b'
+    vm.code[0] = opcode(OP_LOADINT, 1, 0);  // R1 = 'a'
+    vm.code[1] = opcode(OP_LOADINT, 2, 1);  // R2 = 'b'
     vm.code[2] = opcode(OP_EQ, 3, 1, 2);  // R3 = ('a' == 'b') -> 0
     vm.code[3] = opcode(OP_LT, 4, 1, 2);  // R4 = ('a' < 'b') -> 1
     vm.code[4] = opcode(OP_HALT);
@@ -762,19 +753,18 @@ TEST(VmFunctionTest, DynamicInvocation) {
     Function func{};
     func.entry_point = 5;
     func.arity = 1;
-    func.local_count = 2;
     vm.functions[0] = func;
 
     // Create callable value
     Value callable;
     callable.type = ValueType::Callable;
-    callable.as.callable = 0;
-    vm.constants = {callable, int_val(10)};
+    callable.as.i32 = 0;
+    vm.constanti = {callable, int_val(10)};
 
     // Main code
-    vm.code[0] = opcode(OP_LOAD, 1, 0);  // R1 = callable
-    vm.code[1] = opcode(OP_LOAD, 2, 1);  // R2 = 10 (arg)
-    vm.code[2] = opcode(OP_INVOKEDYNAMIС, 1, 2, 1);  // R1(R2)
+    vm.code[0] = opcode(OP_LOADINT, 1, 0);  // R1 = callable
+    vm.code[1] = opcode(OP_LOADINT, 2, 1);  // R2 = 10 (arg)
+    vm.code[2] = opcode(OP_INVOKEDYNAMIC, 1, 2, 1);  // R1(R2)
     vm.code[3] = opcode(OP_HALT);
     // Function just returns the argument
     vm.code[5] = opcode(OP_ADD, 2, 1, 1);  // R2 = R1 + R1
@@ -793,7 +783,6 @@ TEST(VmMemoryTest, StackOverflow) {
     Function recurse{};
     recurse.entry_point = 5;
     recurse.arity = 0;
-    recurse.local_count = 1;
     vm.functions[0] = recurse;
 
     // Main code
@@ -810,7 +799,7 @@ TEST(VmMemoryTest, StackOverflow) {
 TEST(VmOperationsTest, TruthyValues) {
     VMData& vm = initVM();
 
-    vm.constants = {
+    vm.constanti = {
             int_val(0), int_val(1),
             float_val(0.0f), float_val(1.0f),
             char_val('\0'), char_val('a'),
@@ -818,13 +807,13 @@ TEST(VmOperationsTest, TruthyValues) {
     };
 
     // Test various values for truthiness
-    vm.code[0] = opcode(OP_LOAD, 1, 0);  // R1 = 0 (int)
-    vm.code[1] = opcode(OP_LOAD, 2, 1);  // R2 = 1 (int)
-    vm.code[2] = opcode(OP_LOAD, 3, 2);  // R3 = 0.0 (float)
-    vm.code[3] = opcode(OP_LOAD, 4, 3);  // R4 = 1.0 (float)
-    vm.code[4] = opcode(OP_LOAD, 5, 4);  // R5 = '\0' (char)
-    vm.code[5] = opcode(OP_LOAD, 6, 5);  // R6 = 'a' (char)
-    vm.code[6] = opcode(OP_LOAD, 7, 6);  // R7 = nil
+    vm.code[0] = opcode(OP_LOADINT, 1, 0);  // R1 = 0 (int)
+    vm.code[1] = opcode(OP_LOADINT, 2, 1);  // R2 = 1 (int)
+    vm.code[2] = opcode(OP_LOADINT, 3, 2);  // R3 = 0.0 (float)
+    vm.code[3] = opcode(OP_LOADINT, 4, 3);  // R4 = 1.0 (float)
+    vm.code[4] = opcode(OP_LOADINT, 5, 4);  // R5 = '\0' (char)
+    vm.code[5] = opcode(OP_LOADINT, 6, 5);  // R6 = 'a' (char)
+    vm.code[6] = opcode(OP_LOADINT, 7, 6);  // R7 = nil
 
     // Check truthiness
     vm.code[7] = jmpt(1, 100);  // Should not jump (0 is falsy)
@@ -854,7 +843,7 @@ TEST(VmErrorTest, InvalidOpcode) {
 TEST(VmErrorTest, ConstantOutOfRange) {
     VMData& vm = initVM();
 
-    vm.code[0] = opcode(OP_LOAD, 1, 100);  // Try to access non-existent constant
+    vm.code[0] = opcode(OP_LOADINT, 1, 100);  // Try to access non-existent constant
     vm.code[1] = opcode(OP_HALT);
 
     EXPECT_THROW(run(), std::out_of_range);
@@ -868,12 +857,11 @@ TEST(VmFunctionTest, WrongArityCall) {
     Function func{};
     func.entry_point = 5;
     func.arity = 2;
-    func.local_count = 3;
     vm.functions[0] = func;
-    vm.constants = {nil_val()};
+    vm.constanti = {nil_val()};
 
     // Call with 1 arg
-    vm.code[0] = opcode(OP_LOAD, 1, 0);  // R1 = arg
+    vm.code[0] = opcode(OP_LOADINT, 1, 0);  // R1 = arg
     vm.code[1] = opcode(OP_CALL, 0, 1, 1);  // Should throw
 
     vm.code[5] = opcode(OP_RETURNNIL);

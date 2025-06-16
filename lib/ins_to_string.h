@@ -11,7 +11,7 @@
 namespace interpreter {
 
 //-- for debugging --
-    inline std::string ins_to_string(uint32_t instr) {
+    inline std::string ins_to_string(uint32_t instr, std::vector<Value>* consti = nullptr) {
         using namespace interpreter;
 
         OpCode op = static_cast<OpCode>(instr >> OPCODE_SHIFT);
@@ -21,8 +21,11 @@ namespace interpreter {
         uint8_t c = instr & C_ARG;
         uint32_t bx = instr & BX_ARG;
         switch (op) {
-            case OP_LOAD:
-                return std::format("mov [{}] {}", a, bx);
+            case OP_LOADINT:
+                if (consti == nullptr)
+                    return std::format("mov [{}] C[{}]", a, bx);
+                else
+                    return std::format("mov [{}] {}", a, (*consti)[bx].as.i32);
             case OP_MOVE:
                 return std::format("mov [{}] [{}]", a, b);
             case OP_LOADNIL:
@@ -41,6 +44,8 @@ namespace interpreter {
                 return std::format("neg [{}] [{}] [{}]", a, b, c);
             case OP_EQ:
                 return std::format("eq [{}] [{}] [{}]", a, b, c);
+            case OP_NEQ:
+                return std::format("neq  [{}] [{}] [{}]", a, b, c);
             case OP_LT:
                 return std::format("lt [{}] [{}] [{}]", a, b, c);
             case OP_LE:
@@ -56,18 +61,27 @@ namespace interpreter {
             }
             case OP_CALL:
                 return std::format("call f{} [{}]...[{}]", a, b, c);
+            case OP_NATIVE_CALL:
+                throw std::runtime_error("ins_to_string does not support native for now");
+            case OP_INVOKEDYNAMIC:
+                return std::format("invoke [{}] [{}]...[{}]", a, b, b + c - 1);
+                break;
+            case OP_LOADFUNC:
+                return std::format("mov [{}] f[{}]", a, b);
+                break;
             case OP_RETURN:
                 return std::format("ret [{}]", a);
                 break;
-            case OP_NEWOBJ:
-            case OP_GETFIELD:
-            case OP_SETFIELD:
             case OP_HALT:
                 return "halt";
             case OP_RETURNNIL:
                 return std::format("ret nil");
+            case OP_NEWOBJ:
+            case OP_GETFIELD:
+            case OP_SETFIELD:
             default:
                 throw std::runtime_error("Unknown opcode");
+
         }
     }
 }

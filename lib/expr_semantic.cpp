@@ -32,6 +32,9 @@ parser::eval_expr(std::unique_ptr<ast::Node> expr, interpreter::BytecodeEmitter 
                 }
             }
             emitter.emit_call(start, start + 1, cnt);
+            vars.drop(cnt);
+            emitter.emit_move(vars.last(), vars.last() + 1);
+            break;
         }
         case NodeType::ArrayGet:
             return parser_throws(error_msg("todo4")) != nullptr;
@@ -45,8 +48,16 @@ parser::eval_expr(std::unique_ptr<ast::Node> expr, interpreter::BytecodeEmitter 
             emitter.emit_loadi(vars.push_var(), dynamic_cast<IntLitExpr *>(expr.get())->number);
             break;
         case NodeType::Var: {
-            const int res = vars.get_var(dynamic_cast<VarExpr *>(expr.get())->name);
-            if (res == -1) return parser_throws(error_msg("variables not found")) != nullptr;
+            std::string mname = dynamic_cast<VarExpr *>(expr.get())->name;
+            const int res = vars.get_var(mname);
+            if (res == -1) {
+                const int f = vars.get_func(mname);
+                if (f == -1) {
+                    parser_throws(error_msg("unknown identifier '" + mname + "' not found")) != nullptr;
+                }
+                emitter.emit_loadfunc(vars.push_var(), f);
+                return true;
+            }
             emitter.emit_move(vars.push_var(), res);
             break;
         }

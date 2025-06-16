@@ -26,9 +26,33 @@ using namespace parser;
 using namespace ast;
 
 #include "lib/ins_to_string.h"
-inline void print_func_body(std::vector<uint32_t> &code) {
-    for (auto &cur: code) {
-        std::cout << "    " << interpreter::ins_to_string(cur) << "\n";
+inline void print_func_body(uint32_t* code, int msize) {
+    for (int i = 0; i < msize; ++i) {
+        std::cout << "    " << interpreter::ins_to_string(code[i]) << "\n";
+    }
+}
+inline void print_vm_data(interpreter::VMData& vm) {
+    using namespace interpreter;
+    std::cout << "constants: [";
+    for (int i = 0; i < vm.constanti.size(); ++i) {
+        std::cout << vm.constanti[i].as.i32;
+        if (i != vm.constanti.size() - 1) std::cout << ", ";
+    }
+    std::cout << "]\n";
+    std::unordered_map<int, Function*> functions;
+    for (int i = 0; i < vm.functions_count; ++i) {
+        functions[vm.functions[i].entry_point] = &vm.functions[i];
+    }
+    for (int i = 0; i < vm.code_size; ++i) {
+        auto it = functions.find(i);
+        if (it != functions.end()) {
+            std::cout << "func" << it->second - vm.functions << "(args: " << (int)it->second->arity << "):\n";
+        }
+        std::cout << "    " << interpreter::ins_to_string(vm.code[i], &vm.constanti);
+        if (i == vm.ip) {
+            std::cout << " <- ip";
+        }
+        std::cout << '\n';
     }
 }
 

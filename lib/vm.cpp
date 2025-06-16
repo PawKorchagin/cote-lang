@@ -25,7 +25,7 @@ namespace interpreter {
             uint32_t bx = instr & BX_ARG;
 
             switch (op) {
-                case OP_LOAD:
+                case OP_LOADINT:
                     op_load(vm, a, bx);
                     break;
                 case OP_MOVE:
@@ -114,10 +114,10 @@ namespace interpreter {
 
 
     void op_load(VMData &vm, uint8_t reg, uint32_t const_idx) {
-        if (const_idx >= vm.constants.size()) {
+        if (const_idx >= vm.constanti.size()) {
             throw std::out_of_range("Constant index out of range");
         }
-        vm.stack[vm.fp + reg] = vm.constants[const_idx];
+        vm.stack[vm.fp + reg] = vm.constanti[const_idx];
     }
 
     void op_move(VMData &vm, uint8_t dst, uint8_t src) {
@@ -341,7 +341,7 @@ namespace interpreter {
         }
 
         const ObjClass context = vm.classes[class_idx];
-        auto *obj = new Object{std::vector<Value>(context.indexes.size())};
+        auto *obj = vm.heap[context.indexes.size()];
         vm.heap[vm.heap_size] = obj;
 
         Value newobj;
@@ -354,23 +354,25 @@ namespace interpreter {
     }
 
     void op_getfield(VMData &vm, uint8_t dst, uint8_t obj, uint8_t field_idx) {
-        Value &obj_val = vm.stack[vm.fp + obj];
-        Object *obj_ptr = vm.heap[obj_val.as.object_ptr];
-        if (field_idx >= obj_ptr->fields.size()) {
-            throw std::out_of_range("No such field");
-        }
-
-        vm.stack[vm.fp + dst] = obj_ptr->fields[field_idx];
+        throw std::runtime_error("todo");
+//        Value &obj_val = vm.stack[vm.fp + obj];
+//        Object *obj_ptr = vm.heap[obj_val.as.object_ptr];
+//        if (field_idx >= obj_ptr->fields.size()) {
+//            throw std::out_of_range("No such field");
+//        }
+//
+//        vm.stack[vm.fp + dst] = obj_ptr->fields[field_idx];
     }
 
     void op_setfield(VMData &vm, uint8_t obj, uint8_t field_idx, uint8_t src) {
-        Value &obj_val = vm.stack[vm.fp + obj];
-        Object *obj_ptr = vm.heap[obj_val.as.object_ptr];
-        if (field_idx >= obj_ptr->fields.size()) {
-            throw std::out_of_range("No such field");
-        }
-
-        obj_ptr->fields[field_idx] = vm.stack[vm.fp + src];
+        throw std::runtime_error("todo");
+//        Value &obj_val = vm.stack[vm.fp + obj];
+//        Object *obj_ptr = vm.heap[obj_val.as.object_ptr];
+//        if (field_idx >= obj_ptr->fields.size()) {
+//            throw std::out_of_range("No such field");
+//        }
+//
+//        obj_ptr->fields[field_idx] = vm.stack[vm.fp + src];
     }
 
     void op_halt(VMData &vm) {
@@ -455,7 +457,7 @@ namespace interpreter {
             throw std::runtime_error("No expected callable");
         }
 
-        op_call(vm, callable.as.callable, b, c);
+        op_call(vm, callable.as.i32, b, c);
     }
 
 
@@ -518,7 +520,7 @@ namespace interpreter {
 
         // Print opcode name and arguments in one switch
         switch (opcode) {
-            case OP_LOAD:
+            case OP_LOADINT:
                 std::cout << "LOAD        R" << (int) a << " = constants[" << bx << "]";
                 break;
             case OP_MOVE:

@@ -274,7 +274,6 @@ namespace parser {
                     parser_throws("expected } but found EOF");
                 default:
                     parse_statement();
-                    if (is_panic()) return;
             }
         }
     }
@@ -383,14 +382,14 @@ namespace parser {
     std::unique_ptr<Node> parse_assignment(int &res) {
         res = 0;
         auto lhs = parse_expression();
-        if (!lhs || match(TOKEN_SEMICOLON)) { return lhs; }
+        if (!lhs) { return lhs; }
         res = test(TOKEN_ASSIGN)
               + 2 * test(TOKEN_PLUS_EQ)
               + 3 * test(TOKEN_MINUS_EQ)
               + 4 * test(TOKEN_MUL_EQ)
               + 5 * test(TOKEN_DIV_EQ);
         if (res == 0)
-            parser_throws(error_msg("; after expression"));
+            return lhs;
         get_tok();
         auto rhs = parse_expression();
         if (!rhs) return res = 0, nullptr;
@@ -408,7 +407,7 @@ namespace parser {
         if (!match(TOKEN_SEMICOLON)) {
             parse_push_assign();
             if (!match(TOKEN_SEMICOLON))
-                parser_throws(error_msg("expected ; after assignment"));
+                parser_throws(error_msg("; after assignment"));
         }
 
         int start_id = jmp_uid++;
@@ -435,14 +434,16 @@ namespace parser {
 
     void parse_continue() {
         if (!match(TOKEN_SEMICOLON)) parser_throws(";");
-        if (loops.empty()) parser_throws(parser_throws("continue without loop; continue statements are allowed only inside loops"));
+        if (loops.empty())
+            parser_throws(parser_throws("continue without loop; continue statements are allowed only inside loops"));
         emitter->jmp_label(loops.back().label_start);
     }
 
 
     void parse_break() {
         if (!match(TOKEN_SEMICOLON)) parser_throws(";");
-        if (loops.empty()) parser_throws(parser_throws("break without loop; break statements are allowed only inside loops"));
+        if (loops.empty())
+            parser_throws(parser_throws("break without loop; break statements are allowed only inside loops"));
         emitter->jmp_label(loops.back().label_end);
     }
 
@@ -456,28 +457,22 @@ namespace parser {
         else if (match(TOKEN_BREAK)) parse_continue();
         else if (match(TOKEN_CONTINUE)) parse_continue();
         else {
+            //TODO: fails here
             parse_push_assign();
             if (!match(TOKEN_SEMICOLON))
-                parser_throws(error_msg("expected ; after assignment"));
+                parser_throws(error_msg("; after assignment"));
         }
     }
 
     ast::Program parse_program(interpreter::VMData &vm) {
         Program res;
         while (cur.token != TOKEN_EOF) {
-            bool had_errors = is_panic();
-            if (is_panic()) {
-                panic();
-            }
-            if ((had_errors ? prv.token : cur.token) == TOKEN_FN) {
-                if (!had_errors) get_tok();
+            if (match(TOKEN_FN)) {
                 parse_function();
-//                res.declarations.push_back(parse_function());
-            } else parser_throws(error_msg("function definition"));
+            } else parse_statement();
         }
-        emitter->resolve();
         emitter->initVM(vm);
-        res.instructions = std::move(emitter->code);
+        res.instructions = {};
         delete emitter;
         return res;
     }
@@ -494,7 +489,10 @@ namespace parser {
         if (header == nullptr) { return; }
         if (!match(TOKEN_LCURLY))
             parser_throws(error_msg("{ in function body"));
-        emitter->begin_func(name, header->params.size());
+        int fid = emitter->begin_func(header->params.size());
+        if (!vars.add_func(name, fid)) {
+            parser_throws(error_msg("function '" + name + "' already exsists"));
+        }
         for (auto &cur: header->params) {
             auto it = vars.get_var(cur);
             if (it != -1)

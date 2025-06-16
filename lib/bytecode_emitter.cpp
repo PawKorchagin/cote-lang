@@ -7,38 +7,38 @@
 
 void interpreter::BytecodeEmitter::emit_add(int a, int b, int c) {
     using namespace interpreter;
-    code.push_back(opcode(OpCode::OP_ADD, a, b, c));
+    add(opcode(OpCode::OP_ADD, a, b, c));
 }
 
 void interpreter::BytecodeEmitter::emit_sub(int a, int b, int c) {
     using namespace interpreter;
-    code.push_back(opcode(OpCode::OP_SUB, a, b, c));
+    add(opcode(OpCode::OP_SUB, a, b, c));
 
 }
 
 void interpreter::BytecodeEmitter::emit_mul(int a, int b, int c) {
     using namespace interpreter;
-    code.push_back(opcode(OpCode::OP_MUL, a, b, c));
+    add(opcode(OpCode::OP_MUL, a, b, c));
 }
 
 void interpreter::BytecodeEmitter::emit_div(int a, int b, int c) {
     using namespace interpreter;
-    code.push_back(opcode(OpCode::OP_DIV, a, b, c));
+    add(opcode(OpCode::OP_DIV, a, b, c));
 }
 
 void interpreter::BytecodeEmitter::emit_mod(int a, int b, int c) {
     using namespace interpreter;
-    code.push_back(opcode(OpCode::OP_MOD, a, b, c));
+    add(opcode(OpCode::OP_MOD, a, b, c));
 }
 
 void interpreter::BytecodeEmitter::emit_move(int a, int b) {
     using namespace interpreter;
-    code.push_back(opcode(OpCode::OP_MOVE, a, b, 0));
+    add(opcode(OpCode::OP_MOVE, a, b, 0));
 }
 
 void interpreter::BytecodeEmitter::emit_neg(int a, int b) {
     using namespace interpreter;
-    code.push_back(opcode(OpCode::OP_NEG, a, b, 0));
+    add(opcode(OpCode::OP_NEG, a, b, 0));
 }
 
 // Value creation helpers
@@ -54,55 +54,72 @@ namespace {
 void interpreter::BytecodeEmitter::emit_loadi(int a, int imm) {
     auto &it = iconstants[imm];
     if (it == 0) it = ++iconstant_count;
-    code.push_back(opcode(OpCode::OP_LOAD, a, it - 1));
+    add(opcode(OpCode::OP_LOADINT, a, it - 1));
 }
 
 void interpreter::BytecodeEmitter::emit_loadnil(int a) {
     using namespace interpreter;
-    code.push_back(opcode(OpCode::OP_LOADNIL, a, 0, 0));
+    add(opcode(OpCode::OP_LOADNIL, a, 0, 0));
 }
 
 void interpreter::BytecodeEmitter::emit_eq(int a, int b, int c) {
     using namespace interpreter;
-    code.push_back(opcode(OpCode::OP_EQ, a, b, c));
+    add(opcode(OpCode::OP_EQ, a, b, c));
 }
 
 void interpreter::BytecodeEmitter::emit_less(int a, int b, int c) {
     using namespace interpreter;
-    code.push_back(opcode(OpCode::OP_LT, a, b, c));
+    add(opcode(OpCode::OP_LT, a, b, c));
 }
 
 void interpreter::BytecodeEmitter::emit_leq(int a, int b, int c) {
     using namespace interpreter;
-    code.push_back(opcode(OpCode::OP_LE, a, b, c));
+    add(opcode(OpCode::OP_LE, a, b, c));
 }
 
 
 void interpreter::BytecodeEmitter::emit_jtrue(int a, int offset) {
     using namespace interpreter;
-    code.push_back(opcode(OpCode::OP_JMPT, a, offset));
+    add(opcode(OpCode::OP_JMPT, a, offset));
 }
 
 void interpreter::BytecodeEmitter::emit_jmp(int offset) {
     using namespace interpreter;
-    code.push_back(opcode(OpCode::OP_JMP, 0, offset));
+    add(opcode(OpCode::OP_JMP, 0, offset));
 }
 
 void interpreter::BytecodeEmitter::emit_jfalse(int a, int offset) {
     using namespace interpreter;
-    code.push_back(opcode(OpCode::OP_JMPF, a, offset));
+    add(opcode(OpCode::OP_JMPF, a, offset));
 }
 
 void interpreter::BytecodeEmitter::emit_return(int res) {
     using namespace interpreter;
-    code.push_back(opcode(OpCode::OP_RETURN, res, 0, 0));
+    add(opcode(OpCode::OP_RETURN, res, 0, 0));
 }
 
-void interpreter::BytecodeEmitter::begin_func(std::string name, int args) {
-    std::cout << name << ": ; args=" << args << '\n';
+//in the end of each function resolve labels;
+//the code is like this:
+//fn definitions with thier innner labels
+//...
+//global code with its labels
+//fn definitions
+//...
+//therefore:
+// - in the end of each function we resolve
+// - and in begin_func and in the absolute end resolve.
+int interpreter::BytecodeEmitter::begin_func(int args) {
+    resolve();
+    funcs[cur_func].arity = args;
+    funcs[cur_func].code.clear();
+    is_in_func = true;
+    return cur_func;
 }
 
 void interpreter::BytecodeEmitter::end_func() {
+    resolve();
+    is_in_func = false;
+    cur_func++;
 }
 
 /*
@@ -112,7 +129,7 @@ void interpreter::BytecodeEmitter::end_func() {
  */
 
 void interpreter::BytecodeEmitter::label(int32_t pos) {
-    label_pos[pos] = static_cast<int>(code.size());
+    label_pos[pos] = static_cast<int>(get().size());
 }
 
 void interpreter::BytecodeEmitter::resolve() {
@@ -120,7 +137,7 @@ void interpreter::BytecodeEmitter::resolve() {
     for (auto &cur: pending_labels) {
         auto it = label_pos.find(cur.second);
         if (it == label_pos.end()) throw std::runtime_error("ill formed bytecode");
-        auto &instr = code[cur.first];
+        auto &instr = get()[cur.first];
         const auto op = static_cast<OpCode>(instr >> OPCODE_SHIFT);
         uint8_t a = (instr >> A_SHIFT) & A_ARG;
         const int bx = (it->second - cur.first - 1);
@@ -128,47 +145,65 @@ void interpreter::BytecodeEmitter::resolve() {
         if (abs(bx) > 10000) throw std::runtime_error("TODO: sbx is too large(code is too large), cannot emit jump");
         instr = opcode(op, a, bx + (int32_t) J_ZERO);
     }
+    pending_labels.clear();
+    label_pos.clear();
 }
 
 void interpreter::BytecodeEmitter::jmp_label(int label) {
     using namespace interpreter;
-    pending_labels.emplace_back(code.size(), label);
-    code.push_back(opcode(OpCode::OP_JMP, 0, label));
+    pending_labels.emplace_back(get().size(), label);
+    add(opcode(OpCode::OP_JMP, 0, label));
 }
 
 void interpreter::BytecodeEmitter::jmpt_label(int a, int label) {
     using namespace interpreter;
-    pending_labels.emplace_back(code.size(), label);
-    code.push_back(opcode(OpCode::OP_JMPT, a, 0));
+    pending_labels.emplace_back(get().size(), label);
+    add(opcode(OpCode::OP_JMPT, a, 0));
 }
 
 void interpreter::BytecodeEmitter::jmpf_label(int a, int label) {
     using namespace interpreter;
-    pending_labels.emplace_back(code.size(), label);
-    code.push_back(opcode(OpCode::OP_JMPF, a, 0));
+    pending_labels.emplace_back(get().size(), label);
+    add(opcode(OpCode::OP_JMPF, a, 0));
 }
 
 
 void interpreter::BytecodeEmitter::initVM(interpreter::VMData &vm) {
-    vm.constants.resize(iconstant_count);
+    resolve();
+    emit_halt();
+    vm.constanti.resize(iconstant_count);
     for (auto& it : iconstants) {
-        vm.constants[it.second - 1].as.i32 = it.first;
-        vm.constants[it.second - 1].type = ValueType::Int;
+        vm.constanti[it.second - 1].as.i32 = it.first;
+        vm.constanti[it.second - 1].type = ValueType::Int;
     }
-    std::memcpy(vm.code, code.data(), code.size() * sizeof(uint32_t));
-    vm.code_size = code.size();
+    size_t offset = 0;
+    vm.functions_count = cur_func;
+    for (int i = 0; i < cur_func; ++i) {
+        vm.functions[i].arity = funcs[i].arity;
+        vm.functions[i].entry_point = offset;
+        std::memcpy(vm.code + offset, funcs[i].code.data(), funcs[i].code.size() * sizeof(uint32_t));
+        offset += funcs[i].code.size();
+    }
+    vm.ip = offset;
+    vm.sp = vm.fp = 0;
+    std::memcpy(vm.code + offset, global.data(), global.size() * sizeof(uint32_t));
+    vm.code_size = global.size() + offset;
 }
 
 void interpreter::BytecodeEmitter::emit_halt() {
-    code.push_back(opcode(OP_HALT, 0, 0));
+    add(opcode(OP_HALT, 0, 0));
 }
 
 void interpreter::BytecodeEmitter::emit_retnil() {
-    code.push_back(opcode(OP_RETURNNIL, 0, 0));
+    add(opcode(OP_RETURNNIL, 0, 0));
 }
 
 void interpreter::BytecodeEmitter::emit_call(int funcid, int reg, int count) {
-    code.push_back(opcode(OpCode::OP_INVOKEDYNAMIC, funcid, reg, count));
+    add(opcode(OpCode::OP_INVOKEDYNAMIC, funcid, reg, count));
+}
+
+void interpreter::BytecodeEmitter::emit_loadfunc(uint32_t reg, uint32_t fid) {
+    add(opcode(OpCode::OP_LOADFUNC, reg, fid));
 }
 
 

@@ -11,23 +11,33 @@
 #include <unordered_map>
 
 namespace interpreter {
+    struct EmitFunc {
+        std::string name;
+        std::vector<uint32_t> code;
+        int arity = 0;
+    };
     struct BytecodeEmitter {
         std::unordered_map<int32_t, int32_t> label_pos;
         std::vector<std::pair<int, int>> pending_labels;
-        std::vector<uint32_t> code;
+        std::vector<uint32_t> global;
         std::unordered_map<int, int> iconstants;
         int iconstant_count = 0;
+        int cur_func = 0;
+        bool is_in_func = false;
+        EmitFunc funcs[1024];
+
         //TODO: use unordered_map
     public:
+        void emit_loadfunc(uint32_t reg, uint32_t fid);
         void label(int32_t pos);
         void resolve();
-        void begin_func(std::string name, int args);
+        //returns this func id
+        int begin_func(int args);
         void end_func();
 
         void emit_halt();
         void emit_retnil();
         void emit_call(int funcid, int reg, int count);
-
 
         // Adds two values
         // Args: a - destination, b - first operand, c - second operand
@@ -150,6 +160,18 @@ namespace interpreter {
         //TODO: OP_HALT
 
         void initVM(interpreter::VMData& vm);
+    private:
+        inline void add(uint32_t instr) {
+            if (is_in_func) {
+                funcs[cur_func].code.push_back(instr);
+            } else {
+                global.push_back(instr);
+            }
+        }
+        inline std::vector<uint32_t>& get() {
+            if (is_in_func) return funcs[cur_func].code;
+            else return global;
+        }
 
     };
 

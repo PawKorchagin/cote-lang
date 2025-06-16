@@ -14,7 +14,7 @@ namespace interpreter {
         // Loads a constant into a register
         // Args: a - destination register, bx - constant pool index
         // Behavior: registers[a] = constants[bx]
-        OP_LOAD,
+        OP_LOADINT,
 
         // Copies value between registers
         // Args: a - destination register, b - source register
@@ -152,7 +152,11 @@ namespace interpreter {
         // Stops execution
         // Args: none
         // Behavior: terminates VM execution
-        OP_HALT
+        OP_HALT,
+
+        OP_GETGLOBAL,
+        OP_SETGLOBAL,
+        OP_LOADFUNC,
     };
 
     enum class ValueType : uint8_t { Nil, Int, Float, Char, Object, Callable };
@@ -164,7 +168,6 @@ namespace interpreter {
             int32_t i32;
             float f32;
             char c;
-            uint8_t callable;
             uint32_t object_ptr{};
         } as{};
 
@@ -177,13 +180,12 @@ namespace interpreter {
     };
 
     struct Object {
-        std::vector<Value> fields;
+        Value* fields;
     };
 
     struct Function {
         uint32_t entry_point;
         uint8_t arity;
-        uint8_t local_count;
     };
 
     typedef void(*NativeFunction)(VMData&);
@@ -216,13 +218,15 @@ namespace interpreter {
     };
 
     struct VMData {
-        //--for debug---
-        int code_size = 0;
         //  Static data: must be filled before running vm
-        std::vector<Value> constants;
+        std::vector<Value> constanti;
         std::vector<ObjClass> classes;
         Function functions[FUNCTIONS_MAX];
         NativeFunction natives[FUNCTIONS_MAX];
+        // -- general info --
+        size_t code_size = 0;
+        size_t functions_count = 0;
+
 
         // Heap storage
         Object* heap[HEAP_MAX_SIZE];
