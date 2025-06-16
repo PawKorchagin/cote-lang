@@ -126,7 +126,7 @@ namespace parser {
             case '/':
                 cur_char = in.get();
                 if (cur_char == '/') {
-                    while (cur_char != '\n') cur_char = in.get();
+                    while (cur_char != '\n' && cur_char != EOF) cur_char = in.get();
                     return cur.token = TOKEN_COMMENT;
                 }
                 if (cur_char == '=') return helper_return_char(TOKEN_DIV_EQ);

@@ -143,49 +143,19 @@ std::unique_ptr<ast::Node>
 parser::check_expr(std::unique_ptr<ast::Node> expr, interpreter::BytecodeEmitter &emitter, parser::VarManager &vars) {
     using namespace ast;
     if (expr == nullptr) return expr;
-    switch (expr->get_type()) {
-        case NodeType::Block:
-            return parser_throws(error_msg("block is not allowed in expr"));
-        case NodeType::FunctionDef:
-            return parser_throws(error_msg("todo1"));
-        case NodeType::FunctionSingature:
-            return parser_throws(error_msg("todo2"));
-        case NodeType::FunctionCall:
-            return std::move(expr);
-        case NodeType::ArrayGet:
-            return parser_throws(error_msg("todo4"));
-        case NodeType::Member:
-            return parser_throws(error_msg("todo5"));
-        case NodeType::Return:
-            return parser_throws(error_msg("todo6"));
-        case NodeType::StringLit:
-            return parser_throws(error_msg("todo7"));
-        case NodeType::IntLit:
-            return std::move(expr);
-        case NodeType::Var: {
-            return std::move(expr);
-        }
-        case NodeType::If:
-            return parser_throws(error_msg("todo9"));
-        case NodeType::While:
-            return parser_throws(error_msg("todo10"));
-        case NodeType::For:
-            return parser_throws(error_msg("todo11"));
-        case NodeType::UnaryMinus:
-        case NodeType::BinaryPlus:
-        case NodeType::BinaryMul:
-        case NodeType::BinaryDiv:
-        case NodeType::BinaryMinus:
-        case NodeType::BinaryGR:
-        case NodeType::BinaryLE:
-        case NodeType::BinaryLS:
-        case NodeType::BinaryGE:
-        case NodeType::BinaryEQ:
-        case NodeType::BinaryNEQ:
-            return std::move(expr);
-        default:
-            throw std::runtime_error("unknown error");
-        case NodeType::Assign:
-            throw std::runtime_error("internal error: illegal expression");
+    auto it = expr->get_type();
+    if (it == NodeType::ArrayGet || it == NodeType::FunctionCall) {
+        if (!check_lvalue(expr.get(), emitter, vars))
+            parser_throws("illegal expression: expected lvalue expression");
     }
+    return std::move(expr);
+}
+
+bool parser::check_lvalue(ast::Node* node, interpreter::BytecodeEmitter &emitter,
+                     parser::VarManager &vars) {
+    const auto mtype = node->get_type();
+    if (mtype == ast::NodeType::Var) return true;
+    if (mtype == ast::NodeType::FunctionCall) return check_lvalue(dynamic_cast<ast::FunctionCall*>(node)->name_expr.get(), emitter, vars);
+    if (mtype == ast::NodeType::ArrayGet) return check_lvalue(dynamic_cast<ast::ArrayGet*>(node)->name_expr.get(), emitter, vars);
+    return false;
 }

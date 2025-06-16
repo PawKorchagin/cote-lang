@@ -3,3 +3,11 @@ fn fact(n) {
     return n * fact(n - 1);
 }
 fact(5);
+//types of expressions:
+//binary on numbers: + * / - check no nils -> int
+//unary on numbers: // check lhs is not nil -> int
+//or/and on numbers // check no nils -> int
+// == != on everything // no checks -> int
+// <= >= < > on numbers // check no nils -> int
+// [] on arrays // check lhs is a variable, and not a number kind(function call, identifier, another arrayget)
+// () on functions // check lhs is a variable or a not a number kind
