@@ -9,8 +9,8 @@
 #define AUX_H
 
 #include "gtest/gtest.h"
-#include "lib/parser.h"
-#include "lib/exceptions.h"
+#include "src/parser.h"
+#include "src/exceptions.h"
 #include <random>
 #include <utility>
 #include <vector>
@@ -25,7 +25,7 @@ using namespace testing;
 using namespace parser;
 using namespace ast;
 
-#include "lib/ins_to_string.h"
+#include "src/ins_to_string.h"
 inline void print_func_body(uint32_t* code, int msize) {
     for (int i = 0; i < msize; ++i) {
         std::cout << "    " << interpreter::ins_to_string(code[i]) << "\n";

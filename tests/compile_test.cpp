@@ -2,9 +2,9 @@
 // Created by motya on 06.06.2025.
 //
 #include "utils.h"
-#include "lib/ast.h"
-#include "lib/ins_to_string.h"
-#include "lib/nodes.h"
+#include "src/ast.h"
+#include "src/ins_to_string.h"
+#include "src/nodes.h"
 
 using namespace interpreter;
 using SimpleCompileFromFileOk = Test;

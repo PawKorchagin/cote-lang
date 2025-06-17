@@ -2,13 +2,16 @@
 // Created by motya on 06.06.2025.
 //
 #include "utils.h"
-#include "lib/ast.h"
-#include "lib/nodes.h"
+#include "src/ast.h"
+#include "src/nodes.h"
+#include "libs/asmjit/src/asmjit/core.h"
+#include "libs/asmjit/src/asmjit/x86.h"
 
 using namespace interpreter;
 using SimpleJitTest = Test;
 
 TEST(SimpleJitTest, Test1) {
+    asmjit::JitRuntime jit;
     VMData& vm = initVM();
     BytecodeEmitter* emitter = new BytecodeEmitter();
     emitter->emit_loadi(0, 1);

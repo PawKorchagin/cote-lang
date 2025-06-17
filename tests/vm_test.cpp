@@ -1,7 +1,7 @@
 //
 // Created by motya on 12.04.2025.
 //
-#include "../lib/vm.h"
+#include "../src/vm.h"
 
 #include <gtest/gtest.h>
 

@@ -162,8 +162,8 @@ TEST(RandomExpressionEqualsTest, RandomTests) {
 #include <memory>
 #include <sstream>
 
-#include "lib/ast.h"
-#include "lib/equals.h"
+#include "src/ast.h"
+#include "src/equals.h"
 
 TEST(ManualEqualsTest, ParseExpressionTest) {
     auto three = std::make_unique<IntLitExpr>(3);
