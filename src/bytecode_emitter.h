@@ -2,8 +2,8 @@
 // Created by motya on 06.06.2025.
 //
 
-#ifndef CRYPT_BYTECODE_EMITTER_H
-#define CRYPT_BYTECODE_EMITTER_H
+#ifndef COTE_BYTECODE_EMITTER_H
+#define COTE_BYTECODE_EMITTER_H
 
 #include "misc.h"
 #include "vm.h"
@@ -16,6 +16,7 @@ namespace interpreter {
         std::vector<uint32_t> code;
         int arity = 0;
     };
+
     struct BytecodeEmitter {
         std::unordered_map<int32_t, int32_t> label_pos;
         std::vector<std::pair<int, int>> pending_labels;
@@ -27,16 +28,30 @@ namespace interpreter {
         EmitFunc funcs[1024];
 
         //TODO: use unordered_map
+
+
     public:
         void emit_loadfunc(uint32_t reg, uint32_t fid);
+
         void label(int32_t pos);
+
         void resolve();
+
         //returns this func id
-        int begin_func(int args);
+        int begin_func(int args, std::string name);
+
         void end_func();
 
         void emit_halt();
+
+        void emit_arrayget(int to, int from, int offset);
+
+        void emit_arrayset(int to, int offset, int from);
+
+        void emit_native(int id, int from, int cnt);
+
         void emit_retnil();
+
         void emit_call(int funcid, int reg, int count);
 
         // Adds two values
@@ -89,6 +104,7 @@ namespace interpreter {
         // Args: a - result register (1/0), b - first operand, c - second operand
         // Behavior: registers[a] = (registers[b] == registers[c]) ? 1 : 0
         void emit_eq(int a, int b, int c);
+
         // Less-than comparison
         // Args: Same as OP_EQ
         // Behavior: registers[a] = (registers[b] < registers[c]) ? 1 : 0
@@ -105,7 +121,9 @@ namespace interpreter {
         void emit_jmp(int offset);
 
         void jmp_label(int label);
+
         void jmpt_label(int a, int label);
+
         void jmpf_label(int a, int label);
 
         // Jump if true
@@ -159,8 +177,22 @@ namespace interpreter {
         // Behavior: terminates VM execution
         //TODO: OP_HALT
 
-        void initVM(interpreter::VMData& vm);
+        void initVM(interpreter::VMData &vm);
+
+        inline uint32_t pop() {
+            uint32_t res;
+            if (is_in_func) {
+                res = funcs[cur_func].code.back();
+                funcs[cur_func].code.pop_back();
+            } else {
+                res = global.back();
+                global.pop_back();
+            }
+            return res;
+        }
+
     private:
+
         inline void add(uint32_t instr) {
             if (is_in_func) {
                 funcs[cur_func].code.push_back(instr);
@@ -168,7 +200,8 @@ namespace interpreter {
                 global.push_back(instr);
             }
         }
-        inline std::vector<uint32_t>& get() {
+
+        inline std::vector<uint32_t> &get() {
             if (is_in_func) return funcs[cur_func].code;
             else return global;
         }
@@ -177,4 +210,4 @@ namespace interpreter {
 
 }
 
-#endif //CRYPT_BYTECODE_EMITTER_H
+#endif //COTE_BYTECODE_EMITTER_H

@@ -2,8 +2,8 @@
 // Created by motya on 14.06.2025.
 //
 
-#ifndef CRYPT_CODEGEN_H
-#define CRYPT_CODEGEN_H
+#ifndef COTE_CODEGEN_H
+#define COTE_CODEGEN_H
 
 namespace jit {
     struct CodeGen {
@@ -12,4 +12,4 @@ namespace jit {
 }
 
 
-#endif //CRYPT_CODEGEN_H
+#endif //COTE_CODEGEN_H

@@ -12,6 +12,7 @@
 #include "var_manager.h"
 #include "bytecode_emitter.h"
 #include "expr_semantic.h"
+#include "lang_stdlib.h"
 
 namespace {
     using namespace ast;
@@ -20,7 +21,7 @@ namespace {
     interpreter::BytecodeEmitter *emitter;
     VarManager vars;
     std::vector<LoopManager> loops;
-    int jmp_uid = 0;//TODO: reset
+    int jmp_uid = 0;
 
     bool match(int token_type) {
         if (token_type != cur.token) return false;
@@ -360,21 +361,49 @@ namespace parser {
         if (!epush(std::move(rhs))) {
             return;
         }
-        if (lhs->get_type() != ast::NodeType::Var)
-            parser_throws(error_msg("todo16"));
-        const std::string &m_name = dynamic_cast<VarExpr *>(lhs.get())->name;
-        const int res = vars.get_var(m_name);
-        //if variable not found, then we create new at the same place and it has almost no scope
-        if (res == -1) {
-            vars.pop_var();
-            vars.push_var(m_name);
-            return;
+        if (lhs->get_type() == ast::NodeType::Var) {
+            const std::string &m_name = dynamic_cast<VarExpr *>(lhs.get())->name;
+            const int res = vars.get_var(m_name);
+            //if variable not found, then we create new at the same place and it has almost no scope
+            if (res == -1) {
+                vars.pop_var();
+                vars.push_var(m_name);
+                return;
+            }
+            if (is_assignment == 1) emitter->emit_move(res, vars.pop_var());
+            else if (is_assignment == 2) emitter->emit_add(res, vars.pop_var(), res);
+            else if (is_assignment == 3) emitter->emit_sub(res, vars.pop_var(), res);
+            else if (is_assignment == 4) emitter->emit_mul(res, vars.pop_var(), res);
+            else if (is_assignment == 5) emitter->emit_div(res, vars.pop_var(), res);
         }
-        if (is_assignment == 1) emitter->emit_move(res, vars.pop_var());
-        else if (is_assignment == 2) emitter->emit_add(res, vars.pop_var(), res);
-        else if (is_assignment == 3) emitter->emit_sub(res, vars.pop_var(), res);
-        else if (is_assignment == 4) emitter->emit_mul(res, vars.pop_var(), res);
-        else if (is_assignment == 5) emitter->emit_div(res, vars.pop_var(), res);
+        if (lhs->get_type() == ast::NodeType::ArrayGet) {
+            if (!parser::check_lvalue(lhs.get(), *emitter, vars)) parser_throws(error_msg("lvalue failed"));
+            auto cur = dynamic_cast<ast::ArrayGet *>(lhs.get());
+            parser::eval_expr(cur->name_expr.get(), *emitter, vars);
+            parser::eval_expr(cur->index.get(), *emitter, vars);
+            if (is_assignment != 1) {
+                emitter->emit_arrayget(vars.last() + 1, vars.last() - 1, vars.last());
+                switch (is_assignment) {
+                    case 2:
+                        emitter->emit_add(vars.last() - 2, vars.last() - 2, vars.last() + 1);
+                        break;
+                    case 3:
+                        emitter->emit_sub(vars.last() - 2, vars.last() - 2, vars.last() + 1);
+                        break;
+                    case 4:
+                        emitter->emit_mul(vars.last() - 2, vars.last() - 2, vars.last() + 1);
+                        break;
+                    case 5:
+                        emitter->emit_div(vars.last() - 2, vars.last() - 2, vars.last() + 1);
+                        break;
+                    default:
+                        break;
+                }
+            }
+            emitter->emit_arrayset(vars.last() - 1, vars.last(), vars.last() - 2);
+            vars.drop(3);
+        }
+
     }
 
     //parses <expressiona>: ?(<lvalue> =) <expression> ;
@@ -466,10 +495,12 @@ namespace parser {
 
     ast::Program parse_program(interpreter::VMData &vm) {
         Program res;
+        jmp_uid = 0;
         while (cur.token != TOKEN_EOF) {
             if (match(TOKEN_FN)) {
                 parse_function();
-            } else parse_statement();
+            } else
+                parser_throws(error_msg("expected function declaration"));
         }
         emitter->initVM(vm);
         res.instructions = {};
@@ -489,7 +520,7 @@ namespace parser {
         if (header == nullptr) { return; }
         if (!match(TOKEN_LCURLY))
             parser_throws(error_msg("{ in function body"));
-        int fid = emitter->begin_func(header->params.size());
+        int fid = emitter->begin_func(header->params.size(), name);
         if (!vars.add_func(name, fid)) {
             parser_throws(error_msg("function '" + name + "' already exsists"));
         }
@@ -500,6 +531,7 @@ namespace parser {
             vars.push_var(cur);
         }
         parse_block();
+        //TODO: tail call
         //add return in case control flow leaks
         emitter->emit_retnil();
         emitter->end_func();
@@ -509,18 +541,21 @@ namespace parser {
     void init_parser(std::istream &in, interpreter::BytecodeEmitter *emit) {
         init_lexer(in);
         emitter = emit;
+        vars = VarManager();
+        cote_stdlib::initStdlib(interpreter::vm_instance(), vars);
         init_exceptions();
     }
 
     bool epush(std::unique_ptr<ast::Node> expr) {
         if (expr == nullptr) return false;
-        if (!parser::eval_expr(std::move(expr), *emitter, vars))
+        if (!parser::eval_expr(expr.get(), *emitter, vars))
             throw std::runtime_error("error parsing expression");
         return true;
     }
 
     void parse_return() {
         epush(parse_expr_sc());
+        //TODO: tail call
         emitter->emit_return(vars.pop_var());
     }
 

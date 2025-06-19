@@ -2,8 +2,8 @@
 // Created by motya on 14.04.2025.
 //
 
-#ifndef CRYPT_LEXER_H
-#define CRYPT_LEXER_H
+#ifndef COTE_LEXER_H
+#define COTE_LEXER_H
 #include <string>
 namespace parser {
     enum TokenInfo {
@@ -72,4 +72,4 @@ namespace parser {
     std::string token_to_string(TokenInfo tok, std::string temp_data);
 }
 
-#endif //CRYPT_LEXER_H
+#endif //COTE_LEXER_H

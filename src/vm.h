@@ -1,5 +1,5 @@
-#ifndef CRYPT_VM_H
-#define CRYPT_VM_H
+#ifndef COTE_VM_H
+#define COTE_VM_H
 
 #include <cstdint>
 #include <fstream>
@@ -154,9 +154,13 @@ namespace interpreter {
         // Behavior: terminates VM execution
         OP_HALT,
 
-        OP_GETGLOBAL,
-        OP_SETGLOBAL,
+        OP_ARRGET,
+        OP_ARRSET,
         OP_LOADFUNC,
+        OP_LOADFLOAT,
+        OP_TAILCALL
+        //TODO: float support
+        //      tail call
     };
 
     enum class ValueType : uint8_t { Nil, Int, Float, Char, Object, Callable };
@@ -308,4 +312,4 @@ namespace interpreter {
 
 };  // namespace interpreter
 
-#endif  // CRYPT_VM_H
+#endif  // COTE_VM_H

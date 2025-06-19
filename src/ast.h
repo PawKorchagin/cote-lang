@@ -2,8 +2,8 @@
 // Created by motya on 28.03.2025.
 //
 
-#ifndef CRYPT_AST_H
-#define CRYPT_AST_H
+#ifndef COTE_AST_H
+#define COTE_AST_H
 
 #include <string>
 #include <vector>
@@ -701,4 +701,4 @@ namespace detail {
     }
 }
 
-#endif //CRYPT_AST_H
+#endif //COTE_AST_H

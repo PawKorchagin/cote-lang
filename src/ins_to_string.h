@@ -2,8 +2,8 @@
 // Created by motya on 13.06.2025.
 //
 
-#ifndef CRYPT_INS_TO_STRING_H
-#define CRYPT_INS_TO_STRING_H
+#ifndef COTE_INS_TO_STRING_H
+#define COTE_INS_TO_STRING_H
 
 #include "vm.h"
 #include <format>
@@ -62,13 +62,11 @@ namespace interpreter {
             case OP_CALL:
                 return std::format("call f{} [{}]...[{}]", a, b, c);
             case OP_NATIVE_CALL:
-                throw std::runtime_error("ins_to_string does not support native for now");
+                return std::format("native [{}] [{}]...[{}]", a, b, b + c - 1);
             case OP_INVOKEDYNAMIC:
                 return std::format("invoke [{}] [{}]...[{}]", a, b, b + c - 1);
-                break;
             case OP_LOADFUNC:
                 return std::format("mov [{}] f[{}]", a, b);
-                break;
             case OP_RETURN:
                 return std::format("ret [{}]", a);
                 break;
@@ -76,14 +74,18 @@ namespace interpreter {
                 return "halt";
             case OP_RETURNNIL:
                 return std::format("ret nil");
-            case OP_NEWOBJ:
-            case OP_GETFIELD:
-            case OP_SETFIELD:
             default:
                 throw std::runtime_error("Unknown opcode");
-
+            case OP_ARRGET:
+                return std::format("arrget [{}] [{}][{}]", a, b, c);
+            case OP_ARRSET:
+                return std::format("arrset [{}][{}] [{}]", a, b, c);
+            case OP_LOADFLOAT:
+                return std::format("loadfloat TODO");
+            case OP_TAILCALL:
+                return std::format("tailcall [{}]", a);
         }
     }
 }
 
-#endif //CRYPT_INS_TO_STRING_H
+#endif //COTE_INS_TO_STRING_H

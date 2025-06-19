@@ -2,8 +2,8 @@
 // Created by motya on 30.05.2025.
 //
 
-#ifndef CRYPT_NODES_H
-#define CRYPT_NODES_H
+#ifndef COTE_NODES_H
+#define COTE_NODES_H
 
 #include <vector>
 #include <cstdlib>
@@ -115,4 +115,4 @@ namespace cfg {
 
 }
 
-#endif //CRYPT_NODES_H
+#endif //COTE_NODES_H

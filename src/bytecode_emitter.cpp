@@ -108,8 +108,9 @@ void interpreter::BytecodeEmitter::emit_return(int res) {
 //therefore:
 // - in the end of each function we resolve
 // - and in begin_func and in the absolute end resolve.
-int interpreter::BytecodeEmitter::begin_func(int args) {
+int interpreter::BytecodeEmitter::begin_func(int args, std::string name) {
     resolve();
+    funcs[cur_func].name = std::move(name);
     funcs[cur_func].arity = args;
     funcs[cur_func].code.clear();
     is_in_func = true;
@@ -170,9 +171,16 @@ void interpreter::BytecodeEmitter::jmpf_label(int a, int label) {
 
 void interpreter::BytecodeEmitter::initVM(interpreter::VMData &vm) {
     resolve();
+    int cur = -1;
+    for (int i = 0; i < cur_func; ++i) {
+        if (funcs[i].name == "main")
+            cur = i;
+    }
+    if (cur == -1) throw std::runtime_error("no main method found");
+    emit_call(cur, 0, 0);
     emit_halt();
     vm.constanti.resize(iconstant_count);
-    for (auto& it : iconstants) {
+    for (auto &it: iconstants) {
         vm.constanti[it.second - 1].as.i32 = it.first;
         vm.constanti[it.second - 1].type = ValueType::Int;
     }
@@ -204,6 +212,20 @@ void interpreter::BytecodeEmitter::emit_call(int funcid, int reg, int count) {
 
 void interpreter::BytecodeEmitter::emit_loadfunc(uint32_t reg, uint32_t fid) {
     add(opcode(OpCode::OP_LOADFUNC, reg, fid));
+}
+
+void interpreter::BytecodeEmitter::emit_arrayget(int to, int from, int offset) {
+    add(opcode(OpCode::OP_ARRGET, to, from, offset));
+}
+
+void interpreter::BytecodeEmitter::emit_arrayset(int to, int offset, int from) {
+    add(opcode(OpCode::OP_ARRSET, to, offset, from));
+}
+
+
+
+void interpreter::BytecodeEmitter::emit_native(int id, int from, int cnt) {
+    add(opcode(OpCode::OP_NATIVE_CALL, id, from, cnt));
 }
 
 

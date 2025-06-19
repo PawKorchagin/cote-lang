@@ -2,12 +2,13 @@
 // Created by motya on 06.06.2025.
 //
 
-#ifndef CRYPT_VARIABLE_MANAGER_H
-#define CRYPT_VARIABLE_MANAGER_H
+#ifndef COTE_VARIABLE_MANAGER_H
+#define COTE_VARIABLE_MANAGER_H
 
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include "bytecode_emitter.h"
 
 namespace parser {
@@ -26,6 +27,8 @@ namespace parser {
     };
 
     struct VarManager {
+        typedef void(*NativeFunction)(interpreter::VMData &);
+
         inline VarManager() : levels(1, LevelInfo()), var_names() {}
 
         inline int last() { return levels.back().sp - 1; }
@@ -48,13 +51,18 @@ namespace parser {
 
         bool add_func(std::string name, int fid);
 
+        int get_native(std::string name);
+
+        int add_native(std::string name);
+
     private:
         std::vector<LevelInfo> levels;
         std::unordered_map<std::string, int> functions;
+        std::unordered_map<std::string, int> natives;
         // "x" : <location, level>
         std::unordered_map<std::string, std::pair<int, int>> var_names;
     };
 }
 
 
-#endif //CRYPT_VARIABLE_MANAGER_H
+#endif //COTE_VARIABLE_MANAGER_H

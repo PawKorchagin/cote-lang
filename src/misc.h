@@ -2,8 +2,8 @@
 // Created by motya on 01.04.2025.
 //
 
-#ifndef CRYPT_MISC_H
-#define CRYPT_MISC_H
+#ifndef COTE_MISC_H
+#define COTE_MISC_H
 #include <fstream>
 
 inline std::istream NULL_STREAM(nullptr);
@@ -34,4 +34,4 @@ void add_linked(T& obj, decltype(&T::last) nxt) {
     obj->last = obj->last->nxt;
 
 }
-#endif //CRYPT_MISC_H
+#endif //COTE_MISC_H

@@ -2,8 +2,8 @@
 здесь пишем только то, что должно быть видно извне и стараемся только
 сигнатуры тут писать, пример ниже
 */
-#ifndef CRYPT_PARSER_H
-#define CRYPT_PARSER_H
+#ifndef COTE_PARSER_H
+#define COTE_PARSER_H
 
 #include <string>
 #include <exception>

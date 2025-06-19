@@ -2,8 +2,8 @@
 // Created by motya on 14.04.2025.
 //
 
-#ifndef CRYPT_EXCEPTIONS_H
-#define CRYPT_EXCEPTIONS_H
+#ifndef COTE_EXCEPTIONS_H
+#define COTE_EXCEPTIONS_H
 
 #include <vector>
 #include <string>
@@ -22,4 +22,4 @@ namespace parser {
 
 }
 
-#endif //CRYPT_EXCEPTIONS_H
+#endif //COTE_EXCEPTIONS_H
