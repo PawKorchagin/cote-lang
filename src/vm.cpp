@@ -12,8 +12,7 @@ namespace interpreter {
         return vm_instance_;
     }
 
-    template<bool isRecording = false>
-    void run_() {
+    void run() {
         VMData &vm = vm_instance();
 
         while (true) {
@@ -24,8 +23,6 @@ namespace interpreter {
             uint8_t b = (instr >> B_SHIFT) & B_ARG;
             uint8_t c = instr & C_ARG;
             uint32_t bx = instr & BX_ARG;
-
-
 
             switch (op) {
                 case OP_LOADINT:
@@ -86,7 +83,7 @@ namespace interpreter {
                     op_call(vm, a, b, c);
                     break;
                 case OP_NATIVE_CALL:
-                    op_native_call(vm, a);
+                    op_native_call(vm, a, b, c);
                     break;
                 case OP_INVOKEDYNAMIC:
                     op_invokedyn(vm, a, b, c);
@@ -123,8 +120,6 @@ namespace interpreter {
             }
         }
     }
-
-    void run() { run_(); }
 
     void op_load(VMData &vm, uint8_t reg, uint32_t const_idx) {
         if (const_idx >= vm.constanti.size()) {
@@ -460,8 +455,8 @@ namespace interpreter {
         return res;
     }
 
-    void op_native_call(VMData &vm, uint8_t func_idx) {
-        vm.natives[func_idx](vm);
+    void op_native_call(VMData &vm, uint8_t func_idx, int reg, int count) {
+        vm.natives[func_idx](vm, reg, count);
     }
 
     void op_invokedyn(VMData &vm, uint8_t a, uint8_t b, uint8_t c) {
@@ -490,11 +485,11 @@ namespace interpreter {
     }
 
     void op_loadfunc(VMData &vm, uint8_t reg, uint32_t const_idx) {
-        if (const_idx >= vm.constantfunc.size()) {
+        if (const_idx >= vm.functions_count) {
             throw std::out_of_range("Function constant index out of range");
         }
         vm.stack[vm.fp + reg].type = ValueType::Callable;
-        vm.stack[vm.fp + reg].as.i32 = vm.constantfunc[const_idx].as.i32;
+        vm.stack[vm.fp + reg].as.i32 = static_cast<int>(const_idx);
     }
 
     void op_alloc(VMData &vm, uint8_t dst, uint8_t s) {
@@ -504,66 +499,73 @@ namespace interpreter {
 
         uint32_t size = vm.stack[s].as.i32;
 
-        Value *fields = static_cast<Value *>(malloc((size + 1) * sizeof(Value)));
+        auto fields = static_cast<Value *>(malloc((size + 1) * sizeof(Value)));
         if (!fields) {
             throw std::runtime_error("Memory allocation failed");
         }
 
-        // Create array object with "len" field
-        Object *arr = new Object{fields};
-        vm.heap[vm.heap_size] = arr;
 
         // Set len field
         fields[0].type = ValueType::Int;
         fields[0].as.i32 = size;
 
+        vm.heap[vm.heap_size] = fields;
+
         Value obj_val;
         obj_val.type = ValueType::Object;
-        obj_val.as.object_ptr = vm.heap_size;
+        obj_val.as.object_ptr = vm.heap_size++;
         obj_val.class_ptr = 0;  // Array class is always at index 0
 
         vm.stack[vm.fp + dst] = obj_val;
-        vm.heap_size++;
     }
 
-    void op_arrget(VMData &vm, uint8_t dst, uint8_t arr, uint8_t idx) {
+    void op_arrget(VMData &vm, uint8_t dst, uint8_t arr, uint8_t idxc) {
+        auto &idx = vm.stack[vm.fp + idxc];
+        if (!idx.is_int()) {
+            throw std::runtime_error("Invalid array index");
+        }
         Value &arr_val = vm.stack[vm.fp + arr];
         if (!arr_val.is_object()) {
             throw std::runtime_error("Expected array object");
         }
 
-        Object *obj = vm.heap[arr_val.as.object_ptr];
-        Value len_val = obj->fields[0];
+        auto &obj = vm.heap[arr_val.as.object_ptr];
+        Value len_val = obj[0];
         if (!len_val.is_int()) {
             throw std::runtime_error("Invalid array length");
         }
 
         int32_t len = len_val.as.i32;
-        if (idx >= len) {
+        if (idx.as.i32 >= len) {
             throw std::out_of_range("Array index out of bounds");
         }
 
-        vm.stack[vm.fp + dst] = obj->fields[idx + 1];  // +1 because index 0 is len
+        vm.stack[vm.fp + dst] = obj[idx.as.i32 + 1];  // +1 because index 0 is len
     }
 
-    void op_arrset(VMData &vm, uint8_t arr, uint8_t idx, uint8_t src) {
+    void op_arrset(VMData &vm, uint8_t arr, uint8_t idxc, uint8_t src) {
         Value &arr_val = vm.stack[vm.fp + arr];
+        auto &idx = vm.stack[vm.fp + idxc];
+        if (!idx.is_int()) {
+            throw std::runtime_error("Invalid array index");
+        }
+
         if (!arr_val.is_object()) {
             throw std::runtime_error("Expected array object");
         }
 
-        Object *obj = vm.heap[arr_val.as.object_ptr];
-        Value len_val = obj->fields[0];
+        auto &obj = vm.heap[arr_val.as.object_ptr];
+        Value len_val = obj[0];
         if (!len_val.is_int()) {
             throw std::runtime_error("Invalid array length");
         }
 
         int32_t len = len_val.as.i32;
-        if (idx >= len) {
+        if (idx.as.i32 >= len) {
             throw std::out_of_range("Array index out of bounds");
         }
 
-        obj->fields[idx + 1] = vm.stack[vm.fp + src];  // +1 because index 0 is len
+        obj[idx.as.i32 + 1] = vm.stack[vm.fp + src];  // +1 because index 0 is len
     }
 
 
