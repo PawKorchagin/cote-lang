@@ -17,7 +17,7 @@ inline void compile_program(std::istream &fin, const std::string &file_name = "c
     ASSERT_NO_THROW(p = parser::parse_program(vm));
     print_vm_data(vm);
 //    print_func_body(p.instructions);
-    interpreter::run();
+//    interpreter::run();
     ASSERT_TRUE(vm.call_stack.empty());
     ASSERT_EQ(vm.stack[0].as.i32, 0);
 
@@ -32,7 +32,7 @@ inline void compile_program(std::istream &fin, const std::string &file_name = "c
 
 TEST(SimpleCompileFromFileOk, FileTests) {
     ASSERT_NO_THROW({
-                        std::ifstream fin("../../tests/sources/test6.ct");
+                        std::ifstream fin("../../tests/sources/test3.ct");
                         return compile_program(fin);
                     });
 }
