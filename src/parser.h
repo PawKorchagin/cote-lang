@@ -62,7 +62,7 @@ namespace parser {
 
     void init_parser(std::istream& in, interpreter::BytecodeEmitter* emitter);
 
-    bool epush(std::unique_ptr<ast::Node> expr);
+    bool epush(ast::Node* expr);
 }
 
 

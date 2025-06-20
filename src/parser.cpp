@@ -448,17 +448,19 @@ namespace parser {
         int end_id = jmp_uid++;
         loops.emplace_back(start_id, end_id);
 
-        emitter->label(start_id);
-        if (!epush(parse_expr_sc())) return;
+        auto cond = parse_expr_sc();
+        epush(cond.get());
         emitter->jmpf_label(vars.pop_var(), end_id);
-        //HERE: should be parse_assingment
+        emitter->label(start_id);
+        //HERE: should be parse_assignment
         int is_assignment = 0;
         auto incExpr = parse_assignment(is_assignment);
         if (!match(TOKEN_RPAREN)) parser_throws(error_msg(")"));
         if (match(TOKEN_LCURLY)) parse_block<false, false>();
         else parse_statement();
         push_assign(std::move(incExpr), is_assignment);
-        emitter->jmp_label(start_id);
+        epush(cond.get());
+        emitter->jmpt_label(vars.pop_var(), start_id);
         emitter->label(end_id);
 
         vars.close_scope();
@@ -551,9 +553,9 @@ namespace parser {
         init_exceptions();
     }
 
-    bool epush(std::unique_ptr<ast::Node> expr) {
+    bool epush(ast::Node *expr) {
         if (expr == nullptr) return false;
-        if (!parser::eval_expr(expr.get(), *emitter, vars))
+        if (!parser::eval_expr(expr, *emitter, vars))
             throw std::runtime_error("error parsing expression");
         return true;
     }

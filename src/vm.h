@@ -149,6 +149,9 @@ namespace interpreter {
     struct Value {
         ValueType type     = ValueType::Nil;
         uint16_t class_ptr = 0;  // only for objects
+        //0 - array
+        //1 - array of ints
+        //2 - array of doubles
         union {
             int32_t i32;
             float f32;
@@ -161,6 +164,7 @@ namespace interpreter {
         bool is_float() const { return type == ValueType::Float; }
         bool is_char() const { return type == ValueType::Char; }
         bool is_object() const { return type == ValueType::Object; }
+        bool is_array() const { return type == ValueType::Object && class_ptr < 3; }
         bool is_callable() const { return type == ValueType::Callable; }
     };
 
