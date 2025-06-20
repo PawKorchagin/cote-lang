@@ -151,9 +151,6 @@ namespace interpreter {
     struct Value {
         ValueType type = ValueType::Nil;
         uint16_t class_ptr = 0;  // only for objects
-        //0 - array
-        //1 - array of ints
-        //2 - array of doubles
         union {
             int32_t i32;
             float f32;
@@ -171,13 +168,9 @@ namespace interpreter {
 
         bool is_object() const { return type == ValueType::Object; }
 
-        bool is_array() const { return type == ValueType::Object && class_ptr < 3; }
+        bool is_array() const { return is_object() && class_ptr == 0; }
 
         bool is_callable() const { return type == ValueType::Callable; }
-    };
-
-    struct Object {
-        Value *fields;
     };
 
     struct Function {
@@ -185,7 +178,7 @@ namespace interpreter {
         uint8_t arity;
     };
 
-    typedef void (*NativeFunction)(VMData &);
+    typedef void (*NativeFunction)(VMData &, int reg, int cnt);
 
     struct ObjClass {
         std::pmr::unordered_map<std::string, int> indexes;
@@ -219,7 +212,6 @@ namespace interpreter {
         //  Static data: must be filled before running vm
         std::vector<Value> constanti;
         std::vector<Value> constantf;
-        std::vector<Value> constantfunc;
         std::vector<ObjClass> classes;
         Function functions[FUNCTIONS_MAX];
         NativeFunction natives[FUNCTIONS_MAX];
@@ -228,7 +220,7 @@ namespace interpreter {
         size_t functions_count = 0;
 
         // Heap storage
-        Object *heap[HEAP_MAX_SIZE];
+        Value *heap[HEAP_MAX_SIZE];
         uint32_t heap_size = 0;
 
         // Execution state
@@ -336,7 +328,7 @@ namespace interpreter {
 
     void op_call(VMData &vm, uint8_t func_idx, uint8_t first_arg_ind, uint8_t num_args);
 
-    void op_native_call(VMData &vm, uint8_t func_idx, int reg, int cnt);
+    void op_native_call(VMData &vm, uint8_t func_idx, int reg1, int count);
 
     void op_invokedyn(VMData &vm, uint8_t a, uint8_t b, uint8_t c);
 
