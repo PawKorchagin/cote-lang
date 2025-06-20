@@ -9,8 +9,8 @@
 #define AUX_H
 
 #include "gtest/gtest.h"
-#include "lib/parser.h"
-#include "lib/exceptions.h"
+#include "src/parser.h"
+#include "src/exceptions.h"
 #include <random>
 #include <utility>
 #include <vector>
@@ -25,70 +25,34 @@ using namespace testing;
 using namespace parser;
 using namespace ast;
 
-inline std::string ins_to_string(uint32_t instr) {
-    using namespace interpreter;
-
-    OpCode op = static_cast<OpCode>(instr >> OPCODE_SHIFT);
-
-    uint8_t a = (instr >> A_SHIFT) & A_ARG;
-    uint8_t b = (instr >> B_SHIFT) & B_ARG;
-    uint8_t c = instr & C_ARG;
-    uint32_t bx = instr & BX_ARG;
-    switch (op) {
-        case OP_LOAD:
-            return std::format("mov [{}] {}", a, bx);
-        case OP_MOVE:
-            return std::format("mov [{}] [{}]", a, b);
-        case OP_LOADNIL:
-            return std::format("mov [{}] nil", a);
-        case OP_ADD:
-            return std::format("add [{}] [{}] [{}]", a, b, c);
-        case OP_SUB:
-            return std::format("sub [{}] [{}] [{}]", a, b, c);
-        case OP_MUL:
-            return std::format("mul [{}] [{}] [{}]", a, b, c);
-        case OP_DIV:
-            return std::format("div [{}] [{}] [{}]", a, b, c);
-        case OP_MOD:
-            return std::format("mod [{}] [{}] [{}]", a, b, c);
-        case OP_NEG:
-            return std::format("neg [{}] [{}] [{}]", a, b, c);
-        case OP_EQ:
-            return std::format("eq [{}] [{}] [{}]", a, b, c);
-        case OP_LT:
-            return std::format("lt [{}] [{}] [{}]", a, b, c);
-        case OP_LE:
-            return std::format("leq [{}] [{}] [{}]", a, b, c);
-        case OP_JMP: {
-            return std::format("jmp {}", (int32_t)bx - (int32_t)J_ZERO);
-        }
-        case OP_JMPT: {
-            return std::format("jmpt [{}] {}", a, (int32_t)bx - (int32_t)J_ZERO);
-        }
-        case OP_JMPF: {
-            return std::format("jmpf [{}] {}", a, (int32_t)bx - (int32_t)J_ZERO);
-        }
-        case OP_CALL:
-            return std::format("call f{} [{}]...[{}]", a, b, c);
-        case OP_RETURN:
-            return std::format("ret [{}]", a);
-            break;
-        case OP_NEWOBJ:
-        case OP_GETFIELD:
-        case OP_SETFIELD:
-        case OP_HALT:
-            throw std::runtime_error("todo");
-            break;
-        case OP_RETURNNIL:
-            return std::format("ret nil");
-        default:
-            throw std::runtime_error("Unknown opcode");
+#include "src/ins_to_string.h"
+inline void print_func_body(uint32_t* code, int msize) {
+    for (int i = 0; i < msize; ++i) {
+        std::cout << "    " << interpreter::ins_to_string(code[i]) << "\n";
     }
 }
-
-inline void print_func_body(std::vector<uint32_t> &code) {
-    for (auto &cur: code) {
-        std::cout << "    " << ins_to_string(cur) << "\n";
+inline void print_vm_data(interpreter::VMData& vm) {
+    using namespace interpreter;
+    std::cout << "constants: [";
+    for (int i = 0; i < vm.constanti.size(); ++i) {
+        std::cout << vm.constanti[i].as.i32;
+        if (i != vm.constanti.size() - 1) std::cout << ", ";
+    }
+    std::cout << "]\n";
+    std::unordered_map<int, Function*> functions;
+    for (int i = 0; i < vm.functions_count; ++i) {
+        functions[vm.functions[i].entry_point] = &vm.functions[i];
+    }
+    for (int i = 0; i < vm.code_size; ++i) {
+        auto it = functions.find(i);
+        if (it != functions.end()) {
+            std::cout << "func" << it->second - vm.functions << "(args: " << (int)it->second->arity << "):\n";
+        }
+        std::cout << "    " << interpreter::ins_to_string(vm.code[i], &vm.constanti);
+        if (i == vm.ip) {
+            std::cout << " <- ip";
+        }
+        std::cout << '\n';
     }
 }
 

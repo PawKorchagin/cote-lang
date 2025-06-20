@@ -172,8 +172,11 @@ fn get_primes(n) {
     return arr;
 }
 
-
+fn closure_ex(x) {
+    return [x] y -> x + y;
+}
 fn main() {
+    y = [x] (a, b) -> a + b;
     y = x = 2 + 3 * 4;
     if (y == 3) {
         while (1) {
@@ -185,6 +188,9 @@ fn garbage() {
 // this is a comment
     y = x = 2; // we can write comments!
     2[x];
+    x[2] = array(10);
+    y = x[0];
+
     if (y == 2) {
         while (y < 2 * 3) {
             y=y+1*x;

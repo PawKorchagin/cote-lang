@@ -13,5 +13,5 @@ fn main() {
         p1 = p2;
         p2 = s;
     }
-    return p1;
+    return p1 - 55;
 }
