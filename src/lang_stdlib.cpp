@@ -3,10 +3,47 @@
 //
 #include "lang_stdlib.h"
 
-void cote_print(interpreter::VMData& data) {
-    throw std::runtime_error("reached here: lang_stdlib.cpp");
+void cote_str(interpreter::VMData &vm, int reg, int cnt) {
+    throw std::runtime_error("todo");
+}
+
+void cote_len(interpreter::VMData &vm, int reg, int cnt) {
+    if (cnt != 1) throw std::runtime_error("expected only one arg: array");
+    auto &cur = vm.stack[vm.fp + reg];
+    if (!cur.is_array()) throw std::runtime_error("expected only one arg: array");
+    auto &obj = vm.heap[cur.as.object_ptr];
+    vm.stack[vm.fp + reg] = obj[0];
+}
+
+void cote_print(interpreter::VMData &vm, int reg, int cnt) {
+    int off = vm.fp + reg;
+    for (int i = 0; i < cnt; ++i) {
+        auto &cur = vm.stack[off + i];
+        if (cur.is_callable()) std::cout << "callable " << cur.as.i32;
+        else if (cur.is_int()) std::cout << cur.as.i32;
+        else if (cur.is_float()) std::cout << cur.as.f32;
+        else if (cur.is_nil()) std::cout << "nil";
+        else throw std::runtime_error("todo");
+    }
+}
+
+
+void cote_println(interpreter::VMData &vm, int reg, int cnt) {
+    int off = vm.fp + reg;
+    for (int i = 0; i < cnt; ++i) {
+        auto &cur = vm.stack[off + i];
+        if (cur.is_callable()) std::cout << "callable " << cur.as.i32 << ' ';
+        else if (cur.is_int()) std::cout << cur.as.i32 << ' ';
+        else if (cur.is_float()) std::cout << cur.as.f32 << ' ';
+        else if (cur.is_nil()) std::cout << "nil" << ' ';
+        else throw std::runtime_error("todo");
+    }
+    std::cout << std::endl;
 }
 
 void cote_stdlib::initStdlib(interpreter::VMData &data, parser::VarManager &vars) {
     data.natives[vars.add_native("print")] = cote_print;
+    data.natives[vars.add_native("str")] = cote_str;
+    data.natives[vars.add_native("println")] = cote_println;
+    data.natives[vars.add_native("len")] = cote_len;
 }

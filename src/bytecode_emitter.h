@@ -31,6 +31,7 @@ namespace interpreter {
 
 
     public:
+        void emit_alloc(uint32_t reg, uint32_t cnt);
         void emit_loadfunc(uint32_t reg, uint32_t fid);
 
         void label(int32_t pos);
@@ -53,6 +54,7 @@ namespace interpreter {
         void emit_retnil();
 
         void emit_call(int funcid, int reg, int count);
+        void emit_call_direct(int funcid, int reg, int count);
 
         // Adds two values
         // Args: a - destination, b - first operand, c - second operand

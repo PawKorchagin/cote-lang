@@ -240,7 +240,7 @@ namespace ast {
         FunctionDef() = default;
 
         FunctionDef(FunctionSignature sig, std::unique_ptr<Node> block) : signature(
-                                                                              std::make_unique<FunctionSignature>(sig)),
+                std::make_unique<FunctionSignature>(sig)),
                                                                           block(std::move(block)) {
         }
 
@@ -486,7 +486,7 @@ namespace ast {
         std::unique_ptr<Node> efalse = nullptr;
 
         IfStmt(std::unique_ptr<Node> expr, std::unique_ptr<Node> etrue, std::unique_ptr<Node> efalse = nullptr)
-            : expr(std::move(expr)), etrue(std::move(etrue)), efalse(std::move(efalse)) {
+                : expr(std::move(expr)), etrue(std::move(etrue)), efalse(std::move(efalse)) {
         }
 
         NodeType get_type() const override { return NodeType::If; }
@@ -572,8 +572,8 @@ namespace ast {
         std::unique_ptr<Node> clone_upcasting() const override {
             auto new_while = std::make_unique<WhileStmt>(expr->clone_upcasting(),
                                                          std::unique_ptr<Block>(
-                                                             static_cast<Block *>(body->clone_upcasting().
-                                                                 release())));
+                                                                 static_cast<Block *>(body->clone_upcasting().
+                                                                         release())));
             return new_while;
         }
 
@@ -616,6 +616,8 @@ namespace ast {
 
         BinaryExpr(unique_ptr<Node> l, unique_ptr<Node> r) : l(std::move(l)), r(std::move(r)) {
         }
+
+        static constexpr BinaryOpType ownType() { return type; }
 
         NodeType get_type() const override {
             switch (type) {

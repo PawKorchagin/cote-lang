@@ -74,6 +74,8 @@ namespace interpreter {
                 return "halt";
             case OP_RETURNNIL:
                 return std::format("ret nil");
+            case OP_ALLOC:
+                return std::format("alloc [{}] [{}]", a, b);
             default:
                 throw std::runtime_error("Unknown opcode");
             case OP_ARRGET:

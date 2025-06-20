@@ -52,7 +52,7 @@ namespace parser {
 
     void parse_return();
 
-    void parse_block();
+    void parse_block_();
 
     void parse_statement();
 

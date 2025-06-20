@@ -263,13 +263,16 @@ namespace parser {
     }
 
 
+    template<bool createNewScope = true, bool closeScope = true>
     void parse_block() {
-        vars.new_scope();
+        if constexpr (createNewScope)
+            vars.new_scope();
         while (true) {
             switch (cur.token) {
                 case TOKEN_RCURLY:
                     get_tok();
-                    vars.close_scope();
+                    if constexpr (closeScope)
+                        vars.close_scope();
                     return;
                 case TOKEN_EOF:
                     parser_throws("expected } but found EOF");
@@ -366,15 +369,16 @@ namespace parser {
             const int res = vars.get_var(m_name);
             //if variable not found, then we create new at the same place and it has almost no scope
             if (res == -1) {
+                if (is_assignment != 1) parser_throws("cannot find variable used in modifying assignment");
                 vars.pop_var();
                 vars.push_var(m_name);
                 return;
             }
             if (is_assignment == 1) emitter->emit_move(res, vars.pop_var());
             else if (is_assignment == 2) emitter->emit_add(res, vars.pop_var(), res);
-            else if (is_assignment == 3) emitter->emit_sub(res, vars.pop_var(), res);
-            else if (is_assignment == 4) emitter->emit_mul(res, vars.pop_var(), res);
-            else if (is_assignment == 5) emitter->emit_div(res, vars.pop_var(), res);
+            else if (is_assignment == 3) emitter->emit_sub(res, res, vars.pop_var());
+            else if (is_assignment == 4) emitter->emit_mul(res, res, vars.pop_var());
+            else if (is_assignment == 5) emitter->emit_div(res, res, vars.pop_var());
         }
         if (lhs->get_type() == ast::NodeType::ArrayGet) {
             if (!parser::check_lvalue(lhs.get(), *emitter, vars)) parser_throws(error_msg("lvalue failed"));
@@ -433,6 +437,7 @@ namespace parser {
 
     void parse_for() {
         if (!match(TOKEN_LPAREN)) parser_throws(error_msg("( after for"));
+        vars.new_scope();
         if (!match(TOKEN_SEMICOLON)) {
             parse_push_assign();
             if (!match(TOKEN_SEMICOLON))
@@ -442,7 +447,6 @@ namespace parser {
         int start_id = jmp_uid++;
         int end_id = jmp_uid++;
         loops.emplace_back(start_id, end_id);
-        vars.new_scope();
 
         emitter->label(start_id);
         if (!epush(parse_expr_sc())) return;
@@ -451,7 +455,7 @@ namespace parser {
         int is_assignment = 0;
         auto incExpr = parse_assignment(is_assignment);
         if (!match(TOKEN_RPAREN)) parser_throws(error_msg(")"));
-        if (match(TOKEN_LCURLY)) parse_block();
+        if (match(TOKEN_LCURLY)) parse_block<false, false>();
         else parse_statement();
         push_assign(std::move(incExpr), is_assignment);
         emitter->jmp_label(start_id);
@@ -524,13 +528,14 @@ namespace parser {
         if (!vars.add_func(name, fid)) {
             parser_throws(error_msg("function '" + name + "' already exsists"));
         }
+        vars.new_scope();
         for (auto &cur: header->params) {
             auto it = vars.get_var(cur);
             if (it != -1)
                 parser_throws(std::format("illegal argument names, argument {} already exsists", cur));
             vars.push_var(cur);
         }
-        parse_block();
+        parse_block<false>();
         //TODO: tail call
         //add return in case control flow leaks
         emitter->emit_retnil();
@@ -557,6 +562,10 @@ namespace parser {
         epush(parse_expr_sc());
         //TODO: tail call
         emitter->emit_return(vars.pop_var());
+    }
+
+    void parse_block_() {
+        parse_block();
     }
 
 }

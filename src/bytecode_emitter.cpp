@@ -177,7 +177,7 @@ void interpreter::BytecodeEmitter::initVM(interpreter::VMData &vm) {
             cur = i;
     }
     if (cur == -1) throw std::runtime_error("no main method found");
-    emit_call(cur, 0, 0);
+    emit_call_direct(cur, 0, 0);
     emit_halt();
     vm.constanti.resize(iconstant_count);
     for (auto &it: iconstants) {
@@ -223,9 +223,16 @@ void interpreter::BytecodeEmitter::emit_arrayset(int to, int offset, int from) {
 }
 
 
-
 void interpreter::BytecodeEmitter::emit_native(int id, int from, int cnt) {
     add(opcode(OpCode::OP_NATIVE_CALL, id, from, cnt));
+}
+
+void interpreter::BytecodeEmitter::emit_call_direct(int funcid, int reg, int count) {
+    add(opcode(OpCode::OP_CALL, funcid, reg, count));
+}
+
+void interpreter::BytecodeEmitter::emit_alloc(uint32_t reg, uint32_t reg2) {
+    add(opcode(OpCode::OP_ALLOC, reg, reg2, 0));
 }
 
 

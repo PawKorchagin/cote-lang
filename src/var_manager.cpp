@@ -15,6 +15,9 @@ int parser::VarManager::push_var(const std::string &name) {
 }
 
 void parser::VarManager::close_scope() {
+    for (auto &cur: levels.back().vars) {
+        var_names.erase(cur);
+    }
     levels.pop_back();
 }
 

@@ -83,7 +83,7 @@ namespace interpreter {
                     op_call(vm, a, b, c);
                     break;
                 case OP_NATIVE_CALL:
-                    op_native_call(vm, a);
+                    op_native_call(vm, a, b, c);
                     break;
                 case OP_INVOKEDYNAMIC:
                     op_invokedyn(vm, a, b, c);
@@ -94,24 +94,32 @@ namespace interpreter {
                 case OP_RETURNNIL:
                     op_returnnil(vm);
                     break;
-                case OP_NEWOBJ:
-                    op_newobj(vm, a, bx);
-                    break;
-                case OP_GETFIELD:
-                    op_getfield(vm, a, b, c);
-                    break;
-                case OP_SETFIELD:
-                    op_setfield(vm, a, b, c);
-                    break;
                 case OP_HALT:
                     op_halt(vm);
                     return;
+                case OP_LOADFLOAT:
+                    op_loadfloat(vm, a, bx);
+                    break;
+                case OP_LOADFUNC:
+                    op_loadfunc(vm, a, bx);
+                    break;
+                case OP_ALLOC:
+                    op_alloc(vm, a, b);
+                    break;
+                case OP_ARRGET:
+                    op_arrget(vm, a, b, c);
+                    break;
+                case OP_ARRSET:
+                    op_arrset(vm, a, b, c);
+                    break;
+                case OP_TAILCALL:
+                    // op_tailcall(vm, a, b, c);
+                    throw std::runtime_error("Tailcall not implemented");
                 default:
                     throw std::runtime_error("Unknown opcode");
             }
         }
     }
-
 
     void op_load(VMData &vm, uint8_t reg, uint32_t const_idx) {
         if (const_idx >= vm.constanti.size()) {
@@ -193,7 +201,7 @@ namespace interpreter {
         res.type = ValueType::Int;
         res.as.i32 = 0;
 
-        //NOTE: should be the same as: res.as.i32 = (type1 == type2) && (data1.as == data2.as)
+        // NOTE: should be the same as: res.as.i32 = (type1 == type2) && (data1.as == data2.as)
         if (type1 == type2) {
             switch (type1) {
                 case ValueType::Int:
@@ -306,11 +314,11 @@ namespace interpreter {
         CallFrame frame = vm.call_stack.top();
         vm.call_stack.pop();
 
-        vm.fp = frame.base_ptr;   // Restore frame pointer
-        vm.ip = frame.return_ip;  // Restore instruction pointer
-
         // result in reg0 of current fp
         vm.stack[vm.fp] = result;
+
+        vm.fp = frame.base_ptr;
+        vm.ip = frame.return_ip;
     }
 
     void op_returnnil(VMData &vm) {
@@ -355,24 +363,24 @@ namespace interpreter {
 
     void op_getfield(VMData &vm, uint8_t dst, uint8_t obj, uint8_t field_idx) {
         throw std::runtime_error("todo");
-//        Value &obj_val = vm.stack[vm.fp + obj];
-//        Object *obj_ptr = vm.heap[obj_val.as.object_ptr];
-//        if (field_idx >= obj_ptr->fields.size()) {
-//            throw std::out_of_range("No such field");
-//        }
-//
-//        vm.stack[vm.fp + dst] = obj_ptr->fields[field_idx];
+        //        Value &obj_val = vm.stack[vm.fp + obj];
+        //        Object *obj_ptr = vm.heap[obj_val.as.object_ptr];
+        //        if (field_idx >= obj_ptr->fields.size()) {
+        //            throw std::out_of_range("No such field");
+        //        }
+        //
+        //        vm.stack[vm.fp + dst] = obj_ptr->fields[field_idx];
     }
 
     void op_setfield(VMData &vm, uint8_t obj, uint8_t field_idx, uint8_t src) {
         throw std::runtime_error("todo");
-//        Value &obj_val = vm.stack[vm.fp + obj];
-//        Object *obj_ptr = vm.heap[obj_val.as.object_ptr];
-//        if (field_idx >= obj_ptr->fields.size()) {
-//            throw std::out_of_range("No such field");
-//        }
-//
-//        obj_ptr->fields[field_idx] = vm.stack[vm.fp + src];
+        //        Value &obj_val = vm.stack[vm.fp + obj];
+        //        Object *obj_ptr = vm.heap[obj_val.as.object_ptr];
+        //        if (field_idx >= obj_ptr->fields.size()) {
+        //            throw std::out_of_range("No such field");
+        //        }
+        //
+        //        obj_ptr->fields[field_idx] = vm.stack[vm.fp + src];
     }
 
     void op_halt(VMData &vm) {
@@ -447,17 +455,117 @@ namespace interpreter {
         return res;
     }
 
-    void op_native_call(VMData& vm, uint8_t func_idx) {
-        vm.natives[func_idx](vm);
+    void op_native_call(VMData &vm, uint8_t func_idx, int reg, int count) {
+        vm.natives[func_idx](vm, reg, count);
     }
 
-    void op_invokedyn(VMData& vm, uint8_t a, uint8_t b, uint8_t c) {
-        Value callable = vm.stack[a];
+    void op_invokedyn(VMData &vm, uint8_t a, uint8_t b, uint8_t c) {
+        Value callable = vm.stack[vm.fp + a];
         if (!callable.is_callable()) {
             throw std::runtime_error("No expected callable");
         }
 
         op_call(vm, callable.as.i32, b, c);
+    }
+
+    void op_loadint(VMData &vm, uint8_t reg, uint32_t const_idx) {
+        if (const_idx >= vm.constanti.size()) {
+            throw std::out_of_range("Integer constant index out of range");
+        }
+        vm.stack[vm.fp + reg].type = ValueType::Int;
+        vm.stack[vm.fp + reg].as.i32 = vm.constanti[const_idx].as.i32;
+    }
+
+    void op_loadfloat(VMData &vm, uint8_t reg, uint32_t const_idx) {
+        if (const_idx >= vm.constantf.size()) {
+            throw std::out_of_range("Float constant index out of range");
+        }
+        vm.stack[vm.fp + reg].type = ValueType::Float;
+        vm.stack[vm.fp + reg].as.f32 = vm.constantf[const_idx].as.f32;
+    }
+
+    void op_loadfunc(VMData &vm, uint8_t reg, uint32_t const_idx) {
+        if (const_idx >= vm.functions_count) {
+            throw std::out_of_range("Function constant index out of range");
+        }
+        vm.stack[vm.fp + reg].type = ValueType::Callable;
+        vm.stack[vm.fp + reg].as.i32 = static_cast<int>(const_idx);
+    }
+
+    void op_alloc(VMData &vm, uint8_t dst, uint8_t s) {
+        if (vm.heap_size >= HEAP_MAX_SIZE) {
+            throw std::runtime_error("Heap overflow");
+        }
+
+        uint32_t size = vm.stack[s].as.i32;
+
+        auto fields = static_cast<Value *>(malloc((size + 1) * sizeof(Value)));
+        if (!fields) {
+            throw std::runtime_error("Memory allocation failed");
+        }
+
+
+        // Set len field
+        fields[0].type = ValueType::Int;
+        fields[0].as.i32 = size;
+
+        vm.heap[vm.heap_size] = fields;
+
+        Value obj_val;
+        obj_val.type = ValueType::Object;
+        obj_val.as.object_ptr = vm.heap_size++;
+        obj_val.class_ptr = 0;  // Array class is always at index 0
+
+        vm.stack[vm.fp + dst] = obj_val;
+    }
+
+    void op_arrget(VMData &vm, uint8_t dst, uint8_t arr, uint8_t idxc) {
+        auto &idx = vm.stack[vm.fp + idxc];
+        if (!idx.is_int()) {
+            throw std::runtime_error("Invalid array index");
+        }
+        Value &arr_val = vm.stack[vm.fp + arr];
+        if (!arr_val.is_object()) {
+            throw std::runtime_error("Expected array object");
+        }
+
+        auto &obj = vm.heap[arr_val.as.object_ptr];
+        Value len_val = obj[0];
+        if (!len_val.is_int()) {
+            throw std::runtime_error("Invalid array length");
+        }
+
+        int32_t len = len_val.as.i32;
+        if (idx.as.i32 >= len) {
+            throw std::out_of_range("Array index out of bounds");
+        }
+
+        vm.stack[vm.fp + dst] = obj[idx.as.i32 + 1];  // +1 because index 0 is len
+    }
+
+    void op_arrset(VMData &vm, uint8_t arr, uint8_t idxc, uint8_t src) {
+        Value &arr_val = vm.stack[vm.fp + arr];
+        auto &idx = vm.stack[vm.fp + idxc];
+        if (!idx.is_int()) {
+            throw std::runtime_error("Invalid array index");
+        }
+
+        if (!arr_val.is_object()) {
+            throw std::runtime_error("Expected array object");
+        }
+
+        auto &obj = vm.heap[arr_val.as.object_ptr];
+        Value len_val = obj[0];
+        if (!len_val.is_int()) {
+            throw std::runtime_error("Invalid array length");
+        }
+
+        int32_t len = len_val.as.i32;
+        if (idx.as.i32 >= len) {
+            throw std::out_of_range("Array index out of bounds");
+        }
+
+        obj[idx.as.i32 + 1] = vm.stack[vm.fp + src];  // +1 because index 0 is len
     }
 
 
@@ -566,23 +674,14 @@ namespace interpreter {
                 std::cout << "JMPF        if !R" << (int) a << " ip += " << sbx;
                 break;
             case OP_CALL:
-                std::cout << "CALL        func[" << (int) a << "](args R" << (int) b
-                          << "..R" << (int) (b + c - 1) << ")";
+                std::cout << "CALL        func[" << (int) a << "](args R" << (int) b << "..R" << (int) (b + c - 1)
+                          << ")";
                 break;
             case OP_RETURN:
                 std::cout << "RETURN      return R" << (int) a;
                 break;
             case OP_RETURNNIL:
                 std::cout << "RETURNNIL   return nil";
-                break;
-            case OP_NEWOBJ:
-                std::cout << "NEWOBJ      R" << (int) a << " = new obj(class[" << bx << "])";
-                break;
-            case OP_GETFIELD:
-                std::cout << "GETFIELD    R" << (int) a << " = R" << (int) b << ".field[" << (int) c << "]";
-                break;
-            case OP_SETFIELD:
-                std::cout << "SETFIELD    R" << (int) a << ".field[" << (int) b << "] = R" << (int) c;
                 break;
             case OP_HALT:
                 std::cout << "HALT        halt";

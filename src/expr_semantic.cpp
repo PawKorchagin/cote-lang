@@ -6,8 +6,40 @@
 #include "exceptions.h"
 
 namespace {
-    void eval_func_try() {
+    template<ast::BinaryOpType mtype>
+    void get_func(interpreter::BytecodeEmitter &emitter, parser::VarManager &vars) {
+        if constexpr (mtype == ast::BinaryOpType::ADD) {
+            emitter.emit_add(vars.last() - 1, vars.last() - 1, vars.last());
+        } else if constexpr (mtype == ast::BinaryOpType::DIV) {
+            emitter.emit_div(vars.last() - 1, vars.last() - 1, vars.last());
+        } else if constexpr (mtype == ast::BinaryOpType::MUL) {
+            emitter.emit_mul(vars.last() - 1, vars.last() - 1, vars.last());
+        } else if constexpr (mtype == ast::BinaryOpType::SUB) {
+            emitter.emit_sub(vars.last() - 1, vars.last() - 1, vars.last());
+        } else if constexpr (mtype == ast::BinaryOpType::MOD) {
+            emitter.emit_mod(vars.last() - 1, vars.last() - 1, vars.last());
+        } else if constexpr (mtype == ast::BinaryOpType::EQ) {
+            emitter.emit_eq(vars.last() - 1, vars.last() - 1, vars.last());
+        } else if constexpr (mtype == ast::BinaryOpType::NEQ) {
+            throw std::runtime_error("todo");
+//            emitter.emit_neq(vars.last() - 1, vars.last() - 1, vars.last());
+        } else if constexpr (mtype == ast::BinaryOpType::LE) {
+            emitter.emit_leq(vars.last() - 1, vars.last() - 1, vars.last());
+        } else if constexpr (mtype == ast::BinaryOpType::LS) {
+            emitter.emit_less(vars.last() - 1, vars.last() - 1, vars.last());
+        } else if constexpr (mtype == ast::BinaryOpType::GR) {
+            emitter.emit_less(vars.last() - 1, vars.last(), vars.last() - 1);
+        } else if constexpr (mtype == ast::BinaryOpType::GE) {
+            emitter.emit_leq(vars.last() - 1, vars.last(), vars.last() - 1);
+        } else throw std::runtime_error("todo");
+    }
 
+    template<typename T>
+    void simple_eval_binary(ast::Node *expr, interpreter::BytecodeEmitter &emitter, parser::VarManager &vars) {
+        eval_expr(dynamic_cast<T *>(expr)->l.get(), emitter, vars);
+        eval_expr(dynamic_cast<T *>(expr)->r.get(), emitter, vars);
+        get_func<T::ownType()>(emitter, vars);//vars.last() - 1, vars.last() - 1, vars.last());
+        vars.pop_var();
     }
 }
 
@@ -16,21 +48,21 @@ parser::eval_expr(ast::Node *expr, interpreter::BytecodeEmitter &emitter, parser
     using namespace ast;
     if (expr == nullptr) return false;
     switch (expr->get_type()) {
-        case NodeType::Block:
-            return parser_throws(error_msg("block is not allowed in expr")) != nullptr;
-        case NodeType::FunctionDef:
-            return parser_throws(error_msg("todo1")) != nullptr;
-        case NodeType::FunctionSingature:
-            return parser_throws(error_msg("todo2")) != nullptr;
         case NodeType::FunctionCall: {
             if (!check_lvalue(expr, emitter, vars)) parser_throws(error_msg("lvalue failed"));
             auto name = std::move(dynamic_cast<FunctionCall *>(expr)->name_expr);
             int it = -1;
             if (name->get_type() == ast::NodeType::Var) {
-                it = vars.get_native(dynamic_cast<ast::VarExpr *>(name.get())->name);
+                std::string &sname = dynamic_cast<ast::VarExpr *>(name.get())->name;
+                if (sname == "array")
+                    it = -2;
+                else
+                    it = vars.get_native(sname);
             }
             if (it == -1)
                 eval_expr(name.get(), emitter, vars);
+            else
+                vars.push_var();
             int start = vars.last();
             int cnt = 0;
             for (auto &cur: dynamic_cast<FunctionCall *>(expr)->args) {
@@ -39,10 +71,18 @@ parser::eval_expr(ast::Node *expr, interpreter::BytecodeEmitter &emitter, parser
                     return false;
                 }
             }
-            if (it == -1)
+            if (it == -2) {
+                if (cnt != 1)
+                    parser_throws("only one argument expected in function 'array'");
+                emitter.emit_alloc(start + 1, start + 1);
+                return true;
+            }
+            if (it == -1) {
                 emitter.emit_call(start, start + 1, cnt);
-            else
+            }
+            else {
                 emitter.emit_native(it, start + 1, cnt);
+            }
             vars.drop(cnt);
             emitter.emit_move(vars.last(), vars.last() + 1);
             break;
@@ -54,8 +94,8 @@ parser::eval_expr(ast::Node *expr, interpreter::BytecodeEmitter &emitter, parser
             eval_expr(cur->index.get(), emitter, vars);
             emitter.emit_arrayget(vars.last() - 1, vars.last() - 1, vars.last());
             vars.pop_var();
+            return true;
         }
-            return parser_throws(error_msg("todo4")) != nullptr;
         case NodeType::Member:
             return parser_throws(error_msg("todo5")) != nullptr;
         case NodeType::Return:
@@ -72,8 +112,9 @@ parser::eval_expr(ast::Node *expr, interpreter::BytecodeEmitter &emitter, parser
                 const int f = vars.get_func(mname);
                 if (f == -1) {
                     parser_throws(error_msg("identifier '" + mname + "' not found")) != nullptr;
-                } else if (f == -2)
+                } else if (f == -2) {
                     parser_throws(error_msg("illegal expression with native function " + mname));
+                }
                 emitter.emit_loadfunc(vars.push_var(), f);
                 return true;
             }
@@ -91,68 +132,37 @@ parser::eval_expr(ast::Node *expr, interpreter::BytecodeEmitter &emitter, parser
             emitter.emit_neg(vars.last(), vars.last());
             break;
         case NodeType::BinaryPlus:
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::ADD> *>(expr)->l.get(), emitter, vars);
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::ADD> *>(expr)->r.get(), emitter, vars);
-            emitter.emit_add(vars.last() - 1, vars.last() - 1, vars.last());
-            vars.pop_var();
+            simple_eval_binary<BinaryExpr<BinaryOpType::ADD>>(expr, emitter, vars);
+            break;
+        case NodeType::BinaryMod:
+            simple_eval_binary<BinaryExpr<BinaryOpType::MOD>>(expr, emitter, vars);
             break;
         case NodeType::BinaryMul:
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::MUL> *>(expr)->l.get(), emitter, vars);
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::MUL> *>(expr)->r.get(), emitter, vars);
-            emitter.emit_mul(vars.last() - 1, vars.last() - 1, vars.last());
-            vars.pop_var();
+            simple_eval_binary<BinaryExpr<BinaryOpType::MUL>>(expr, emitter, vars);
             break;
         case NodeType::BinaryDiv:
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::DIV> *>(expr)->l.get(), emitter, vars);
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::DIV> *>(expr)->r.get(), emitter, vars);
-            emitter.emit_div(vars.last() - 1, vars.last() - 1, vars.last());
-            vars.pop_var();
+            simple_eval_binary<BinaryExpr<BinaryOpType::DIV>>(expr, emitter, vars);
             break;
         case NodeType::BinaryMinus:
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::SUB> *>(expr)->l.get(), emitter, vars);
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::SUB> *>(expr)->r.get(), emitter, vars);
-            emitter.emit_sub(vars.last() - 1, vars.last() - 1, vars.last());
-            vars.pop_var();
+            simple_eval_binary<BinaryExpr<BinaryOpType::SUB>>(expr, emitter, vars);
             break;
-
         case NodeType::BinaryGR:
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::GR> *>(expr)->l.get(), emitter, vars);
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::GR> *>(expr)->r.get(), emitter, vars);
-            emitter.emit_less(vars.last() - 1, vars.last(), vars.last() - 1);
-            vars.pop_var();
+            simple_eval_binary<BinaryExpr<BinaryOpType::GR>>(expr, emitter, vars);
             break;
         case NodeType::BinaryLE:
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::LE> *>(expr)->l.get(), emitter, vars);
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::LE> *>(expr)->r.get(), emitter, vars);
-            emitter.emit_leq(vars.last() - 1, vars.last() - 1, vars.last());
-            vars.pop_var();
+            simple_eval_binary<BinaryExpr<BinaryOpType::LE>>(expr, emitter, vars);
             break;
         case NodeType::BinaryLS:
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::LS> *>(expr)->l.get(), emitter, vars);
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::LS> *>(expr)->r.get(), emitter, vars);
-            emitter.emit_less(vars.last() - 1, vars.last() - 1, vars.last());
-            vars.pop_var();
+            simple_eval_binary<BinaryExpr<BinaryOpType::LS>>(expr, emitter, vars);
             break;
         case NodeType::BinaryGE:
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::GE> *>(expr)->l.get(), emitter, vars);
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::GE> *>(expr)->r.get(), emitter, vars);
-            emitter.emit_leq(vars.last() - 1, vars.last(), vars.last() - 1);
-            vars.pop_var();
+            simple_eval_binary<BinaryExpr<BinaryOpType::GE>>(expr, emitter, vars);
             break;
         case NodeType::BinaryEQ:
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::EQ> *>(expr)->l.get(), emitter, vars);
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::EQ> *>(expr)->r.get(), emitter, vars);
-            emitter.emit_eq(vars.last() - 1, vars.last() - 1, vars.last());
-            vars.pop_var();
+            simple_eval_binary<BinaryExpr<BinaryOpType::EQ>>(expr, emitter, vars);
             break;
         case NodeType::BinaryNEQ:
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::NEQ> *>(expr)->l.get(), emitter, vars);
-            eval_expr(dynamic_cast<BinaryExpr<BinaryOpType::NEQ> *>(expr)->r.get(), emitter, vars);
-            emitter.emit_eq(vars.last() - 1, vars.last() - 1, vars.last());
-            //TODO: NOT_EQ or NOT
-            throw std::runtime_error("misha implement NOT_EQ or NOT");
-//            emitter.emit_not()
-            vars.pop_var();
+            simple_eval_binary<BinaryExpr<BinaryOpType::NEQ>>(expr, emitter, vars);
             break;
     }
     return true;

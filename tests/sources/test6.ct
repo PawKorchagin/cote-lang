@@ -1,0 +1,22 @@
+fn sort(arr) {
+    for (i = 0; i < len(arr); i += 1) {
+        for (j = i + 1; j < len(arr); j += 1) {
+            if (arr[i] > arr[j]) {
+                t = arr[i];
+                arr[i] = arr[j];
+                arr[j] = t;
+            }
+        }
+    }
+}
+fn main() {
+    arr = array(1000);
+    for (i = 0; i < len(arr); i += 1) {
+        arr[i] = len(arr) - i;
+    }
+    sort(arr);
+    for (i = 0; i < len(arr); i += 1) {
+        println(arr[i]);
+    }
+    return 0;
+}
