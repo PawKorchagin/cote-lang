@@ -324,6 +324,11 @@ namespace parser {
         return res;
     }
 
+    //while (cond) body
+    // 1. jmpf cond 4
+    // 2. body
+    // 3. jmpt cond 1
+    // 4. ....
     void parse_while() {
         if (!match(TOKEN_LPAREN))
             parser_throws(error_msg("( after while"));
@@ -331,17 +336,19 @@ namespace parser {
         int end_id = jmp_uid++;
         loops.emplace_back(start_id, end_id);
         vars.new_scope();
-        emitter->label(start_id);
-        if (!epush(parse_expression())) return;
+        auto cond = parse_expression();
+        epush(cond.get());
         emitter->jmpf_label(vars.pop_var(), end_id);
+        emitter->label(start_id);
         if (!match(TOKEN_RPAREN))
             parser_throws(error_msg(") in while statement"));
         if (match(TOKEN_LCURLY)) {
-            parse_block();
+            parse_block<false, false>();
         } else {
             parse_statement();
         }
-        emitter->jmp_label(start_id);
+        epush(cond.get());
+        emitter->jmpt_label(vars.pop_var(), start_id);
         emitter->label(end_id);
 
         vars.close_scope();
@@ -448,17 +455,19 @@ namespace parser {
         int end_id = jmp_uid++;
         loops.emplace_back(start_id, end_id);
 
-        emitter->label(start_id);
-        if (!epush(parse_expr_sc())) return;
+        auto cond = parse_expr_sc();
+        epush(cond.get());
         emitter->jmpf_label(vars.pop_var(), end_id);
-        //HERE: should be parse_assingment
+        emitter->label(start_id);
+        //HERE: should be parse_assignment
         int is_assignment = 0;
         auto incExpr = parse_assignment(is_assignment);
         if (!match(TOKEN_RPAREN)) parser_throws(error_msg(")"));
         if (match(TOKEN_LCURLY)) parse_block<false, false>();
         else parse_statement();
         push_assign(std::move(incExpr), is_assignment);
-        emitter->jmp_label(start_id);
+        epush(cond.get());
+        emitter->jmpt_label(vars.pop_var(), start_id);
         emitter->label(end_id);
 
         vars.close_scope();
@@ -487,7 +496,7 @@ namespace parser {
         else if (match(TOKEN_FOR)) parse_for();
         else if (match(TOKEN_WHILE)) parse_while();
         else if (match(TOKEN_RETURN)) parse_return();
-        else if (match(TOKEN_BREAK)) parse_continue();
+        else if (match(TOKEN_BREAK)) parse_break();
         else if (match(TOKEN_CONTINUE)) parse_continue();
         else {
             //TODO: fails here
@@ -551,9 +560,9 @@ namespace parser {
         init_exceptions();
     }
 
-    bool epush(std::unique_ptr<ast::Node> expr) {
+    bool epush(ast::Node *expr) {
         if (expr == nullptr) return false;
-        if (!parser::eval_expr(expr.get(), *emitter, vars))
+        if (!parser::eval_expr(expr, *emitter, vars))
             throw std::runtime_error("error parsing expression");
         return true;
     }

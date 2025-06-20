@@ -50,17 +50,17 @@ parser::eval_expr(ast::Node *expr, interpreter::BytecodeEmitter &emitter, parser
     switch (expr->get_type()) {
         case NodeType::FunctionCall: {
             if (!check_lvalue(expr, emitter, vars)) parser_throws(error_msg("lvalue failed"));
-            auto name = std::move(dynamic_cast<FunctionCall *>(expr)->name_expr);
+            auto name = dynamic_cast<FunctionCall *>(expr)->name_expr.get();
             int it = -1;
             if (name->get_type() == ast::NodeType::Var) {
-                std::string &sname = dynamic_cast<ast::VarExpr *>(name.get())->name;
+                std::string &sname = dynamic_cast<ast::VarExpr *>(name)->name;
                 if (sname == "array")
                     it = -2;
                 else
                     it = vars.get_native(sname);
             }
             if (it == -1)
-                eval_expr(name.get(), emitter, vars);
+                eval_expr(name, emitter, vars);
             else
                 vars.push_var();
             int start = vars.last();
@@ -79,8 +79,7 @@ parser::eval_expr(ast::Node *expr, interpreter::BytecodeEmitter &emitter, parser
             }
             if (it == -1) {
                 emitter.emit_call(start, start + 1, cnt);
-            }
-            else {
+            } else {
                 emitter.emit_native(it, start + 1, cnt);
             }
             vars.drop(cnt);

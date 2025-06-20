@@ -45,6 +45,7 @@ namespace parser {
         int precedence;
         bool left_assoc = true;
     };
+
 //TODO: forbid x = (y = z) expressions
     unique_ptr<ast::Node> parse_expression();
 
@@ -58,11 +59,13 @@ namespace parser {
 
     void parse_annotations();
 
-    ast::Program parse_program(interpreter::VMData& vm);
+    ast::Program parse_program(interpreter::VMData &vm);
 
-    void init_parser(std::istream& in, interpreter::BytecodeEmitter* emitter);
+    void init_parser(std::istream &in, interpreter::BytecodeEmitter *emitter);
 
-    bool epush(std::unique_ptr<ast::Node> expr);
+    bool epush(ast::Node *expr);
+
+    inline bool epush(std::unique_ptr<ast::Node> expr) { return epush(expr.get()); }
 }
 
 
