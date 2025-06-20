@@ -144,12 +144,10 @@ namespace interpreter {
         OP_TAILCALL,
     };
 
-    enum class ValueType : uint8_t {
-        Nil, Int, Float, Char, Object, Callable
-    };
+    enum class ValueType : uint8_t { Nil, Int, Float, Char, Object, Callable };
 
     struct Value {
-        ValueType type = ValueType::Nil;
+        ValueType type     = ValueType::Nil;
         uint16_t class_ptr = 0;  // only for objects
         union {
             int32_t i32;
@@ -159,18 +157,15 @@ namespace interpreter {
         } as{};
 
         bool is_nil() const { return type == ValueType::Nil; }
-
         bool is_int() const { return type == ValueType::Int; }
-
         bool is_float() const { return type == ValueType::Float; }
-
         bool is_char() const { return type == ValueType::Char; }
-
         bool is_object() const { return type == ValueType::Object; }
-
-        bool is_array() const { return is_object() && class_ptr == 0; }
-
         bool is_callable() const { return type == ValueType::Callable; }
+    };
+
+    struct Object {
+        Value* fields;
     };
 
     struct Function {
@@ -178,30 +173,29 @@ namespace interpreter {
         uint8_t arity;
     };
 
-    typedef void (*NativeFunction)(VMData &, int reg, int cnt);
-
+    typedef void (*NativeFunction)(VMData&);
     struct ObjClass {
         std::pmr::unordered_map<std::string, int> indexes;
     };
 
 // Memory limits
     static constexpr uint32_t CODE_MAX_SIZE = 4096;
-    static constexpr uint32_t STACK_SIZE = 4096;
+    static constexpr uint32_t STACK_SIZE    = 4096;
     static constexpr uint32_t HEAP_MAX_SIZE = 65536;
     static constexpr uint32_t FUNCTIONS_MAX = 256;
     static constexpr uint32_t CALL_MAX_SIZE = 2000;
 
 // Dispatch constants
-    static constexpr uint32_t A_ARG = 0xFF;
-    static constexpr uint32_t A_SHIFT = 18;
-    static constexpr uint32_t B_ARG = 0x1FF;
-    static constexpr uint32_t B_SHIFT = 9;
-    static constexpr uint32_t C_ARG = 0x1FF;
-    static constexpr uint32_t BX_ARG = 0x3FFFF;
+    static constexpr uint32_t A_ARG        = 0xFF;
+    static constexpr uint32_t A_SHIFT      = 18;
+    static constexpr uint32_t B_ARG        = 0x1FF;
+    static constexpr uint32_t B_SHIFT      = 9;
+    static constexpr uint32_t C_ARG        = 0x1FF;
+    static constexpr uint32_t BX_ARG       = 0x3FFFF;
     static constexpr uint32_t OPCODE_SHIFT = 26;
-    static constexpr uint32_t C_SHIFT = 0;
-    static constexpr uint32_t SBX_SHIFT = 0;
-    static constexpr uint32_t J_ZERO = BX_ARG >> 1;
+    static constexpr uint32_t C_SHIFT      = 0;
+    static constexpr uint32_t SBX_SHIFT    = 0;
+    static constexpr uint32_t J_ZERO       = BX_ARG >> 1;
 
     struct CallFrame {
         uint32_t return_ip;
@@ -212,15 +206,16 @@ namespace interpreter {
         //  Static data: must be filled before running vm
         std::vector<Value> constanti;
         std::vector<Value> constantf;
+        std::vector<Value> constantfunc;
         std::vector<ObjClass> classes;
         Function functions[FUNCTIONS_MAX];
         NativeFunction natives[FUNCTIONS_MAX];
         // -- general info --
-        size_t code_size = 0;
+        size_t code_size       = 0;
         size_t functions_count = 0;
 
         // Heap storage
-        Value *heap[HEAP_MAX_SIZE];
+        Object* heap[HEAP_MAX_SIZE];
         uint32_t heap_size = 0;
 
         // Execution state
@@ -235,8 +230,7 @@ namespace interpreter {
 
 // Core VM functions
     void run();
-
-    VMData &vm_instance();
+    VMData& vm_instance();
 
 // Helper functions (creating opcode)
 
@@ -256,93 +250,54 @@ namespace interpreter {
     uint32_t opcode(OpCode code);
 
     uint32_t halt();
-
     uint32_t jmp(int32_t offset);
-
     uint32_t jmpt(uint8_t a, int32_t offset);
-
     uint32_t jmpf(uint8_t a, int32_t offset);
-
     uint32_t move(uint8_t a, uint8_t b);
 
 // Printing opcode
     void print_opcode(uint32_t instruction);
 
-    Value add_values(const Value &a, const Value &b);
-
-    Value sub_values(const Value &a, const Value &b);
-
-    Value mul_values(const Value &a, const Value &b);
-
-    Value div_values(const Value &a, const Value &b);
-
-    bool is_truthy(const Value &val);
-
-    Value convert_value(const Value &val, ValueType target_type);
+    Value add_values(const Value& a, const Value& b);
+    Value sub_values(const Value& a, const Value& b);
+    Value mul_values(const Value& a, const Value& b);
+    Value div_values(const Value& a, const Value& b);
+    bool is_truthy(const Value& val);
+    Value convert_value(const Value& val, ValueType target_type);
 
 // Instruction implementations
-    void op_load(VMData &vm, uint8_t reg, uint32_t const_idx);
-
-    void op_move(VMData &vm, uint8_t dst, uint8_t src);
-
-    void op_loadnil(VMData &vm, uint8_t reg);
-
-    void op_loadint(VMData &vm, uint8_t reg, uint32_t const_idx);
-
-    void op_loadfloat(VMData &vm, uint8_t reg, uint32_t const_idx);
-
-    void op_loadfunc(VMData &vm, uint8_t reg, uint32_t const_idx);
-
-    void op_alloc(VMData &vm, uint8_t dst, uint8_t size);
-
-    void op_arrget(VMData &vm, uint8_t dst, uint8_t arr, uint8_t idx);
-
-    void op_arrset(VMData &vm, uint8_t arr, uint8_t idx, uint8_t src);
-
+    void op_load(VMData& vm, uint8_t reg, uint32_t const_idx);
+    void op_move(VMData& vm, uint8_t dst, uint8_t src);
+    void op_loadnil(VMData& vm, uint8_t reg);
+    void op_loadint(VMData& vm, uint8_t reg, uint32_t const_idx);
+    void op_loadfloat(VMData& vm, uint8_t reg, uint32_t const_idx);
+    void op_loadfunc(VMData& vm, uint8_t reg, uint32_t const_idx);
+    void op_alloc(VMData& vm, uint8_t dst, uint8_t size);
+    void op_arrget(VMData& vm, uint8_t dst, uint8_t arr, uint8_t idx);
+    void op_arrset(VMData& vm, uint8_t arr, uint8_t idx, uint8_t src);
 // void op_tailcall(VMData &vm, uint8_t func_idx, uint8_t first_arg_ind, uint8_t num_args);
-    void op_add(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2);
-
-    void op_sub(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2);
-
-    void op_mul(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2);
-
-    void op_div(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2);
-
-    void op_mod(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2);
-
-    void op_neg(VMData &vm, uint8_t dst, uint8_t src);
-
-    void op_eq(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2);
-
-    void op_neq(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2);
-
-    void op_lt(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2);
-
-    void op_le(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2);
-
-    void op_jmp(VMData &vm, int32_t offset);
-
-    void op_jmpt(VMData &vm, uint8_t cond, int32_t offset);
-
-    void op_jmpf(VMData &vm, uint8_t cond, int32_t offset);
-
-    void op_call(VMData &vm, uint8_t func_idx, uint8_t first_arg_ind, uint8_t num_args);
-
-    void op_native_call(VMData &vm, uint8_t func_idx, int reg1, int count);
-
-    void op_invokedyn(VMData &vm, uint8_t a, uint8_t b, uint8_t c);
-
-    void op_return(VMData &vm, uint8_t result_reg);
-
-    void op_returnnil(VMData &vm);
-
-    void op_newobj(VMData &vm, uint8_t dst, uint32_t class_idx);
-
-    void op_getfield(VMData &vm, uint8_t dst, uint8_t obj, uint8_t field_idx);
-
-    void op_setfield(VMData &vm, uint8_t obj, uint8_t field_idx, uint8_t src);
-
-    void op_halt(VMData &vm);
+    void op_add(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+    void op_sub(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+    void op_mul(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+    void op_div(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+    void op_mod(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+    void op_neg(VMData& vm, uint8_t dst, uint8_t src);
+    void op_eq(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+    void op_neq(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+    void op_lt(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+    void op_le(VMData& vm, uint8_t dst, uint8_t src1, uint8_t src2);
+    void op_jmp(VMData& vm, int32_t offset);
+    void op_jmpt(VMData& vm, uint8_t cond, int32_t offset);
+    void op_jmpf(VMData& vm, uint8_t cond, int32_t offset);
+    void op_call(VMData& vm, uint8_t func_idx, uint8_t first_arg_ind, uint8_t num_args);
+    void op_native_call(VMData& vm, uint8_t func_idx);
+    void op_invokedyn(VMData& vm, uint8_t a, uint8_t b, uint8_t c);
+    void op_return(VMData& vm, uint8_t result_reg);
+    void op_returnnil(VMData& vm);
+    void op_newobj(VMData& vm, uint8_t dst, uint32_t class_idx);
+    void op_getfield(VMData& vm, uint8_t dst, uint8_t obj, uint8_t field_idx);
+    void op_setfield(VMData& vm, uint8_t obj, uint8_t field_idx, uint8_t src);
+    void op_halt(VMData& vm);
 
 };  // namespace interpreter
 

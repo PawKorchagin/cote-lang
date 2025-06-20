@@ -17,11 +17,11 @@ namespace interpreter {
 
         while (true) {
             uint32_t instr = vm.code[vm.ip++];
-            OpCode op = static_cast<OpCode>(instr >> OPCODE_SHIFT);
+            OpCode op      = static_cast<OpCode>(instr >> OPCODE_SHIFT);
 
-            uint8_t a = (instr >> A_SHIFT) & A_ARG;
-            uint8_t b = (instr >> B_SHIFT) & B_ARG;
-            uint8_t c = instr & C_ARG;
+            uint8_t a   = (instr >> A_SHIFT) & A_ARG;
+            uint8_t b   = (instr >> B_SHIFT) & B_ARG;
+            uint8_t c   = instr & C_ARG;
             uint32_t bx = instr & BX_ARG;
 
             switch (op) {
@@ -83,7 +83,7 @@ namespace interpreter {
                     op_call(vm, a, b, c);
                     break;
                 case OP_NATIVE_CALL:
-                    op_native_call(vm, a, b, c);
+                    op_native_call(vm, a);
                     break;
                 case OP_INVOKEDYNAMIC:
                     op_invokedyn(vm, a, b, c);
@@ -137,26 +137,26 @@ namespace interpreter {
     }
 
     void op_add(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
-        Value &v1 = vm.stack[vm.fp + src1];
-        Value &v2 = vm.stack[vm.fp + src2];
+        Value &v1             = vm.stack[vm.fp + src1];
+        Value &v2             = vm.stack[vm.fp + src2];
         vm.stack[vm.fp + dst] = add_values(v1, v2);
     }
 
     void op_sub(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
-        Value &v1 = vm.stack[vm.fp + src1];
-        Value &v2 = vm.stack[vm.fp + src2];
+        Value &v1             = vm.stack[vm.fp + src1];
+        Value &v2             = vm.stack[vm.fp + src2];
         vm.stack[vm.fp + dst] = sub_values(v1, v2);
     }
 
     void op_mul(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
-        Value &v1 = vm.stack[vm.fp + src1];
-        Value &v2 = vm.stack[vm.fp + src2];
+        Value &v1             = vm.stack[vm.fp + src1];
+        Value &v2             = vm.stack[vm.fp + src2];
         vm.stack[vm.fp + dst] = mul_values(v1, v2);
     }
 
     void op_div(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
-        Value &v1 = vm.stack[vm.fp + src1];
-        Value &v2 = vm.stack[vm.fp + src2];
+        Value &v1             = vm.stack[vm.fp + src1];
+        Value &v2             = vm.stack[vm.fp + src2];
         vm.stack[vm.fp + dst] = div_values(v1, v2);
     }
 
@@ -169,8 +169,8 @@ namespace interpreter {
                 throw std::runtime_error("Division by zero");
 
             Value res;
-            res.type = ValueType::Int;
-            res.as.i32 = v1.as.i32 % v2.as.i32;
+            res.type              = ValueType::Int;
+            res.as.i32            = v1.as.i32 % v2.as.i32;
             vm.stack[vm.fp + dst] = res;
         } else {
             throw std::runtime_error("Modulo requires integer operands");
@@ -182,10 +182,10 @@ namespace interpreter {
         Value res;
 
         if (v.is_int()) {
-            res.type = ValueType::Int;
+            res.type   = ValueType::Int;
             res.as.i32 = -v.as.i32;
         } else if (v.is_float()) {
-            res.type = ValueType::Float;
+            res.type   = ValueType::Float;
             res.as.f32 = -v.as.f32;
         } else {
             throw std::runtime_error("Cannot negate non-numeric value");
@@ -194,11 +194,11 @@ namespace interpreter {
     }
 
     void op_eq(VMData &vm, const uint8_t dst, const uint8_t src1, const uint8_t src2) {
-        auto &[type1, ignored, data1] = vm.stack[vm.fp + src1];
+        auto &[type1, ignored, data1]  = vm.stack[vm.fp + src1];
         auto &[type2, ignored2, data2] = vm.stack[vm.fp + src2];
 
         Value res;
-        res.type = ValueType::Int;
+        res.type   = ValueType::Int;
         res.as.i32 = 0;
 
         // NOTE: should be the same as: res.as.i32 = (type1 == type2) && (data1.as == data2.as)
@@ -335,7 +335,7 @@ namespace interpreter {
         vm.ip = frame.return_ip;  // Restore instruction pointer
 
         Value res;
-        res.type = ValueType::Nil;
+        res.type        = ValueType::Nil;
         vm.stack[vm.fp] = res;
     }
 
@@ -349,13 +349,13 @@ namespace interpreter {
         }
 
         const ObjClass context = vm.classes[class_idx];
-        auto *obj = vm.heap[context.indexes.size()];
-        vm.heap[vm.heap_size] = obj;
+        auto *obj              = vm.heap[context.indexes.size()];
+        vm.heap[vm.heap_size]  = obj;
 
         Value newobj;
-        newobj.type = ValueType::Object;
-        newobj.as.object_ptr = vm.heap_size;
-        newobj.class_ptr = class_idx;
+        newobj.type           = ValueType::Object;
+        newobj.as.object_ptr  = vm.heap_size;
+        newobj.class_ptr      = class_idx;
         vm.stack[vm.fp + dst] = newobj;
 
         vm.heap_size++;
@@ -391,12 +391,12 @@ namespace interpreter {
         Value res;
 
         if (a.is_int() && b.is_int()) {
-            res.type = ValueType::Int;
+            res.type   = ValueType::Int;
             res.as.i32 = a.as.i32 + b.as.i32;
         } else {
-            res.type = ValueType::Float;
-            float fa = a.is_int() ? static_cast<float>(a.as.i32) : a.as.f32;
-            float fb = b.is_int() ? static_cast<float>(b.as.i32) : b.as.f32;
+            res.type   = ValueType::Float;
+            float fa   = a.is_int() ? static_cast<float>(a.as.i32) : a.as.f32;
+            float fb   = b.is_int() ? static_cast<float>(b.as.i32) : b.as.f32;
             res.as.f32 = fa + fb;
         }
 
@@ -407,12 +407,12 @@ namespace interpreter {
         Value res;
 
         if (a.is_int() && b.is_int()) {
-            res.type = ValueType::Int;
+            res.type   = ValueType::Int;
             res.as.i32 = a.as.i32 - b.as.i32;
         } else {
-            res.type = ValueType::Float;
-            float fa = a.is_int() ? static_cast<float>(a.as.i32) : a.as.f32;
-            float fb = b.is_int() ? static_cast<float>(b.as.i32) : b.as.f32;
+            res.type   = ValueType::Float;
+            float fa   = a.is_int() ? static_cast<float>(a.as.i32) : a.as.f32;
+            float fb   = b.is_int() ? static_cast<float>(b.as.i32) : b.as.f32;
             res.as.f32 = fa - fb;
         }
 
@@ -423,12 +423,12 @@ namespace interpreter {
         Value res;
 
         if (a.is_int() && b.is_int()) {
-            res.type = ValueType::Int;
+            res.type   = ValueType::Int;
             res.as.i32 = a.as.i32 * b.as.i32;
         } else {
-            res.type = ValueType::Float;
-            float fa = a.is_int() ? static_cast<float>(a.as.i32) : a.as.f32;
-            float fb = b.is_int() ? static_cast<float>(b.as.i32) : b.as.f32;
+            res.type   = ValueType::Float;
+            float fa   = a.is_int() ? static_cast<float>(a.as.i32) : a.as.f32;
+            float fb   = b.is_int() ? static_cast<float>(b.as.i32) : b.as.f32;
             res.as.f32 = fa * fb;
         }
 
@@ -443,24 +443,24 @@ namespace interpreter {
 
         Value res;
         if (a.is_int() && b.is_int()) {
-            res.type = ValueType::Int;
+            res.type   = ValueType::Int;
             res.as.i32 = a.as.i32 / b.as.i32;
         } else {
-            res.type = ValueType::Float;
-            float fa = a.is_int() ? static_cast<float>(a.as.i32) : a.as.f32;
-            float fb = b.is_int() ? static_cast<float>(b.as.i32) : b.as.f32;
+            res.type   = ValueType::Float;
+            float fa   = a.is_int() ? static_cast<float>(a.as.i32) : a.as.f32;
+            float fb   = b.is_int() ? static_cast<float>(b.as.i32) : b.as.f32;
             res.as.f32 = fa / fb;
         }
 
         return res;
     }
 
-    void op_native_call(VMData &vm, uint8_t func_idx, int reg, int count) {
-        vm.natives[func_idx](vm, reg, count);
+    void op_native_call(VMData &vm, uint8_t func_idx) {
+        vm.natives[func_idx](vm);
     }
 
     void op_invokedyn(VMData &vm, uint8_t a, uint8_t b, uint8_t c) {
-        Value callable = vm.stack[vm.fp + a];
+        Value callable = vm.stack[a];
         if (!callable.is_callable()) {
             throw std::runtime_error("No expected callable");
         }
@@ -472,7 +472,7 @@ namespace interpreter {
         if (const_idx >= vm.constanti.size()) {
             throw std::out_of_range("Integer constant index out of range");
         }
-        vm.stack[vm.fp + reg].type = ValueType::Int;
+        vm.stack[vm.fp + reg].type   = ValueType::Int;
         vm.stack[vm.fp + reg].as.i32 = vm.constanti[const_idx].as.i32;
     }
 
@@ -480,16 +480,16 @@ namespace interpreter {
         if (const_idx >= vm.constantf.size()) {
             throw std::out_of_range("Float constant index out of range");
         }
-        vm.stack[vm.fp + reg].type = ValueType::Float;
+        vm.stack[vm.fp + reg].type   = ValueType::Float;
         vm.stack[vm.fp + reg].as.f32 = vm.constantf[const_idx].as.f32;
     }
 
     void op_loadfunc(VMData &vm, uint8_t reg, uint32_t const_idx) {
-        if (const_idx >= vm.functions_count) {
+        if (const_idx >= vm.constantfunc.size()) {
             throw std::out_of_range("Function constant index out of range");
         }
-        vm.stack[vm.fp + reg].type = ValueType::Callable;
-        vm.stack[vm.fp + reg].as.i32 = static_cast<int>(const_idx);
+        vm.stack[vm.fp + reg].type   = ValueType::Callable;
+        vm.stack[vm.fp + reg].as.i32 = vm.constantfunc[const_idx].as.i32;
     }
 
     void op_alloc(VMData &vm, uint8_t dst, uint8_t s) {
@@ -499,73 +499,66 @@ namespace interpreter {
 
         uint32_t size = vm.stack[s].as.i32;
 
-        auto fields = static_cast<Value *>(malloc((size + 1) * sizeof(Value)));
+        Value *fields = static_cast<Value *>(malloc((size + 1) * sizeof(Value)));
         if (!fields) {
             throw std::runtime_error("Memory allocation failed");
         }
 
+        // Create array object with "len" field
+        Object *arr           = new Object{fields};
+        vm.heap[vm.heap_size] = arr;
 
         // Set len field
-        fields[0].type = ValueType::Int;
+        fields[0].type   = ValueType::Int;
         fields[0].as.i32 = size;
 
-        vm.heap[vm.heap_size] = fields;
-
         Value obj_val;
-        obj_val.type = ValueType::Object;
-        obj_val.as.object_ptr = vm.heap_size++;
-        obj_val.class_ptr = 0;  // Array class is always at index 0
+        obj_val.type          = ValueType::Object;
+        obj_val.as.object_ptr = vm.heap_size;
+        obj_val.class_ptr     = 0;  // Array class is always at index 0
 
         vm.stack[vm.fp + dst] = obj_val;
+        vm.heap_size++;
     }
 
-    void op_arrget(VMData &vm, uint8_t dst, uint8_t arr, uint8_t idxc) {
-        auto &idx = vm.stack[vm.fp + idxc];
-        if (!idx.is_int()) {
-            throw std::runtime_error("Invalid array index");
-        }
+    void op_arrget(VMData &vm, uint8_t dst, uint8_t arr, uint8_t idx) {
         Value &arr_val = vm.stack[vm.fp + arr];
         if (!arr_val.is_object()) {
             throw std::runtime_error("Expected array object");
         }
 
-        auto &obj = vm.heap[arr_val.as.object_ptr];
-        Value len_val = obj[0];
+        Object *obj   = vm.heap[arr_val.as.object_ptr];
+        Value len_val = obj->fields[0];
         if (!len_val.is_int()) {
             throw std::runtime_error("Invalid array length");
         }
 
         int32_t len = len_val.as.i32;
-        if (idx.as.i32 >= len) {
+        if (idx >= len) {
             throw std::out_of_range("Array index out of bounds");
         }
 
-        vm.stack[vm.fp + dst] = obj[idx.as.i32 + 1];  // +1 because index 0 is len
+        vm.stack[vm.fp + dst] = obj->fields[idx + 1];  // +1 because index 0 is len
     }
 
-    void op_arrset(VMData &vm, uint8_t arr, uint8_t idxc, uint8_t src) {
+    void op_arrset(VMData &vm, uint8_t arr, uint8_t idx, uint8_t src) {
         Value &arr_val = vm.stack[vm.fp + arr];
-        auto &idx = vm.stack[vm.fp + idxc];
-        if (!idx.is_int()) {
-            throw std::runtime_error("Invalid array index");
-        }
-
         if (!arr_val.is_object()) {
             throw std::runtime_error("Expected array object");
         }
 
-        auto &obj = vm.heap[arr_val.as.object_ptr];
-        Value len_val = obj[0];
+        Object *obj   = vm.heap[arr_val.as.object_ptr];
+        Value len_val = obj->fields[0];
         if (!len_val.is_int()) {
             throw std::runtime_error("Invalid array length");
         }
 
         int32_t len = len_val.as.i32;
-        if (idx.as.i32 >= len) {
+        if (idx >= len) {
             throw std::out_of_range("Array index out of bounds");
         }
 
-        obj[idx.as.i32 + 1] = vm.stack[vm.fp + src];  // +1 because index 0 is len
+        obj->fields[idx + 1] = vm.stack[vm.fp + src];  // +1 because index 0 is len
     }
 
 
@@ -620,65 +613,64 @@ namespace interpreter {
     void print_opcode(uint32_t instruction) {
         // Extract arguments from instruction
         uint8_t opcode = instruction >> OPCODE_SHIFT;
-        uint8_t a = (instruction >> A_SHIFT) & 0xFF;
-        uint8_t b = (instruction >> B_SHIFT) & 0xFF;
-        uint8_t c = (instruction >> C_SHIFT) & 0xFF;
-        uint16_t bx = (instruction >> SBX_SHIFT) & 0xFFFF;
-        uint16_t sbx = bx;
+        uint8_t a      = (instruction >> A_SHIFT) & 0xFF;
+        uint8_t b      = (instruction >> B_SHIFT) & 0xFF;
+        uint8_t c      = (instruction >> C_SHIFT) & 0xFF;
+        uint16_t bx    = (instruction >> SBX_SHIFT) & 0xFFFF;
+        uint16_t sbx   = bx;
 
         // Print opcode name and arguments in one switch
         switch (opcode) {
             case OP_LOADINT:
-                std::cout << "LOAD        R" << (int) a << " = constants[" << bx << "]";
+                std::cout << "LOAD        R" << (int)a << " = constants[" << bx << "]";
                 break;
             case OP_MOVE:
-                std::cout << "MOVE        R" << (int) a << " = R" << (int) b;
+                std::cout << "MOVE        R" << (int)a << " = R" << (int)b;
                 break;
             case OP_LOADNIL:
-                std::cout << "LOADNIL     R" << (int) a << " = nil";
+                std::cout << "LOADNIL     R" << (int)a << " = nil";
                 break;
             case OP_ADD:
-                std::cout << "ADD         R" << (int) a << " = R" << (int) b << " + R" << (int) c;
+                std::cout << "ADD         R" << (int)a << " = R" << (int)b << " + R" << (int)c;
                 break;
             case OP_SUB:
-                std::cout << "SUB         R" << (int) a << " = R" << (int) b << " - R" << (int) c;
+                std::cout << "SUB         R" << (int)a << " = R" << (int)b << " - R" << (int)c;
                 break;
             case OP_MUL:
-                std::cout << "MUL         R" << (int) a << " = R" << (int) b << " * R" << (int) c;
+                std::cout << "MUL         R" << (int)a << " = R" << (int)b << " * R" << (int)c;
                 break;
             case OP_DIV:
-                std::cout << "DIV         R" << (int) a << " = R" << (int) b << " / R" << (int) c;
+                std::cout << "DIV         R" << (int)a << " = R" << (int)b << " / R" << (int)c;
                 break;
             case OP_MOD:
-                std::cout << "MOD         R" << (int) a << " = R" << (int) b << " % R" << (int) c;
+                std::cout << "MOD         R" << (int)a << " = R" << (int)b << " % R" << (int)c;
                 break;
             case OP_NEG:
-                std::cout << "NEG         R" << (int) a << " = -R" << (int) b;
+                std::cout << "NEG         R" << (int)a << " = -R" << (int)b;
                 break;
             case OP_EQ:
-                std::cout << "EQ          R" << (int) a << " = R" << (int) b << " == R" << (int) c;
+                std::cout << "EQ          R" << (int)a << " = R" << (int)b << " == R" << (int)c;
                 break;
             case OP_LT:
-                std::cout << "LT          R" << (int) a << " = R" << (int) b << " < R" << (int) c;
+                std::cout << "LT          R" << (int)a << " = R" << (int)b << " < R" << (int)c;
                 break;
             case OP_LE:
-                std::cout << "LE          R" << (int) a << " = R" << (int) b << " <= R" << (int) c;
+                std::cout << "LE          R" << (int)a << " = R" << (int)b << " <= R" << (int)c;
                 break;
             case OP_JMP:
                 std::cout << "JMP         ip += " << sbx;
                 break;
             case OP_JMPT:
-                std::cout << "JMPT        if R" << (int) a << " ip += " << sbx;
+                std::cout << "JMPT        if R" << (int)a << " ip += " << sbx;
                 break;
             case OP_JMPF:
-                std::cout << "JMPF        if !R" << (int) a << " ip += " << sbx;
+                std::cout << "JMPF        if !R" << (int)a << " ip += " << sbx;
                 break;
             case OP_CALL:
-                std::cout << "CALL        func[" << (int) a << "](args R" << (int) b << "..R" << (int) (b + c - 1)
-                          << ")";
+                std::cout << "CALL        func[" << (int)a << "](args R" << (int)b << "..R" << (int)(b + c - 1) << ")";
                 break;
             case OP_RETURN:
-                std::cout << "RETURN      return R" << (int) a;
+                std::cout << "RETURN      return R" << (int)a;
                 break;
             case OP_RETURNNIL:
                 std::cout << "RETURNNIL   return nil";
