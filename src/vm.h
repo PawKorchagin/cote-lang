@@ -230,6 +230,7 @@ namespace interpreter {
     struct Function {
         uint32_t entry_point;
         uint8_t arity;
+        uint32_t max_stack_size = 120;
     };
 
     typedef void (*NativeFunction)(VMData &, int reg, int cnt);
@@ -260,6 +261,7 @@ namespace interpreter {
     struct CallFrame {
         uint32_t return_ip;
         uint32_t base_ptr;
+        Function *func;
     };
 
     struct VMData {
@@ -285,6 +287,8 @@ namespace interpreter {
         uint32_t sp = 0;  // Stack pointer
         uint32_t fp = 0;  // Frame pointer
         std::stack<CallFrame> call_stack;
+
+        inline uint32_t get_sp() { return fp + (uint32_t) call_stack.top().func->max_stack_size; }
     };
 
 // Core VM functions

@@ -269,7 +269,7 @@ namespace interpreter {
         if (vm.call_stack.size() >= CALL_MAX_SIZE) {
             throw std::runtime_error("Call stack overflow");
         }
-        vm.call_stack.push(CallFrame{vm.ip, vm.fp});
+        vm.call_stack.push(CallFrame{vm.ip, vm.fp, &func});
 
         vm.fp = vm.fp + first_arg_ind;
         vm.ip = func.entry_point;
