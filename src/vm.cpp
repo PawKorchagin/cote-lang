@@ -4,6 +4,8 @@
 #include <iostream>
 #include <stdexcept>
 
+#include "gc.h"
+
 namespace {
     interpreter::VMData vm_instance_;
 }
@@ -15,7 +17,16 @@ namespace interpreter {
     void run() {
         VMData &vm = vm_instance();
 
+        int T = 0;
+
         while (true) {
+            T++;
+
+            if (T % 10 == 0) {
+                // log("CALL GC");
+                gc::call(vm);
+            }
+
             uint32_t instr = vm.code[vm.ip++];
             OpCode op = static_cast<OpCode>(instr >> OPCODE_SHIFT);
 
@@ -349,8 +360,8 @@ namespace interpreter {
         }
 
         const ObjClass context = vm.classes[class_idx];
-        auto *obj = vm.heap[context.indexes.size()];
-        vm.heap[vm.heap_size] = obj;
+        // auto obj = vm.heap[context.indexes.size()].get();
+        // vm.heap[vm.heap_size] = obj;
 
         Value newobj;
         newobj.type = ValueType::Object;
@@ -497,13 +508,11 @@ namespace interpreter {
             throw std::runtime_error("Heap overflow");
         }
 
-        uint32_t size = vm.stack[s].as.i32;
-
-        auto fields = static_cast<Value *>(malloc((size + 1) * sizeof(Value)));
+        const uint32_t size = vm.stack[s].as.i32;
+        const std::shared_ptr<Value[]> fields(new Value[size + 1]);
         if (!fields) {
             throw std::runtime_error("Memory allocation failed");
         }
-
 
         // Set len field
         fields[0].type = ValueType::Int;

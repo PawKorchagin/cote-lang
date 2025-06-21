@@ -150,7 +150,7 @@ namespace interpreter {
 
     struct Value {
         ValueType type = ValueType::Nil;
-        uint16_t class_ptr = 0;  // only for objects
+        uint16_t class_ptr = 0;  // only for objects --> use for check gc alive
         union {
             int32_t i32;
             float f32;
@@ -168,7 +168,7 @@ namespace interpreter {
 
         bool is_object() const { return type == ValueType::Object; }
 
-        bool is_array() const { return is_object() && class_ptr == 0; }
+        bool is_array() const { return is_object(); }
 
         bool is_callable() const { return type == ValueType::Callable; }
     };
@@ -220,7 +220,7 @@ namespace interpreter {
         size_t functions_count = 0;
 
         // Heap storage
-        Value *heap[HEAP_MAX_SIZE];
+        std::shared_ptr<Value[]> heap[HEAP_MAX_SIZE];
         uint32_t heap_size = 0;
 
         // Execution state

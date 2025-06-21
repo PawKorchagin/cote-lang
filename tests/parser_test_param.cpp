@@ -107,10 +107,10 @@ INSTANTIATE_TEST_SUITE_P(
 
  */
 
-int main(int argc, char** argv) {
-        InitGoogleTest(&argc, argv);
-        //std::cout << "Registered tests:\n";
-        // auto& listeners = UnitTest::GetInstance()->listeners();
-        // listeners.Append(new FileAndConsoleListener("logs/dump"));
-        return RUN_ALL_TESTS();
-}
+// int main(int argc, char** argv) {
+//         InitGoogleTest(&argc, argv);
+//         //std::cout << "Registered tests:\n";
+//         // auto& listeners = UnitTest::GetInstance()->listeners();
+//         // listeners.Append(new FileAndConsoleListener("logs/dump"));
+//         return RUN_ALL_TESTS();
+// }

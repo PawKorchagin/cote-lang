@@ -9,6 +9,8 @@ add_library(crypt_lib STATIC parser.cpp ast.cpp lexer.cpp equals.h
         codegen.cpp
         lang_stdlib.cpp
         Trace.cpp
+        gc.cpp
+        gc.h
 )
 
 target_link_libraries(crypt_lib asmjit::asmjit)
