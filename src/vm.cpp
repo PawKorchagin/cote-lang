@@ -271,8 +271,12 @@ namespace interpreter {
         }
         vm.call_stack.push(CallFrame{vm.ip, vm.fp, &func});
 
+
         vm.fp = vm.fp + first_arg_ind;
         vm.ip = func.entry_point;
+        for (int i = vm.fp; i < vm.fp + func.max_stack_size; ++i) {
+            vm.stack[i].set_nil();
+        }
     }
 
     void op_return(VMData &vm, uint8_t result_reg) {
