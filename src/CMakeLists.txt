@@ -12,7 +12,6 @@ add_library(crypt_lib STATIC
         expr_semantic.cpp
         codegen.cpp
         lang_stdlib.cpp
-        trace.cpp
         gc.cpp
         gc.h
         misc.cpp
