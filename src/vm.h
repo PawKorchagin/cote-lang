@@ -8,6 +8,14 @@
 #include <vector>
 #include <memory>
 
+#include "misc.h"
+
+namespace jit {
+    struct Trace;
+    struct TraceEntry;
+    enum class TraceResult;
+}
+
 namespace interpreter {
     struct VMData;
 
@@ -230,6 +238,9 @@ namespace interpreter {
     struct Function {
         uint32_t entry_point;
         uint8_t arity;
+        uint32_t max_stack = 120;
+        uint32_t hotness = 0;
+//        util::int_int_map hot_loc;
     };
 
     typedef void (*NativeFunction)(VMData &, int reg, int cnt);
@@ -256,11 +267,16 @@ namespace interpreter {
     static constexpr uint32_t C_SHIFT = 0;
     static constexpr uint32_t SBX_SHIFT = 0;
     static constexpr uint32_t J_ZERO = BX_ARG >> 1;
-
     struct CallFrame {
         uint32_t return_ip;
         uint32_t base_ptr;
+        Function *cur_func;
     };
+
+    static constexpr int VM_NORMAL = 0;
+    static constexpr int VM_RECORD = 1;
+
+    static constexpr int HOT_THRESHOLD = 3;
 
     struct VMData {
         //  Static data: must be filled before running vm
@@ -285,10 +301,20 @@ namespace interpreter {
         uint32_t sp = 0;  // Stack pointer
         uint32_t fp = 0;  // Frame pointer
         std::stack<CallFrame> call_stack;
+
+        // -- JIT data --
+//        util::int_ptr_map trace_head;
+        jit::Trace *trace = nullptr;
+
+        inline uint32_t get_sp() { return fp + call_stack.top().cur_func->max_stack; }
     };
 
 // Core VM functions
     void run();
+
+    jit::TraceResult run_record();
+
+    void record_fully(jit::TraceEntry &);
 
     VMData &vm_instance();
 
@@ -310,12 +336,6 @@ namespace interpreter {
     uint32_t opcode(OpCode code);
 
     uint32_t halt();
-
-    uint32_t jmp(int32_t offset);
-
-    uint32_t jmpt(uint8_t a, int32_t offset);
-
-    uint32_t jmpf(uint8_t a, int32_t offset);
 
     uint32_t move(uint8_t a, uint8_t b);
 
