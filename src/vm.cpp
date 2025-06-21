@@ -23,8 +23,8 @@ namespace interpreter {
             T++;
 
             if (T % 10 == 0) {
-                // log("CALL GC");
                 gc::call(vm);
+                std::cout << "Freed: " << gc::get_freed_objects() << "\n";
             }
 
             uint32_t instr = vm.code[vm.ip++];

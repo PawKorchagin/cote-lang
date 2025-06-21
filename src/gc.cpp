@@ -17,6 +17,7 @@ namespace gc {
     void sweep(interpreter::VMData &);
 
     int calls = 0;
+    int freed = 0;
 
     void call(interpreter::VMData &vm) {
         log("CALL GC ");
@@ -85,8 +86,15 @@ namespace gc {
                 log(i);
                 log("\n");
                 vm.heap[i].reset();
+                if (vm.heap[i].use_count() == 0) {
+                    freed++;
+                }
             }
         }
         log("\n");
+    }
+
+    int get_freed_objects() {
+        return freed;
     }
 } // gc

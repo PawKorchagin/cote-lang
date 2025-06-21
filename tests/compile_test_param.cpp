@@ -75,6 +75,13 @@ TEST(SimpleCompileFromFileOk, Test7) {
         });
 }
 
+TEST(SimpleCompileFromFileOk, Test8) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/test8.ct" );
+        return compile_program(fin);
+        });
+}
+
 
 
 

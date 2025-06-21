@@ -16,6 +16,7 @@
 namespace gc {
 
     void call(interpreter::VMData&);
+    int get_freed_objects();
 
 // class gc {
 //
