@@ -20,10 +20,11 @@ namespace interpreter {
         int T = 0;
 
         while (true) {
+//            std::cerr << vm.ip << ' ' << int(vm.stack[0].type) << std::endl;
             T++;
 
             if (T % 10 == 0) {
-                gc::call(vm);
+//                gc::call(vm);
                 std::cout << "Freed: " << gc::get_freed_objects() << "\n";
             }
 
@@ -144,7 +145,7 @@ namespace interpreter {
     }
 
     void op_loadnil(VMData &vm, uint8_t reg) {
-        vm.stack[vm.fp + reg] = Value{};
+        vm.stack[vm.fp + reg].set_nil();
     }
 
     void op_add(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
@@ -176,13 +177,10 @@ namespace interpreter {
         Value &v2 = vm.stack[vm.fp + src2];
 
         if (v1.is_int() && v2.is_int()) {
-            if (v2.as.i32 == 0)
+            if (v2.i32 == 0)
                 throw std::runtime_error("Division by zero");
 
-            Value res;
-            res.type = ValueType::Int;
-            res.as.i32 = v1.as.i32 % v2.as.i32;
-            vm.stack[vm.fp + dst] = res;
+            vm.stack[vm.fp + dst].set_int(v1.i32 % v2.i32);
         } else {
             throw std::runtime_error("Modulo requires integer operands");
         }
@@ -193,89 +191,53 @@ namespace interpreter {
         Value res;
 
         if (v.is_int()) {
-            res.type = ValueType::Int;
-            res.as.i32 = -v.as.i32;
+            vm.stack[vm.fp + dst].set_int(-v.i32);
         } else if (v.is_float()) {
-            res.type = ValueType::Float;
-            res.as.f32 = -v.as.f32;
+            vm.stack[vm.fp + dst].set_float(-v.f32);
         } else {
             throw std::runtime_error("Cannot negate non-numeric value");
         }
-        vm.stack[vm.fp + dst] = res;
     }
 
     void op_eq(VMData &vm, const uint8_t dst, const uint8_t src1, const uint8_t src2) {
-        auto &[type1, ignored, data1] = vm.stack[vm.fp + src1];
-        auto &[type2, ignored2, data2] = vm.stack[vm.fp + src2];
+        Value &v1 = vm.stack[vm.fp + src1];
+        Value &v2 = vm.stack[vm.fp + src2];
 
-        Value res;
-        res.type = ValueType::Int;
-        res.as.i32 = 0;
-
-        // NOTE: should be the same as: res.as.i32 = (type1 == type2) && (data1.as == data2.as)
-        if (type1 == type2) {
-            switch (type1) {
-                case ValueType::Int:
-                    res.as.i32 = data1.i32 == data2.i32;
-                    break;
-                case ValueType::Float:
-                    res.as.i32 = data1.f32 == data2.f32;
-                    break;
-                case ValueType::Char:
-                    res.as.i32 = data1.c == data2.c;
-                    break;
-                case ValueType::Object:
-                    res.as.i32 = data1.object_ptr == data2.object_ptr;
-                    break;
-                case ValueType::Nil:
-                    res.as.i32 = 1;
-                    break;
-                default:
-                    res.as.i32 = 0;
-            }
-        }
-        vm.stack[vm.fp + dst] = res;
+        vm.stack[vm.fp + dst].set_int(v1.as_unmarked() == v2.as_unmarked());
     }
 
     void op_neq(VMData &vm, const uint8_t dst, const uint8_t src1, const uint8_t src2) {
         op_eq(vm, dst, src1, src2);
-        vm.stack[vm.fp + dst].as.i32 = ~vm.stack[vm.fp + dst].as.i32 & 1;
+        vm.stack[vm.fp + dst].i32 = 1 - vm.stack[vm.fp + dst].i32;
+    }
+
+    template<bool same = false>
+    inline bool cmp(const Value &v1, const Value &v2) {
+        if (v1.get_class() != v2.get_class()) throw std::runtime_error("Comparison requires same types");
+        if (v1.is_int()) {
+            if constexpr (same) {
+                return v1.i32 <= v2.i32;
+            }
+            return v1.i32 < v2.i32;
+        } else if (v1.is_float()) {
+            if constexpr (same) {
+                return v1.f32 <= v2.f32;
+            }
+            return v1.f32 < v2.f32;
+
+        } else throw std::runtime_error("Comparison requires compatible types");
     }
 
     void op_lt(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
         const Value &v1 = vm.stack[vm.fp + src1];
         const Value &v2 = vm.stack[vm.fp + src2];
-        Value res;
-        res.type = ValueType::Int;
-
-        if (v1.is_int() && v2.is_int())
-            res.as.i32 = v1.as.i32 < v2.as.i32;
-        else if (v1.is_float() && v2.is_float())
-            res.as.i32 = v1.as.f32 < v2.as.f32;
-        else if (v1.is_char() && v2.is_char())
-            res.as.i32 = v1.as.c < v2.as.c;
-        else
-            throw std::runtime_error("Comparison requires compatible types");
-
-        vm.stack[vm.fp + dst] = res;
+        vm.stack[vm.fp + dst].set_int(cmp<false>(v1, v2));
     }
 
     void op_le(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2) {
         const Value &v1 = vm.stack[vm.fp + src1];
         const Value &v2 = vm.stack[vm.fp + src2];
-        Value res;
-        res.type = ValueType::Int;
-
-        if (v1.is_int() && v2.is_int())
-            res.as.i32 = v1.as.i32 <= v2.as.i32;
-        else if (v1.is_float() && v2.is_float())
-            res.as.i32 = v1.as.f32 <= v2.as.f32;
-        else if (v1.is_char() && v2.is_char())
-            res.as.i32 = v1.as.c <= v2.as.c;
-        else
-            throw std::runtime_error("Comparison requires compatible types");
-
-        vm.stack[vm.fp + dst] = res;
+        vm.stack[vm.fp + dst].set_int(cmp<true>(v1, v2));
     }
 
     void op_jmp(VMData &vm, int32_t offset) {
@@ -338,38 +300,38 @@ namespace interpreter {
             return;
         }
 
+        //return nil
+        vm.stack[vm.fp].set_nil();
+
         // Restore previous frame
         CallFrame frame = vm.call_stack.top();
         vm.call_stack.pop();
 
         vm.fp = frame.base_ptr;   // Restore frame pointer
         vm.ip = frame.return_ip;  // Restore instruction pointer
-
-        Value res;
-        res.type = ValueType::Nil;
-        vm.stack[vm.fp] = res;
     }
 
 // TAG: GC maybe want to do smth here
     void op_newobj(VMData &vm, uint8_t dst, uint32_t class_idx) {
-        if (class_idx >= vm.classes.size()) {
-            throw std::out_of_range("context index out of range");
-        }
-        if (vm.heap_size >= HEAP_MAX_SIZE) {
-            // TAG: GC
-        }
-
-        const ObjClass context = vm.classes[class_idx];
-        // auto obj = vm.heap[context.indexes.size()].get();
-        // vm.heap[vm.heap_size] = obj;
-
-        Value newobj;
-        newobj.type = ValueType::Object;
-        newobj.as.object_ptr = vm.heap_size;
-        newobj.class_ptr = class_idx;
-        vm.stack[vm.fp + dst] = newobj;
-
-        vm.heap_size++;
+        throw std::runtime_error("todo");
+//        if (class_idx >= vm.classes.size()) {
+//            throw std::out_of_range("context index out of range");
+//        }
+//        if (vm.heap_size >= HEAP_MAX_SIZE) {
+//            // TAG: GC
+//        }
+//
+//        const ObjClass context = vm.classes[class_idx];
+//        // auto obj = vm.heap[context.indexes.size()].get();
+//        // vm.heap[vm.heap_size] = obj;
+//
+//        Value newobj;
+//        newobj.type = ValueType::Object;
+//        newobj.as.object_ptr = vm.heap_size;
+//        newobj.class_ptr = class_idx;
+//        vm.stack[vm.fp + dst] = newobj;
+//
+//        vm.heap_size++;
     }
 
     void op_getfield(VMData &vm, uint8_t dst, uint8_t obj, uint8_t field_idx) {
@@ -401,15 +363,13 @@ namespace interpreter {
     Value add_values(const Value &a, const Value &b) {
         Value res;
 
-        if (a.is_int() && b.is_int()) {
-            res.type = ValueType::Int;
-            res.as.i32 = a.as.i32 + b.as.i32;
-        } else {
-            res.type = ValueType::Float;
-            float fa = a.is_int() ? static_cast<float>(a.as.i32) : a.as.f32;
-            float fb = b.is_int() ? static_cast<float>(b.as.i32) : b.as.f32;
-            res.as.f32 = fa + fb;
-        }
+        if (!a.is_float() && !a.is_int() ||
+            !b.is_float() && !b.is_int())
+            throw std::runtime_error("addition is defined for numeric types only");
+        if (a.is_int() && b.is_int())
+            res.set_int(a.i32 + b.i32);
+        else
+            res.set_float(a.cast_to_float() + b.cast_to_float());
 
         return res;
     }
@@ -417,15 +377,13 @@ namespace interpreter {
     Value sub_values(const Value &a, const Value &b) {
         Value res;
 
-        if (a.is_int() && b.is_int()) {
-            res.type = ValueType::Int;
-            res.as.i32 = a.as.i32 - b.as.i32;
-        } else {
-            res.type = ValueType::Float;
-            float fa = a.is_int() ? static_cast<float>(a.as.i32) : a.as.f32;
-            float fb = b.is_int() ? static_cast<float>(b.as.i32) : b.as.f32;
-            res.as.f32 = fa - fb;
-        }
+        if (!a.is_float() && !a.is_int() ||
+            !b.is_float() && !b.is_int())
+            throw std::runtime_error("subtraction is defined for numeric types only");
+        if (a.is_int() && b.is_int())
+            res.set_int(a.i32 - b.i32);
+        else
+            res.set_float(a.cast_to_float() - b.cast_to_float());
 
         return res;
     }
@@ -433,35 +391,33 @@ namespace interpreter {
     Value mul_values(const Value &a, const Value &b) {
         Value res;
 
-        if (a.is_int() && b.is_int()) {
-            res.type = ValueType::Int;
-            res.as.i32 = a.as.i32 * b.as.i32;
-        } else {
-            res.type = ValueType::Float;
-            float fa = a.is_int() ? static_cast<float>(a.as.i32) : a.as.f32;
-            float fb = b.is_int() ? static_cast<float>(b.as.i32) : b.as.f32;
-            res.as.f32 = fa * fb;
-        }
+        if (!a.is_float() && !a.is_int() ||
+            !b.is_float() && !b.is_int())
+            throw std::runtime_error("mul is defined for numeric types only");
+        if (a.is_int() && b.is_int())
+            res.set_int(a.i32 * b.i32);
+        else
+            res.set_float(a.cast_to_float() * b.cast_to_float());
 
         return res;
     }
 
     Value div_values(const Value &a, const Value &b) {
-        if (b.is_int() && b.as.i32 == 0)
+        if (!a.is_float() && !a.is_int() ||
+            !b.is_float() && !b.is_int())
+            throw std::runtime_error("division is defined for numeric types only");
+        Value res;
+
+        if (b.is_int() && b.i32 == 0)
             throw std::runtime_error("Division by zero");
-        if (b.is_float() && b.as.f32 == 0.0f)
+        if (b.is_float() && b.f32 == 0.0f)
             throw std::runtime_error("Division by zero");
 
-        Value res;
-        if (a.is_int() && b.is_int()) {
-            res.type = ValueType::Int;
-            res.as.i32 = a.as.i32 / b.as.i32;
-        } else {
-            res.type = ValueType::Float;
-            float fa = a.is_int() ? static_cast<float>(a.as.i32) : a.as.f32;
-            float fb = b.is_int() ? static_cast<float>(b.as.i32) : b.as.f32;
-            res.as.f32 = fa / fb;
-        }
+        if (a.is_int() && b.is_int())
+            res.set_int(a.i32 + b.i32);
+        else
+            res.set_float(a.cast_to_float() + b.cast_to_float());
+
 
         return res;
     }
@@ -476,31 +432,29 @@ namespace interpreter {
             throw std::runtime_error("No expected callable");
         }
 
-        op_call(vm, callable.as.i32, b, c);
+        op_call(vm, callable.i32, b, c);
     }
 
     void op_loadint(VMData &vm, uint8_t reg, uint32_t const_idx) {
         if (const_idx >= vm.constanti.size()) {
             throw std::out_of_range("Integer constant index out of range");
         }
-        vm.stack[vm.fp + reg].type = ValueType::Int;
-        vm.stack[vm.fp + reg].as.i32 = vm.constanti[const_idx].as.i32;
+
+        vm.stack[vm.fp + reg].set_int(vm.constanti[const_idx].i32);
     }
 
     void op_loadfloat(VMData &vm, uint8_t reg, uint32_t const_idx) {
         if (const_idx >= vm.constantf.size()) {
             throw std::out_of_range("Float constant index out of range");
         }
-        vm.stack[vm.fp + reg].type = ValueType::Float;
-        vm.stack[vm.fp + reg].as.f32 = vm.constantf[const_idx].as.f32;
+        vm.stack[vm.fp + reg].set_float(vm.constanti[const_idx].f32);
     }
 
     void op_loadfunc(VMData &vm, uint8_t reg, uint32_t const_idx) {
         if (const_idx >= vm.functions_count) {
             throw std::out_of_range("Function constant index out of range");
         }
-        vm.stack[vm.fp + reg].type = ValueType::Callable;
-        vm.stack[vm.fp + reg].as.i32 = static_cast<int>(const_idx);
+        vm.stack[vm.fp + reg].set_callable(static_cast<int>(const_idx));
     }
 
     void op_alloc(VMData &vm, uint8_t dst, uint8_t s) {
@@ -508,24 +462,18 @@ namespace interpreter {
             throw std::runtime_error("Heap overflow");
         }
 
-        const uint32_t size = vm.stack[s].as.i32;
+        const uint32_t size = vm.stack[s].i32;
         const std::shared_ptr<Value[]> fields(new Value[size + 1]);
         if (!fields) {
             throw std::runtime_error("Memory allocation failed");
         }
 
         // Set len field
-        fields[0].type = ValueType::Int;
-        fields[0].as.i32 = size;
+        fields[0].set_int(size);
 
         vm.heap[vm.heap_size] = fields;
 
-        Value obj_val;
-        obj_val.type = ValueType::Object;
-        obj_val.as.object_ptr = vm.heap_size++;
-        obj_val.class_ptr = 0;  // Array class is always at index 0
-
-        vm.stack[vm.fp + dst] = obj_val;
+        vm.stack[vm.fp + dst].set_obj(1, vm.heap_size++);// Array class is always at index 1
     }
 
     void op_arrget(VMData &vm, uint8_t dst, uint8_t arr, uint8_t idxc) {
@@ -538,18 +486,18 @@ namespace interpreter {
             throw std::runtime_error("Expected array object");
         }
 
-        auto &obj = vm.heap[arr_val.as.object_ptr];
+        auto &obj = vm.heap[arr_val.object_ptr];
         Value len_val = obj[0];
         if (!len_val.is_int()) {
             throw std::runtime_error("Invalid array length");
         }
 
-        int32_t len = len_val.as.i32;
-        if (idx.as.i32 >= len) {
+        int32_t len = len_val.i32;
+        if (idx.i32 >= len) {
             throw std::out_of_range("Array index out of bounds");
         }
 
-        vm.stack[vm.fp + dst] = obj[idx.as.i32 + 1];  // +1 because index 0 is len
+        vm.stack[vm.fp + dst] = obj[idx.i32 + 1];  // +1 because index 0 is len
     }
 
     void op_arrset(VMData &vm, uint8_t arr, uint8_t idxc, uint8_t src) {
@@ -563,31 +511,29 @@ namespace interpreter {
             throw std::runtime_error("Expected array object");
         }
 
-        auto &obj = vm.heap[arr_val.as.object_ptr];
+        auto &obj = vm.heap[arr_val.object_ptr];
         Value len_val = obj[0];
         if (!len_val.is_int()) {
             throw std::runtime_error("Invalid array length");
         }
 
-        int32_t len = len_val.as.i32;
-        if (idx.as.i32 >= len) {
+        int32_t len = len_val.i32;
+        if (idx.i32 >= len) {
             throw std::out_of_range("Array index out of bounds");
         }
 
-        obj[idx.as.i32 + 1] = vm.stack[vm.fp + src];  // +1 because index 0 is len
+        obj[idx.i32 + 1] = vm.stack[vm.fp + src];  // +1 because index 0 is len
     }
 
 
     bool is_truthy(const Value &val) {
-        if (val.is_nil())
-            return false;
+        if (val.is_object())
+            return val.get_class() != 0; // Objects are always truthy(except nil)
         if (val.is_int())
-            return val.as.i32 != 0;
+            return val.i32 != 0;
         if (val.is_float())
-            return val.as.f32 != 0.0f;
-        if (val.is_char())
-            return val.as.c != '\0';
-        return true;  // Objects are always truthy
+            return val.f32 != 0.0f;
+        return false;
     }
 
     uint32_t opcode(OpCode code, uint8_t a, uint32_t bx) {

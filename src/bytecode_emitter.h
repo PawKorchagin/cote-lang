@@ -107,6 +107,8 @@ namespace interpreter {
         // Behavior: registers[a] = (registers[b] == registers[c]) ? 1 : 0
         void emit_eq(int a, int b, int c);
 
+        void emit_neq(int a, int b, int c);
+
         // Less-than comparison
         // Args: Same as OP_EQ
         // Behavior: registers[a] = (registers[b] < registers[c]) ? 1 : 0

@@ -6,6 +6,7 @@
 #include <stack>
 #include <unordered_map>
 #include <vector>
+#include <memory>
 
 namespace interpreter {
     struct VMData;
@@ -144,33 +145,86 @@ namespace interpreter {
         OP_TAILCALL,
     };
 
-    enum class ValueType : uint8_t {
-        Nil, Int, Float, Char, Object, Callable
-    };
+    static constexpr uint32_t TYPE_OBJ = 1;
+    static constexpr uint32_t MARK_BIT = 2;
+    static constexpr uint32_t TYPE_INT = 4;
+    static constexpr uint32_t TYPE_FLOAT = 8;
+    static constexpr uint32_t TYPE_CALLABLE = 12;
+    static constexpr uint32_t UNMARK_BITS = ~MARK_BIT;
+    static constexpr uint64_t OBJ_NIL = (uint64_t) TYPE_OBJ << 32ull;
 
+    //type_part:
+    //  objects: xxxx y 1 - last bits means that it's an object
+    //                y - mark bit
+    //  nil has class_type = 0
+    //  array has class_type = 1;
+    // non-objects: xxxx00 - int
+    //              xxxx10 - float
+    //              xxx100 - callable
+    //              xxx100 - callable
     struct Value {
-        ValueType type = ValueType::Nil;
-        uint16_t class_ptr = 0;  // only for objects --> use for check gc alive
+        uint32_t type_part;
         union {
             int32_t i32;
             float f32;
-            char c;
-            uint32_t object_ptr{};
-        } as{};
+            uint32_t object_ptr;
+        };
 
-        bool is_nil() const { return type == ValueType::Nil; }
+        Value() {}
 
-        bool is_int() const { return type == ValueType::Int; }
+        void mark() { type_part |= MARK_BIT; }
 
-        bool is_float() const { return type == ValueType::Float; }
+        void unmark() { type_part &= UNMARK_BITS; }
 
-        bool is_char() const { return type == ValueType::Char; }
+        bool is_marked() const { return type_part & MARK_BIT; }
 
-        bool is_object() const { return type == ValueType::Object; }
+        uint64_t as_unmarked() const { return (uint64_t(UNMARK_BITS & type_part) << 32ull) | (uint64_t(i32)); }
 
-        bool is_array() const { return is_object(); }
+        inline int32_t get_class() const { return type_part >> 2; }//1 for obj type; 1 for mark bit
 
-        bool is_callable() const { return type == ValueType::Callable; }
+        inline void set_nil() { set_obj<false>(0, 0); }
+
+        inline void set_int(int val) {
+            type_part = TYPE_INT;
+            i32 = val;
+        }
+
+        inline void set_callable(int val) {
+            type_part = TYPE_CALLABLE;
+            i32 = val;
+        }
+
+        inline void set_float(float val) {
+            type_part = TYPE_FLOAT;
+            f32 = val;
+        }
+
+        template<bool marked = true>
+        inline void set_obj(uint32_t class_info, uint32_t ptr_val) {
+            type_part = class_info << 2ull | TYPE_OBJ | uint32_t(marked) << 1;
+            object_ptr = ptr_val;
+        }
+
+        inline bool is_nil() const { return as_unmarked() == OBJ_NIL; }
+
+        inline bool is_int() const { return (type_part & UNMARK_BITS) == TYPE_INT; }
+
+        inline bool is_float() const { return (type_part & UNMARK_BITS) == TYPE_FLOAT; }
+
+
+        //TODO: add char support
+        inline bool is_char() const { return false; }
+
+        inline bool is_object() const { return type_part & 1; }
+
+        inline bool is_array() const { return is_object() && get_class() == 1; }
+
+        inline bool is_callable() const { return (type_part & UNMARK_BITS) == TYPE_CALLABLE; }
+
+        //only for numeric types
+        inline float cast_to_float() const {
+            return is_float() ? f32 : static_cast<float>(i32);
+        }
     };
 
     struct Function {
@@ -277,8 +331,6 @@ namespace interpreter {
     Value div_values(const Value &a, const Value &b);
 
     bool is_truthy(const Value &val);
-
-    Value convert_value(const Value &val, ValueType target_type);
 
 // Instruction implementations
     void op_load(VMData &vm, uint8_t reg, uint32_t const_idx);

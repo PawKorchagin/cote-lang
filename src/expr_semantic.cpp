@@ -21,8 +21,7 @@ namespace {
         } else if constexpr (mtype == ast::BinaryOpType::EQ) {
             emitter.emit_eq(vars.last() - 1, vars.last() - 1, vars.last());
         } else if constexpr (mtype == ast::BinaryOpType::NEQ) {
-            throw std::runtime_error("todo");
-//            emitter.emit_neq(vars.last() - 1, vars.last() - 1, vars.last());
+            emitter.emit_neq(vars.last() - 1, vars.last() - 1, vars.last());
         } else if constexpr (mtype == ast::BinaryOpType::LE) {
             emitter.emit_leq(vars.last() - 1, vars.last() - 1, vars.last());
         } else if constexpr (mtype == ast::BinaryOpType::LS) {
@@ -74,7 +73,8 @@ parser::eval_expr(ast::Node *expr, interpreter::BytecodeEmitter &emitter, parser
             if (it == -2) {
                 if (cnt != 1)
                     parser_throws("only one argument expected in function 'array'");
-                emitter.emit_alloc(start + 1, start + 1);
+                vars.drop(1);
+                emitter.emit_alloc(vars.last(), start + 1);
                 return true;
             }
             if (it == -1) {
@@ -106,6 +106,10 @@ parser::eval_expr(ast::Node *expr, interpreter::BytecodeEmitter &emitter, parser
             break;
         case NodeType::Var: {
             std::string mname = dynamic_cast<VarExpr *>(expr)->name;
+            if (mname == "nil") {
+                emitter.emit_loadnil(vars.push_var());
+                return true;
+            }
             const int res = vars.get_var(mname);
             if (res == -1) {
                 const int f = vars.get_func(mname);

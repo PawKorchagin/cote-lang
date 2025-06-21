@@ -44,9 +44,9 @@ void interpreter::BytecodeEmitter::emit_neg(int a, int b) {
 // Value creation helpers
 namespace {
     interpreter::Value int_val(int32_t v) {
-        interpreter::Value val;
-        val.type = interpreter::ValueType::Int;
-        val.as.i32 = v;
+        using namespace interpreter;
+        Value val;
+        val.set_int(v);
         return val;
     }
 }
@@ -181,8 +181,7 @@ void interpreter::BytecodeEmitter::initVM(interpreter::VMData &vm) {
     emit_halt();
     vm.constanti.resize(iconstant_count);
     for (auto &it: iconstants) {
-        vm.constanti[it.second - 1].as.i32 = it.first;
-        vm.constanti[it.second - 1].type = ValueType::Int;
+        vm.constanti[it.second - 1].set_int(it.first);
     }
     size_t offset = 0;
     vm.functions_count = cur_func;
@@ -233,6 +232,10 @@ void interpreter::BytecodeEmitter::emit_call_direct(int funcid, int reg, int cou
 
 void interpreter::BytecodeEmitter::emit_alloc(uint32_t reg, uint32_t reg2) {
     add(opcode(OpCode::OP_ALLOC, reg, reg2, 0));
+}
+
+void interpreter::BytecodeEmitter::emit_neq(int a, int b, int c) {
+    add(opcode(OpCode::OP_NEQ, a, b, c));
 }
 
 
