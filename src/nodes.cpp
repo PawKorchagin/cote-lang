@@ -114,9 +114,9 @@ bool cfg::CFGraph::buildBasicCFG() {
     jmp_pos.emplace(0, 0);
     code_for_each(info,
                   [&id, &jmp_pos, &should_jmp](const int idx, const int instr) {
-                        if (is_ret(instr)) {
-                            should_jmp.insert(idx + 1);
-                        }
+                      if (is_ret(instr)) {
+                          should_jmp.insert(idx + 1);
+                      }
                       if (!is_jmp(instr)) return;
                       const int bx = instr & (int) interpreter::BX_ARG;
                       const int pos = bx - (int32_t) interpreter::J_ZERO + idx + 1;
@@ -128,13 +128,14 @@ bool cfg::CFGraph::buildBasicCFG() {
                       }
                   });
     blocks.resize(id + 2);
-    for (auto& cur : should_jmp) {
+    for (auto &cur: should_jmp) {
         jmp_pos.emplace(cur, id + 1);
     }
     BasicBlock *cur_block = nullptr;
     for (int idx = 0; idx < info.code_size; ++idx) {
         const int instr = (int) info.code[idx];
         auto it = jmp_pos.find(idx);
+        std::cerr << interpreter::ins_to_string(instr) << std::endl;
         if (it != jmp_pos.end()) {//block start
             const int temp_id = it->second;
             //process edge
@@ -156,6 +157,7 @@ bool cfg::CFGraph::buildBasicCFG() {
     blocks[id].ptr = info.code_size;
     //clear last block TODO: clear jump_info(s)
     return !blocks.empty();
+    //
 }
 
 std::ostream &cfg::CFGraph::toString(std::ostream &out) {

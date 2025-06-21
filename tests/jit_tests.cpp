@@ -19,11 +19,13 @@ inline void compile_program_(std::istream &fin, const std::string &file_name = "
     print_vm_data(vm);
     cfg::VMInfo vmInfo(vm);
 
-    vmInfo.code = vm.code;
-    vmInfo.code_size = vm.code_size;
+    vmInfo.code = vm.code + vm.functions[0].entry_point;
+    vmInfo.code_size = vm.code_size - vm.functions[0].entry_point - 2;
+
     cfg::CFGraph graph(vmInfo);
     ASSERT_TRUE(graph.buildBasicCFG());
-    graph.toString(std::cout);
+    std::ofstream fout("temp.txt");
+    graph.toString(fout);
     interpreter::run();
     ASSERT_TRUE(vm.call_stack.empty());
     ASSERT_EQ(vm.stack[0].i32, 0);
@@ -79,6 +81,6 @@ TEST(SimpleJitTest, Test1) {
     ASSERT_EQ(result, 100);
     rt.release(func);
 
-    std::ifstream fin("../../tests/sources/test3.ct");
+    std::ifstream fin("../../tests/sources/test6mini.ct");
     compile_program_(fin, "ff");
 }
