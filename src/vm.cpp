@@ -338,7 +338,7 @@ namespace interpreter {
         vm.fp = vm.fp + first_arg_ind;
         vm.ip = func.entry_point;
         const uint32_t sp = vm.get_sp();
-        for (int i = vm.fp + (uint32_t)num_args; i < sp; ++i) {
+        for (int i = vm.fp + (uint32_t) num_args; i < sp; ++i) {
             vm.stack[i].set_nil();
         }
     }
