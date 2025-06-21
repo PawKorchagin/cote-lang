@@ -51,15 +51,12 @@ protected:
 
     std::shared_ptr<Value[]> allocArray(const int size, const int stack_idx) {
         const std::shared_ptr<Value[]> fields(new Value[size + 1]);
-        fields[0].type = ValueType::Int;
-        fields[0].as.i32 = size;
+        fields[0].set_int(size);
 
         vm.heap[vm.heap_size] = fields;
 
         Value arrVal;
-        arrVal.type = ValueType::Object;
-        arrVal.as.object_ptr = vm.heap_size;
-        vm.heap_size++;
+        arrVal.set_obj(1, vm.heap_size++);
 
         if (stack_idx >= 0) {
             vm.stack[stack_idx] = arrVal;

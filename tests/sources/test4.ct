@@ -9,9 +9,11 @@ fn isPrime(n) {
 
 
 fn main() {
+    x = nil;
+    x = isPrime;
     n = 1000;
     for (i = 2; i < n; i += 1) {
-        if (isPrime(i))
+        if (x(i))
             println(i);
     }
     return 0;

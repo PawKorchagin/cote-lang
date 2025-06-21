@@ -4,3 +4,6 @@
 
 #include "Trace.h"
 
+void jit::Trace::eval_code(interpreter::VMData &data, int head) {
+//    for (int )
+}

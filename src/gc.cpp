@@ -31,9 +31,9 @@ namespace gc {
     void reset_alive(const interpreter::VMData &vm) {
         log("\nreset alive\n");
         for (int i = 0; i < vm.heap_size; ++i) {
-            auto* block = vm.heap[i].get();
+            auto *block = vm.heap[i].get();
             if (block == nullptr) continue;
-            block->class_ptr = 0;
+            block->unmark();
         }
     }
 
@@ -41,8 +41,8 @@ namespace gc {
 
     void mark_alive(interpreter::VMData &vm, interpreter::Value &value) {
         if (value.is_array()) {
-            const auto size = value.as.i32;
-            const auto ptr = value.as.object_ptr;
+            const auto size = value.i32;
+            const auto ptr = value.object_ptr;
             const auto mem_ptr = vm.heap[ptr].get();
 
             for (auto i = 0; i < size + 1; ++i) {
@@ -55,7 +55,8 @@ namespace gc {
             }
         } else {
             log("mark value\n");
-            value.class_ptr = 1;
+            //if is not an array, then it is not a gc object and is WAS NOT ALLOCATED and we shouldn't even consider collecting it
+//            value.mark();
             alive_cnt++;
         }
     }
@@ -65,7 +66,7 @@ namespace gc {
         log("mark\n");
         // TODO sp
         for (int i = 0; i < vm.fp + 100; ++i) {
-            if (vm.stack[i].type == interpreter::ValueType::Object) {
+            if (vm.stack[i].is_object()) {
                 mark_alive(vm, vm.stack[i]);
             }
         }
@@ -79,9 +80,9 @@ namespace gc {
         log(vm.heap_size);
         log("\n");
         for (auto i = 0; i < vm.heap_size; ++i) {
-            const auto* block = vm.heap[i].get();
+            const auto *block = vm.heap[i].get();
             if (block == nullptr) continue;
-            if (!block->class_ptr) {
+            if (!block->is_marked()) {
                 log("heap reset: ");
                 log(i);
                 log("\n");

@@ -19,7 +19,6 @@ add_executable(
         parser_test_param.cpp
         jit_tests.cpp
         utils.h
-        compile_test.cpp
         compile_test_param.cpp
         gc_test.cpp
 )

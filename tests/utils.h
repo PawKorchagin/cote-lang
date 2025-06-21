@@ -35,7 +35,7 @@ inline void print_vm_data(interpreter::VMData& vm) {
     using namespace interpreter;
     std::cout << "constants: [";
     for (int i = 0; i < vm.constanti.size(); ++i) {
-        std::cout << vm.constanti[i].as.i32;
+        std::cout << vm.constanti[i].i32;
         if (i != vm.constanti.size() - 1) std::cout << ", ";
     }
     std::cout << "]\n";

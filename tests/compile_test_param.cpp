@@ -20,7 +20,7 @@ inline void compile_program(std::istream &fin, const std::string &file_name = "c
     //    print_func_body(p.instructions);
     interpreter::run();
     ASSERT_TRUE(vm.call_stack.empty());
-    ASSERT_EQ(vm.stack[0].as.i32, 0);
+    ASSERT_EQ(vm.stack[0].i32, 0);
 
     if (!parser::get_errors().empty()) {
         for (auto x: get_errors()) {

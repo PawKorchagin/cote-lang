@@ -25,7 +25,7 @@ namespace interpreter {
                 if (consti == nullptr)
                     return std::format("mov [{}] C[{}]", a, bx);
                 else
-                    return std::format("mov [{}] {}", a, (*consti)[bx].as.i32);
+                    return std::format("mov [{}] {}", a, (*consti)[bx].i32);
             case OP_MOVE:
                 return std::format("mov [{}] [{}]", a, b);
             case OP_LOADNIL:
