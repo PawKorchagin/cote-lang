@@ -22,10 +22,9 @@ inline void compile_program_(std::istream &fin, const std::string &file_name = "
     vmInfo.code = vm.code;
     vmInfo.code_size = vm.code_size;
     cfg::CFGraph graph(vmInfo);
-//    ASSERT_TRUE(graph.buildBasicCFG());
-//    graph.toString(std::cout);
-//    print_func_body(p.instructions);
-//    interpreter::run();
+    ASSERT_TRUE(graph.buildBasicCFG());
+    graph.toString(std::cout);
+    interpreter::run();
     ASSERT_TRUE(vm.call_stack.empty());
     ASSERT_EQ(vm.stack[0].i32, 0);
 

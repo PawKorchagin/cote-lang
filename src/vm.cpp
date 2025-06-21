@@ -4,23 +4,93 @@
 #include <iostream>
 #include <stdexcept>
 
+
 #include "gc.h"
+#include "trace.h"
 
 namespace {
     interpreter::VMData vm_instance_;
+
+    //if already in
+    //TODO: one of the most important functions
+//    void update_hot(util::int_int_map &mp, interpreter::VMData &vm, int ip, int add = 0) {
+//        using namespace interpreter;
+//        util::int_int_map_itr it = util::int_int_map_get_or_insert(&mp, ip, 1);
+    //TODO: check that not end(out of mem)
+    //already hot => do not increase
+//        if (it.data->val >= HOT_THRESHOLD)
+//            return;
+//
+//        it.data->val += 1;
+//        //became hot => need to record
+//        if (it.data->val >= HOT_THRESHOLD) {
+//            // vm.trace_head[ip] - is empty, because this position was never recorded
+//            auto entry = new jit::TraceEntry();
+//            util::int_ptr_map_insert(&vm.trace_head, ip, entry);
+//            //TODO: check that not end(out of mem)
+//            //record trace
+//            record_fully(*entry);
+//        }
+//    }
 }
 namespace interpreter {
     VMData &vm_instance() {
         return vm_instance_;
     }
 
-    void run() {
+
+    template<bool mode>
+    void op_jmp(VMData &vm, int32_t offset) {
+        vm.ip += offset;
+        if constexpr (mode == VM_NORMAL) {
+//            if (offset < 0)
+//                update_hot(vm.call_stack.top().cur_func->hot_loc, vm, (int) vm.ip, 1);
+        }
+    }
+
+    template<bool mode>
+    void op_jmpt(VMData &vm, uint8_t cond, int32_t offset) {
+        if (is_truthy(vm.stack[vm.fp + cond])) {
+            vm.ip += offset;
+            if constexpr (mode == VM_NORMAL) {
+//                if (offset < 0)
+//                    update_hot(vm.call_stack.top().cur_func->hot_loc, vm, (int) vm.ip, 1);
+            }
+        }
+    }
+
+    template<bool mode>
+    void op_jmpf(VMData &vm, uint8_t cond, int32_t offset) {
+        if (!is_truthy(vm.stack[vm.fp + cond])) {
+            vm.ip += offset;
+            if constexpr (mode == VM_NORMAL) {
+//                if (offset < 0)
+//                    update_hot(vm.call_stack.top().cur_func->hot_loc, vm, (int) vm.ip, 1);
+            }
+        }
+    }
+
+    //0 - normal mode
+    //1 - recording mode
+    template<int mode = 0>
+    jit::TraceResult m_run() {
         VMData &vm = vm_instance();
 
         int T = 0;
 
         while (true) {
-//            std::cerr << vm.ip << ' ' << int(vm.stack[0].type) << std::endl;
+//            util::int_ptr_map_itr it = util::int_ptr_map_get(&vm.trace_head, vm.ip);
+//            if (!util::int_ptr_map_is_end(it)) {
+//                //try enter a trace
+//                auto entry = *reinterpret_cast<jit::TraceEntry *>(it.data->val);
+//                auto res = entry.try_entry(vm);
+//                if (res == 0) {
+//                    throw std::runtime_error(
+//                            "todo: couldn't find suitable trace; increase abortion count and maybe rerun");
+//                }
+//                entry.run(res);
+//                throw std::runtime_error("todo: trace exit");
+//            }
             T++;
 
             if (T % 10 == 0) {
@@ -39,9 +109,11 @@ namespace interpreter {
             switch (op) {
                 case OP_LOADINT:
                     op_load(vm, a, bx);
+//                    if constexpr (mode == VM_RECORD) vm.trace->parse_loadi(a, bx);
                     break;
                 case OP_MOVE:
                     op_move(vm, a, b);
+//                    if constexpr (mode == VM_RECORD) vm.trace->parse_mov(a, b);
                     break;
                 case OP_LOADNIL:
                     op_loadnil(vm, a);
@@ -78,17 +150,17 @@ namespace interpreter {
                     break;
                 case OP_JMP: {
                     int32_t sbx = static_cast<int32_t>(instr & BX_ARG) - J_ZERO;
-                    op_jmp(vm, sbx);
+                    op_jmp<mode>(vm, sbx);
                     break;
                 }
                 case OP_JMPT: {
                     int32_t sbx = static_cast<int32_t>(instr & BX_ARG) - J_ZERO;
-                    op_jmpt(vm, a, sbx);
+                    op_jmpt<mode>(vm, a, sbx);
                     break;
                 }
                 case OP_JMPF: {
                     int32_t sbx = static_cast<int32_t>(instr & BX_ARG) - J_ZERO;
-                    op_jmpf(vm, a, sbx);
+                    op_jmpf<mode>(vm, a, sbx);
                     break;
                 }
                 case OP_CALL:
@@ -108,7 +180,7 @@ namespace interpreter {
                     break;
                 case OP_HALT:
                     op_halt(vm);
-                    return;
+                    return jit::TraceResult::TRACE_ABORT;
                 case OP_LOADFLOAT:
                     op_loadfloat(vm, a, bx);
                     break;
@@ -131,6 +203,14 @@ namespace interpreter {
                     throw std::runtime_error("Unknown opcode");
             }
         }
+    }
+
+    void run() {
+        m_run<VM_NORMAL>();
+    }
+
+    jit::TraceResult run_record() {
+        throw std::runtime_error("todo");
     }
 
     void op_load(VMData &vm, uint8_t reg, uint32_t const_idx) {
@@ -240,22 +320,6 @@ namespace interpreter {
         vm.stack[vm.fp + dst].set_int(cmp<true>(v1, v2));
     }
 
-    void op_jmp(VMData &vm, int32_t offset) {
-        vm.ip += offset;
-    }
-
-    void op_jmpt(VMData &vm, uint8_t cond, int32_t offset) {
-        if (is_truthy(vm.stack[vm.fp + cond])) {
-            vm.ip += offset;
-        }
-    }
-
-    void op_jmpf(VMData &vm, uint8_t cond, int32_t offset) {
-        if (!is_truthy(vm.stack[vm.fp + cond])) {
-            vm.ip += offset;
-        }
-    }
-
     void op_call(VMData &vm, uint8_t func_idx, uint8_t first_arg_ind, uint8_t num_args) {
         if (func_idx >= FUNCTIONS_MAX) {
             throw std::out_of_range("Function index out of range");
@@ -269,10 +333,14 @@ namespace interpreter {
         if (vm.call_stack.size() >= CALL_MAX_SIZE) {
             throw std::runtime_error("Call stack overflow");
         }
-        vm.call_stack.push(CallFrame{vm.ip, vm.fp});
+        vm.call_stack.push(CallFrame{vm.ip, vm.fp, &func});
 
         vm.fp = vm.fp + first_arg_ind;
         vm.ip = func.entry_point;
+        const uint32_t sp = vm.get_sp();
+        for (int i = vm.fp + (uint32_t)num_args; i < sp; ++i) {
+            vm.stack[i].set_nil();
+        }
     }
 
     void op_return(VMData &vm, uint8_t result_reg) {
@@ -646,6 +714,14 @@ namespace interpreter {
                 break;
         }
         std::cout << std::endl;
+    }
+
+    void record_fully(jit::TraceEntry &entry) {
+        entry.traces.emplace_back(vm_instance());
+        vm_instance().trace = &entry.traces.back();
+        if (run_record() != jit::TraceResult::TRACE_FINISH) {
+            entry.traces.pop_back();
+        }
     }
 
     void init_vm(std::istream &in) {
