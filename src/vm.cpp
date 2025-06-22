@@ -6,7 +6,6 @@
 
 
 #include "gc.h"
-#include "trace.h"
 
 namespace {
     interpreter::VMData vm_instance_;
@@ -38,59 +37,12 @@ namespace interpreter {
         return vm_instance_;
     }
 
-
-    template<bool mode>
-    void op_jmp(VMData &vm, int32_t offset) {
-        vm.ip += offset;
-        if constexpr (mode == VM_NORMAL) {
-//            if (offset < 0)
-//                update_hot(vm.call_stack.top().cur_func->hot_loc, vm, (int) vm.ip, 1);
-        }
-    }
-
-    template<bool mode>
-    void op_jmpt(VMData &vm, uint8_t cond, int32_t offset) {
-        if (is_truthy(vm.stack[vm.fp + cond])) {
-            vm.ip += offset;
-            if constexpr (mode == VM_NORMAL) {
-//                if (offset < 0)
-//                    update_hot(vm.call_stack.top().cur_func->hot_loc, vm, (int) vm.ip, 1);
-            }
-        }
-    }
-
-    template<bool mode>
-    void op_jmpf(VMData &vm, uint8_t cond, int32_t offset) {
-        if (!is_truthy(vm.stack[vm.fp + cond])) {
-            vm.ip += offset;
-            if constexpr (mode == VM_NORMAL) {
-//                if (offset < 0)
-//                    update_hot(vm.call_stack.top().cur_func->hot_loc, vm, (int) vm.ip, 1);
-            }
-        }
-    }
-
-    //0 - normal mode
-    //1 - recording mode
-    template<int mode = 0>
-    jit::TraceResult m_run() {
+    void run() {
         VMData &vm = vm_instance();
 
         int T = 0;
 
         while (true) {
-//            util::int_ptr_map_itr it = util::int_ptr_map_get(&vm.trace_head, vm.ip);
-//            if (!util::int_ptr_map_is_end(it)) {
-//                //try enter a trace
-//                auto entry = *reinterpret_cast<jit::TraceEntry *>(it.data->val);
-//                auto res = entry.try_entry(vm);
-//                if (res == 0) {
-//                    throw std::runtime_error(
-//                            "todo: couldn't find suitable trace; increase abortion count and maybe rerun");
-//                }
-//                entry.run(res);
-//                throw std::runtime_error("todo: trace exit");
-//            }
             T++;
 
             if (T % 10 == 0) {
@@ -150,17 +102,17 @@ namespace interpreter {
                     break;
                 case OP_JMP: {
                     int32_t sbx = static_cast<int32_t>(instr & BX_ARG) - J_ZERO;
-                    op_jmp<mode>(vm, sbx);
+                    op_jmp(vm, sbx);
                     break;
                 }
                 case OP_JMPT: {
                     int32_t sbx = static_cast<int32_t>(instr & BX_ARG) - J_ZERO;
-                    op_jmpt<mode>(vm, a, sbx);
+                    op_jmpt(vm, a, sbx);
                     break;
                 }
                 case OP_JMPF: {
                     int32_t sbx = static_cast<int32_t>(instr & BX_ARG) - J_ZERO;
-                    op_jmpf<mode>(vm, a, sbx);
+                    op_jmpf(vm, a, sbx);
                     break;
                 }
                 case OP_CALL:
@@ -180,7 +132,7 @@ namespace interpreter {
                     break;
                 case OP_HALT:
                     op_halt(vm);
-                    return jit::TraceResult::TRACE_ABORT;
+                    return;
                 case OP_LOADFLOAT:
                     op_loadfloat(vm, a, bx);
                     break;
@@ -203,14 +155,6 @@ namespace interpreter {
                     throw std::runtime_error("Unknown opcode");
             }
         }
-    }
-
-    void run() {
-        m_run<VM_NORMAL>();
-    }
-
-    jit::TraceResult run_record() {
-        throw std::runtime_error("todo");
     }
 
     void op_load(VMData &vm, uint8_t reg, uint32_t const_idx) {
@@ -289,6 +233,23 @@ namespace interpreter {
     void op_neq(VMData &vm, const uint8_t dst, const uint8_t src1, const uint8_t src2) {
         op_eq(vm, dst, src1, src2);
         vm.stack[vm.fp + dst].i32 = 1 - vm.stack[vm.fp + dst].i32;
+    }
+
+
+    void op_jmp(VMData &vm, int32_t offset) {
+        vm.ip += offset;
+    }
+
+    void op_jmpt(VMData &vm, uint8_t cond, int32_t offset) {
+        if (is_truthy(vm.stack[vm.fp + cond])) {
+            vm.ip += offset;
+        }
+    }
+
+    void op_jmpf(VMData &vm, uint8_t cond, int32_t offset) {
+        if (!is_truthy(vm.stack[vm.fp + cond])) {
+            vm.ip += offset;
+        }
     }
 
     template<bool same = false>
@@ -530,7 +491,7 @@ namespace interpreter {
             throw std::runtime_error("Heap overflow");
         }
 
-        const uint32_t size = vm.stack[s].i32;
+        const uint32_t size = vm.stack[vm.fp + s].i32;
         const std::shared_ptr<Value[]> fields(new Value[size + 1]);
         if (!fields) {
             throw std::runtime_error("Memory allocation failed");
@@ -596,7 +557,7 @@ namespace interpreter {
 
     bool is_truthy(const Value &val) {
         if (val.is_object())
-            return val.get_class() != 0; // Objects are always truthy(except nil)
+            return !val.is_nil(); // Objects are always truthy(except nil)
         if (val.is_int())
             return val.i32 != 0;
         if (val.is_float())
@@ -714,14 +675,6 @@ namespace interpreter {
                 break;
         }
         std::cout << std::endl;
-    }
-
-    void record_fully(jit::TraceEntry &entry) {
-        entry.traces.emplace_back(vm_instance());
-        vm_instance().trace = &entry.traces.back();
-        if (run_record() != jit::TraceResult::TRACE_FINISH) {
-            entry.traces.pop_back();
-        }
     }
 
     void init_vm(std::istream &in) {
