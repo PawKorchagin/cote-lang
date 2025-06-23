@@ -1,0 +1,12 @@
+fn link() {
+    a = array(10);
+    return a;
+}
+
+fn main() {
+    a = link();
+    b = a;
+    b[0] = nil;
+    println(a[0]);
+    return 0;
+}

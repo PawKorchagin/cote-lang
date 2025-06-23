@@ -23,7 +23,7 @@ add_executable(
         gc_test.cpp
 )
 
-target_link_libraries(cote_test PRIVATE crypt_lib GTest::gtest_main)
+target_link_libraries(cote_test PRIVATE cote_lib GTest::gtest_main)
 
 # --------------------------------------------------------------------------------
 # Sanitizers: enable AddressSanitizer and LeakSanitizer, ignore for Windows
@@ -32,6 +32,7 @@ if(NOT WIN32)
     message(STATUS "Enabling AddressSanitizer and LeakSanitizer for cote test")
     target_compile_options(cote_test PRIVATE
             -fsanitize=address
+            -fsanitize=undefined
 #            -fsanitize=leak
             -O1                 # ?
             -fno-omit-frame-pointer

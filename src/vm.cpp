@@ -1,11 +1,13 @@
 #include "vm.h"
 
+#include <cassert>
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
 
 
 #include "gc.h"
+#include "trace.h"
 
 namespace {
     interpreter::VMData vm_instance_;
@@ -157,6 +159,14 @@ namespace interpreter {
         }
     }
 
+    void run(bool with_gc) {
+        m_run<VM_NORMAL>(with_gc);
+    }
+
+    jit::TraceResult run_record() {
+        throw std::runtime_error("todo");
+    }
+
     void op_load(VMData &vm, uint8_t reg, uint32_t const_idx) {
         if (const_idx >= vm.constanti.size()) {
             throw std::out_of_range("Constant index out of range");
@@ -233,23 +243,6 @@ namespace interpreter {
     void op_neq(VMData &vm, const uint8_t dst, const uint8_t src1, const uint8_t src2) {
         op_eq(vm, dst, src1, src2);
         vm.stack[vm.fp + dst].i32 = 1 - vm.stack[vm.fp + dst].i32;
-    }
-
-
-    void op_jmp(VMData &vm, int32_t offset) {
-        vm.ip += offset;
-    }
-
-    void op_jmpt(VMData &vm, uint8_t cond, int32_t offset) {
-        if (is_truthy(vm.stack[vm.fp + cond])) {
-            vm.ip += offset;
-        }
-    }
-
-    void op_jmpf(VMData &vm, uint8_t cond, int32_t offset) {
-        if (!is_truthy(vm.stack[vm.fp + cond])) {
-            vm.ip += offset;
-        }
     }
 
     template<bool same = false>
@@ -487,7 +480,7 @@ namespace interpreter {
     }
 
     void op_alloc(VMData &vm, uint8_t dst, uint8_t s) {
-        if (vm.heap_size >= HEAP_MAX_SIZE) {
+        if (heap::get_size() >= HEAP_MAX_SIZE) {
             throw std::runtime_error("Heap overflow");
         }
 
@@ -500,9 +493,9 @@ namespace interpreter {
         // Set len field
         fields[0].set_int(size);
 
-        vm.heap[vm.heap_size] = fields;
+        heap::heap.push_back(fields);
 
-        vm.stack[vm.fp + dst].set_obj(1, vm.heap_size++);// Array class is always at index 1
+        vm.stack[vm.fp + dst].set_obj(1, heap::get_size() - 1);// Array class is always at index 1
     }
 
     void op_arrget(VMData &vm, uint8_t dst, uint8_t arr, uint8_t idxc) {
@@ -515,8 +508,14 @@ namespace interpreter {
             throw std::runtime_error("Expected array object");
         }
 
-        auto &obj = vm.heap[arr_val.object_ptr];
-        Value len_val = obj[0];
+        // auto &obj = vm.heap[arr_val.object_ptr];
+#ifdef GC_TEST
+        const auto* obj = heap::get_heap(arr_val.object_ptr).get();
+#else
+        const auto* obj = heap::get_heap(arr_val.object_ptr);
+#endif
+
+        const Value len_val = obj[0];
         if (!len_val.is_int()) {
             throw std::runtime_error("Invalid array length");
         }
@@ -536,11 +535,19 @@ namespace interpreter {
             throw std::runtime_error("Invalid array index");
         }
 
-        if (!arr_val.is_object()) {
+        if (!arr_val.is_array()) {
             throw std::runtime_error("Expected array object");
         }
 
         auto &obj = vm.heap[arr_val.object_ptr];
+        // auto &obj = vm.heap[arr_val.object_ptr];
+#ifdef GC_TEST
+        auto* obj = heap::get_heap(arr_val.object_ptr).get();
+#else
+        auto* obj = heap::get_heap(arr_val.object_ptr);
+#endif
+
+
         Value len_val = obj[0];
         if (!len_val.is_int()) {
             throw std::runtime_error("Invalid array length");

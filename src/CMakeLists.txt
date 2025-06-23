@@ -1,4 +1,4 @@
-add_library(crypt_lib STATIC
+add_library(cote_lib STATIC
         parser.cpp
         ast.cpp
         lexer.cpp
@@ -14,7 +14,9 @@ add_library(crypt_lib STATIC
         gc.cpp
         gc.h
         misc.cpp
+        heap.cpp
+        heap.h
 )
 
-target_link_libraries(crypt_lib asmjit::asmjit)
-target_include_directories(crypt_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(cote_lib asmjit::asmjit)
+target_include_directories(cote_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

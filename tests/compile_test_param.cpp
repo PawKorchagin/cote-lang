@@ -17,7 +17,7 @@ inline void compile_program(std::istream &fin, const std::string &file_name = "c
     ASSERT_NO_THROW(p = parser::parse_program(vm));
     print_vm_data(vm);
     //    print_func_body(p.instructions);
-    interpreter::run();
+    interpreter::run(true);
     ASSERT_TRUE(vm.call_stack.empty());
     ASSERT_EQ(vm.stack[0].i32, 0);
 
@@ -74,6 +74,8 @@ TEST(SimpleCompileFromFileOk, Test7) {
         });
 }
 
+#define GC_TEST
+
 TEST(SimpleCompileFromFileOk, Test8) {
     ASSERT_NO_THROW({
         std::ifstream fin("../../tests/sources/test8.ct" );
@@ -81,7 +83,12 @@ TEST(SimpleCompileFromFileOk, Test8) {
         });
 }
 
-
+TEST(SimpleCompileFromFileOk, TestGC1) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/gc/test_arraylink_mini.ct" );
+        return compile_program(fin);
+        });
+}
 
 
 // INSTANTIATE_TEST_SUITE_P(

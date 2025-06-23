@@ -14,14 +14,9 @@
 #endif
 
 namespace gc {
-
-    void call(interpreter::VMData&);
+    void call(interpreter::VMData&, bool verbose = true);
     int get_freed_objects();
-
-// class gc {
-//
-// };
-
+    int get_calls();
 } // gc
 
 #endif //GC_H

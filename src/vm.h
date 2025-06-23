@@ -9,7 +9,6 @@
 #include <memory>
 
 #include "misc.h"
-
 namespace jit {
     struct Trace;
     struct TraceEntry;
@@ -179,15 +178,26 @@ namespace interpreter {
             uint32_t object_ptr;
         };
 
+        // Value()=default;
         Value() {}
 
         void mark() { type_part |= MARK_BIT; }
 
         void unmark() { type_part &= UNMARK_BITS; }
 
+        // TODO simplify
+        void flip_mark() {
+            if (this->is_marked()) {
+                this->unmark();
+            }
+            else {
+                this->mark();
+            }
+        }
+
         bool is_marked() const { return type_part & MARK_BIT; }
 
-        uint64_t as_unmarked() const { return (uint64_t(UNMARK_BITS & type_part) << 32ull) | (uint64_t(i32)); }
+        uint64_t as_unmarked() const { return (static_cast<uint64_t>(UNMARK_BITS & type_part) << 32ull) | static_cast<uint64_t>(i32); }
 
         inline int32_t get_class() const { return type_part >> 2; }//1 for obj type; 1 for mark bit
 
@@ -292,8 +302,11 @@ namespace interpreter {
         size_t functions_count = 0;
 
         // Heap storage
-        std::shared_ptr<Value[]> heap[HEAP_MAX_SIZE];
-        uint32_t heap_size = 0;
+
+        // std::shared_ptr<Value[]> heap[HEAP_MAX_SIZE];
+        // std::vector<std::shared_ptr<Value[]>>& heap = heap::get_heap();
+
+        // uint32_t heap_size = 0;
 
         // Execution state
         Value stack[STACK_SIZE];
@@ -308,11 +321,16 @@ namespace interpreter {
 //        util::int_ptr_map trace_head;
         jit::Trace *trace = nullptr;
 
-        inline uint32_t get_sp() { return fp + call_stack.top().cur_func->max_stack; }
+        inline uint32_t get_sp() {
+            if (call_stack.empty()) {
+                return fp;
+            }
+            return fp + call_stack.top().cur_func->max_stack;
+        }
     };
 
 // Core VM functions
-    void run();
+    void run(bool with_gc = true);
 
     VMData &vm_instance();
 

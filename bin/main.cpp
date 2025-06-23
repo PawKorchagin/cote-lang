@@ -9,6 +9,7 @@
 //
 //#include "lib/exceptions.h"
 //#include "semantics/analyzer.h"
+
 //
 //
 //using namespace parser;
@@ -198,4 +199,76 @@
 //
 //    return 0;
 //}
-int main() {return 0;}
+
+#include "src/vm.h"
+#include "src/parser.h"
+
+#include <cassert>
+#include <exceptions.h>
+#include <ins_to_string.h>
+
+inline interpreter::VMData& initVM() {
+    interpreter::VMData& vm = interpreter::vm_instance();
+    vm         = interpreter::VMData();
+
+    vm.ip = 0;  // Start at first instruction
+    vm.fp = 0;  // Frame pointer at base
+    vm.sp = 0;  // Stack pointer
+
+    return vm;
+}
+
+inline void print_vm_data(interpreter::VMData& vm) {
+    using namespace interpreter;
+    std::cout << "constants: [";
+    for (int i = 0; i < vm.constanti.size(); ++i) {
+        std::cout << vm.constanti[i].i32;
+        if (i != vm.constanti.size() - 1) std::cout << ", ";
+    }
+    std::cout << "]\n";
+    std::unordered_map<int, Function*> functions;
+    for (int i = 0; i < vm.functions_count; ++i) {
+        functions[vm.functions[i].entry_point] = &vm.functions[i];
+    }
+    for (int i = 0; i < vm.code_size; ++i) {
+        auto it = functions.find(i);
+        if (it != functions.end()) {
+            std::cout << "func" << it->second - vm.functions << "(args: " << (int)it->second->arity << "):\n";
+        }
+        std::cout << "    " << interpreter::ins_to_string(vm.code[i], &vm.constanti);
+        if (i == vm.ip) {
+            std::cout << " <- ip";
+        }
+        std::cout << '\n';
+    }
+}
+
+inline void compile_program(std::istream &fin, const std::string &file_name = "code") {
+    using namespace interpreter;
+    auto &vm = initVM();
+    parser::init_parser(fin, new BytecodeEmitter());
+    ast::Program p;
+    p = parser::parse_program(vm);
+    print_vm_data(vm);
+    //    print_func_body(p.instructions);
+    interpreter::run(true);
+    assert(vm.call_stack.empty());
+    // ASSERT_EQ(vm.stack[0].i32, 0);
+
+    if (!parser::get_errors().empty()) {
+        for (auto x: parser::get_errors()) {
+            std::cerr << file_name << ":" << x <<
+                    std::endl;
+        }
+        throw std::runtime_error("parser failed: " + parser::get_errors().front());
+    }
+}
+
+#include "src/gc.h";
+
+int main() {
+    std::fstream fin("../../tests/sources/test8.ct");
+    compile_program(fin);
+    std::cout << "total calls: " <<  gc::get_calls() << std::endl;
+    return 0;
+}
