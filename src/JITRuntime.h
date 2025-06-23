@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
-#include "asmjit/asmjit.h"
+#include "asmjit/x86.h"
 #include "vm.h"
 #include "misc.h"
 #include <cstring>
@@ -31,11 +31,20 @@ control dependent on the branch)
 // - each function should end with ret nil
 // - jmp limitations:
 //      - no irreducible loops
-namespace cfg {
+namespace jit {
+    enum class CompilationResult {
+        ABORT,
+        SUCCESS,
+    };
+
+    using FuncCompiled = uint64_t (*)(void *, void *);
+
     struct JITRuntime {
-        void compile(interpreter::VMData &vm, interpreter::Function &func);
+
+        CompilationResult compile(interpreter::VMData &vm, interpreter::Function &func, FuncCompiled &res);
+
     private:
-        void run();
+        asmjit::JitRuntime asmrt;
     };
 
 }

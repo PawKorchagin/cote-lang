@@ -171,12 +171,12 @@ namespace interpreter {
     //              xxx100 - callable
     //              xxx100 - callable
     struct Value {
-        uint32_t type_part;
         union {
             int32_t i32;
             float f32;
             uint32_t object_ptr;
-        };
+        };//low bits
+        uint32_t type_part;//high bits
 
         // Value()=default;
         Value() {}

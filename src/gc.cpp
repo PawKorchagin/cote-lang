@@ -7,7 +7,8 @@
 
 #include <cassert>
 #include <iostream>
-#include<ranges>
+#include <ranges>
+#include <algorithm>
 
 #include "heap.h"
 
@@ -16,25 +17,25 @@
 namespace gc_detail {
     inline bool all_non_nullptr() {
         return std::ranges::all_of(
-            heap::heap,
-            [](const auto &ptr) {
-                return ptr != nullptr;
-            });
+                heap::heap,
+                [](const auto &ptr) {
+                    return ptr != nullptr;
+                });
     }
 
     inline bool all_nullptr(const std::vector<
 #ifdef GC_TEST
-    std::shared_ptr<interpreter::Value[]>
+            std::shared_ptr<interpreter::Value[]>
 #else
-    interpreter::Value*
+            interpreter::Value*
 #endif
-        >::iterator& begin) {
+    >::iterator &begin) {
         return std::ranges::all_of(
-            begin,
-            std::ranges::end(heap::heap),
-            [](const auto &ptr) {
-                return ptr == nullptr;
-            });
+                begin,
+                std::ranges::end(heap::heap),
+                [](const auto &ptr) {
+                    return ptr == nullptr;
+                });
     }
 
 }
@@ -55,7 +56,8 @@ namespace gc {
         mark(vm);
         sweep();
         if (verbose) {
-            std::cerr << "Call: " << calls << ", Freed: " << get_freed_objects() << " Heap: " << heap::get_size() << std::endl;
+            std::cerr << "Call: " << calls << ", Freed: " << get_freed_objects() << " Heap: " << heap::get_size()
+                      << std::endl;
         }
     }
 
@@ -68,12 +70,12 @@ namespace gc {
 #else
             interpreter::Value*
 #endif
-             &ptr: heap::heap) {
+                    &ptr: heap::heap) {
             ptr // NOLINT(*-redundant-smartptr-get)
 #ifdef GC_TEST
-            .get()
+                    .get()
 #endif
-            ->unmark();
+                    ->unmark();
         }
         // POST: no nullptr in heap
         assert(gc_detail::all_non_nullptr());
@@ -116,7 +118,7 @@ namespace gc {
             if (i == 2) {
 
             }
-            if  (heap::heap[i] == nullptr) {
+            if (heap::heap[i] == nullptr) {
                 assert(gc_detail::all_nullptr(heap::heap.begin() + i));
                 break;
             }
@@ -130,7 +132,7 @@ namespace gc {
                     }
 
                     heap::get_heap(j).swap(ptr);
-                        // std::cerr <<
+                    // std::cerr <<
                     deleted++;
                     freed++;
                 }
@@ -143,13 +145,13 @@ namespace gc {
         assert(gc_detail::all_non_nullptr());
 #else
 #endif
-        }
+    }
 
-        int get_freed_objects() {
-            return freed;
-        }
+    int get_freed_objects() {
+        return freed;
+    }
 
-        int get_calls() {
-            return calls;
-        }
-    } // gc
+    int get_calls() {
+        return calls;
+    }
+} // gc
