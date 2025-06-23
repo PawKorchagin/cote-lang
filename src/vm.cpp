@@ -7,7 +7,7 @@
 
 
 #include "gc.h"
-#include "trace.h"
+#include "heap.h"
 
 namespace {
     interpreter::VMData vm_instance_;
@@ -39,7 +39,7 @@ namespace interpreter {
         return vm_instance_;
     }
 
-    void run() {
+    void run(const bool with_gc) {
         VMData &vm = vm_instance();
 
         int T = 0;
@@ -47,9 +47,8 @@ namespace interpreter {
         while (true) {
             T++;
 
-            if (T % 10 == 0) {
-//                gc::call(vm);
-                std::cout << "Freed: " << gc::get_freed_objects() << "\n";
+            if (T % 10 == 0 && with_gc) {
+                gc::call(vm, true);
             }
 
             uint32_t instr = vm.code[vm.ip++];
@@ -157,10 +156,6 @@ namespace interpreter {
                     throw std::runtime_error("Unknown opcode");
             }
         }
-    }
-
-    void run(bool with_gc) {
-        m_run<VM_NORMAL>(with_gc);
     }
 
     jit::TraceResult run_record() {
@@ -520,8 +515,7 @@ namespace interpreter {
             throw std::runtime_error("Invalid array length");
         }
 
-        int32_t len = len_val.i32;
-        if (idx.i32 >= len) {
+        if (int32_t len = len_val.i32; idx.i32 >= len) {
             throw std::out_of_range("Array index out of bounds");
         }
 
@@ -539,7 +533,6 @@ namespace interpreter {
             throw std::runtime_error("Expected array object");
         }
 
-        auto &obj = vm.heap[arr_val.object_ptr];
         // auto &obj = vm.heap[arr_val.object_ptr];
 #ifdef GC_TEST
         auto* obj = heap::get_heap(arr_val.object_ptr).get();
