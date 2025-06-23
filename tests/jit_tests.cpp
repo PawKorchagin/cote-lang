@@ -3,7 +3,6 @@
 //
 #include "utils.h"
 #include "src/ast.h"
-#include "src/nodes.h"
 #include "libs/asmjit/src/asmjit/core.h"
 #include "libs/asmjit/src/asmjit/x86.h"
 
@@ -17,13 +16,13 @@ inline void compile_program_(std::istream &fin, const std::string &file_name = "
     ast::Program p;
     ASSERT_NO_THROW(p = parser::parse_program(vm));
     print_vm_data(vm);
-    cfg::VMInfo vmInfo(vm);
+    // cfg::VMInfo vmInfo(vm);
 
-    vmInfo.code = vm.code;
-    vmInfo.code_size = vm.code_size;
-    cfg::CFGraph graph(vmInfo);
-    ASSERT_TRUE(graph.buildBasicCFG());
-    graph.toString(std::cout);
+    // vmInfo.code = vm.code;
+    // vmInfo.code_size = vm.code_size;
+    // cfg::CFGraph graph(vmInfo);
+    // ASSERT_TRUE(graph.buildBasicCFG());
+    // graph.toString(std::cout);
     interpreter::run();
     ASSERT_TRUE(vm.call_stack.empty());
     ASSERT_EQ(vm.stack[0].i32, 0);

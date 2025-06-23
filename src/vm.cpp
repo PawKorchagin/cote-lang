@@ -577,16 +577,21 @@ namespace interpreter {
         return (static_cast<int>(OP_HALT) << OPCODE_SHIFT);
     }
 
-    uint32_t jmp(int32_t offset) {
-        return (static_cast<int>(OP_JMP) << OPCODE_SHIFT) | (offset + J_ZERO);
+
+    void op_jmp(VMData &vm, int32_t offset) {
+        vm.ip += offset;
     }
 
-    uint32_t jmpt(uint8_t a, int32_t offset) {
-        return (static_cast<int>(OP_JMPT) << OPCODE_SHIFT) | (a << A_SHIFT) | (offset + J_ZERO);
+    void op_jmpt(VMData &vm, uint8_t cond, int32_t offset) {
+        if (is_truthy(vm.stack[vm.fp + cond])) {
+            vm.ip += offset;
+        }
     }
 
-    uint32_t jmpf(uint8_t a, int32_t offset) {
-        return (static_cast<int>(OP_JMPF) << OPCODE_SHIFT) | (a << A_SHIFT) | (offset + J_ZERO);
+    void op_jmpf(VMData &vm, uint8_t cond, int32_t offset) {
+        if (!is_truthy(vm.stack[vm.fp + cond])) {
+            vm.ip += offset;
+        }
     }
 
     uint32_t move(uint8_t a, uint8_t b) {
@@ -681,5 +686,7 @@ namespace interpreter {
         // Initialization logic would go here
         // Load bytecode, constants, contextes, etc.
     }
+
+
 
 }  // namespace interpreter

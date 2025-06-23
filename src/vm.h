@@ -408,12 +408,6 @@ namespace interpreter {
 
     void op_le(VMData &vm, uint8_t dst, uint8_t src1, uint8_t src2);
 
-    void op_jmp(VMData &vm, int32_t offset);
-
-    void op_jmpt(VMData &vm, uint8_t cond, int32_t offset);
-
-    void op_jmpf(VMData &vm, uint8_t cond, int32_t offset);
-
     void op_call(VMData &vm, uint8_t func_idx, uint8_t first_arg_ind, uint8_t num_args);
 
     void op_native_call(VMData &vm, uint8_t func_idx, int reg1, int count);
@@ -431,6 +425,12 @@ namespace interpreter {
     void op_setfield(VMData &vm, uint8_t obj, uint8_t field_idx, uint8_t src);
 
     void op_halt(VMData &vm);
+
+    void op_jmp(VMData &vm, int32_t offset);
+
+    void op_jmpt(VMData &vm, uint8_t cond, int32_t offset);
+
+    void op_jmpf(VMData &vm, uint8_t cond, int32_t offset);
 
 };  // namespace interpreter
 

@@ -8,8 +8,6 @@
 
 #include "gc.h"
 
-#include <trace.h>
-
 #include "heap.h"
 #include "vm.h"
 
