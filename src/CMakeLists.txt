@@ -6,13 +6,11 @@ add_library(crypt_lib STATIC
         vm.cpp vm.h
         exceptions.cpp
         concept.h
-        nodes.cpp
         bytecode_emitter.cpp
         var_manager.cpp
         expr_semantic.cpp
         codegen.cpp
         lang_stdlib.cpp
-        trace.cpp
         gc.cpp
         gc.h
         misc.cpp

@@ -5,7 +5,6 @@
 #include "utils.h"
 #include "src/ast.h"
 #include "src/ins_to_string.h"
-#include "src/nodes.h"
 
 using namespace interpreter;
 using SimpleCompileFromFileOk = Test;

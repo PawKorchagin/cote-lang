@@ -151,6 +151,7 @@ namespace interpreter {
         OP_ARRGET,
         OP_ARRSET,
         OP_TAILCALL,
+        OP_NONE
     };
 
     static constexpr uint32_t TYPE_OBJ = 1;
@@ -238,6 +239,7 @@ namespace interpreter {
     struct Function {
         uint32_t entry_point;
         uint8_t arity;
+        uint32_t code_size = 0;
         uint32_t max_stack = 120;
         uint32_t hotness = 0;
 //        util::int_int_map hot_loc;
@@ -311,10 +313,6 @@ namespace interpreter {
 
 // Core VM functions
     void run();
-
-    jit::TraceResult run_record();
-
-    void record_fully(jit::TraceEntry &);
 
     VMData &vm_instance();
 
