@@ -36,7 +36,8 @@ namespace interpreter {
         uint32_t type_part; // high bits
 
         // Value()=default;
-        Value() {}
+        Value() {
+        }
 
         void mark() { type_part |= MARK_BIT; }
 
@@ -46,23 +47,24 @@ namespace interpreter {
         void flip_mark() {
             if (this->is_marked()) {
                 this->unmark();
-            }
-            else {
+            } else {
                 this->mark();
             }
         }
 
         bool is_marked() const { return type_part & MARK_BIT; }
 
-        uint64_t as_unmarked() const { return (static_cast<uint64_t>(UNMARK_BITS & type_part) << 32ull) | static_cast<uint64_t>(i32); }
+        uint64_t as_unmarked() const {
+            return (static_cast<uint64_t>(UNMARK_BITS & type_part) << 32ull) | static_cast<uint64_t>(i32);
+        }
 
-        inline int32_t get_class() const { return (type_part >> 2) & 1; }//1 for obj type; 1 for mark bit, & 1 bc size
+        inline int32_t get_class() const { return (type_part >> 2) & 1; } //1 for obj type; 1 for mark bit, & 1 bc size
 
         uint32_t get_len() {
             return type_part >> 3;
         }
 
-        inline void set_nil() { set_obj<false>(0, 0); }
+        inline void set_nil() { set_obj<false>(0, nullptr); }
 
         inline void set_int(int val) {
             type_part = TYPE_INT;
@@ -80,14 +82,14 @@ namespace interpreter {
         }
 
         template<bool marked = true>
-        inline void set_obj(const uint32_t class_info, Value* ptr_val) {
+        inline void set_obj(const uint32_t class_info, Value *ptr_val) {
             type_part = class_info << 2ull | TYPE_OBJ | static_cast<uint32_t>(marked) << 1;
-            assert(ptr_val);
-            object_ptr = ptr_val->object_ptr;
+            assert(class_info == 0 || ptr_val);
+            object_ptr = !class_info ? 0 : ptr_val->object_ptr; // set nullptr to nil or objectptr
         }
 
         template<bool marked = true>
-        inline void set_array(const uint32_t size, Value* ptr_val) {
+        inline void set_array(const uint32_t size, Value *ptr_val) {
             set_obj(1, ptr_val);
             type_part |= size << 3ull;
         }

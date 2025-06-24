@@ -39,7 +39,7 @@ using namespace interpreter;
 //     }
 //
 //     size_t get_used_young_arena() const {
-//         return young_arena.get_used_values();
+//         return YoungArena.get_used_values();
 //     }
 // };
 
@@ -63,12 +63,10 @@ TEST_F(gc_test, OldArenaNoThrowing) {
     ASSERT_EQ(vm.gc.get_used_young_arena(), 6);
     ASSERT_EQ(vm.gc.get_young_root_size(), 1);
 
-    // auto* young = gc.get_obj(RootsType::YOUNG, 0);
-    auto *old = vm.gc.get_obj(heap::GarbageCollector::RootsType::OLD, 0);
-    auto *from_stack = vm.stack[1].object_ptr;
+    auto *young = vm.gc.get_obj(heap::GarbageCollector::RootsType::YOUNG, 0);
+    auto *from_stack = heap::mem.at(vm.stack[1].object_ptr);
 
-    // ASSERT_EQ(young, old);
-    ASSERT_EQ(old, from_stack);
+    ASSERT_EQ(young, from_stack);
 }
 
 // TEST_F(GCTest, ReferencedArrayIsKeptWithElements) {

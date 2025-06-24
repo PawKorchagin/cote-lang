@@ -9,34 +9,68 @@
 #include <vector>
 #include <memory_resource>
 #include <cstddef>
-#include <unordered_map>
-#include <__ranges/all.h>
+#include <map>
 
 #include "value.h"
 
 namespace heap {
-    inline std::unordered_map<uint32_t, interpreter::Value*> mem{};
+    inline std::map<uint32_t, interpreter::Value*> mem{};
 
     class GarbageCollector {
-        class monotonic_resource final : public std::pmr::monotonic_buffer_resource {
-            std::size_t used_values_ = 0;
+        class YoungArena {
+            interpreter::Value* arena = nullptr;
+            uint16_t used = 0;
 
-        public:
-            monotonic_resource(void *buf, const std::size_t buf_size)
-                : monotonic_buffer_resource(buf, buf_size) {
-                // reset_used();
+            void alloc_buffer() {
+                arena = new interpreter::Value[YOUNG_BUFFER];
             }
 
 
+        public:
+            YoungArena() {
+                alloc_buffer();
+            }
 
-        protected:
-            void *do_allocate(const std::size_t bytes, const std::size_t alignment) override {
-                // this->used_values_ += bytes;
-                return monotonic_buffer_resource::do_allocate(bytes, alignment);
+            interpreter::Value* allocate(size_t values) {
+                assert(used + values < YOUNG_BUFFER);
+                if (arena == nullptr) {
+                    alloc_buffer();
+                }
+                auto* res = arena + used;
+                used += values;
+
+                return res;
+            }
+
+            void release() {
+                used = 0;
+                delete[] arena;
+                arena = nullptr;
+            }
+
+            [[nodiscard]] uint16_t get_used() const {
+                return used;
             }
         };
 
-        size_t used_values_ = 0;
+        // class monotonic_resource final : public std::pmr::monotonic_buffer_resource {
+        //     std::size_t used_values_ = 0;
+        //
+        // public:
+        //     monotonic_resource(void *buf, const std::size_t buf_size)
+        //         : monotonic_buffer_resource(buf, buf_size) {
+        //         // reset_used();
+        //     }
+        //
+        //
+        //
+        // protected:
+        //     void *do_allocate(const std::size_t bytes, const std::size_t alignment) override {
+        //         // this->used_values_ += bytes;
+        //         return monotonic_buffer_resource::do_allocate(bytes, alignment);
+        //     }
+        // };
+
         size_t allocated_ = 0;
 
         static constexpr uint16_t YOUNG_BUFFER = 50;
@@ -45,35 +79,26 @@ namespace heap {
 
         static std::byte young_buffer[YOUNG_BUFFER * sizeof(interpreter::Value)];
 
-        void reset_used() {
-            used_values_ = 0;
-        }
-
-        void add_used(size_t len) {
-            used_values_ += len;
-        }
-
-
     protected:
-        std::pmr::monotonic_buffer_resource young_arena {
-            young_buffer, sizeof(young_buffer)
-        };
+        // std::pmr::monotonic_buffer_resource young_arena {
+        //     young_buffer, sizeof(young_buffer)
+        // };
         std::pmr::unsynchronized_pool_resource old_arena;
     private:
 
         // Allocators
         using Alloc = std::pmr::polymorphic_allocator<interpreter::Value>;
-        Alloc young_alloc{&young_arena};
+        YoungArena young_alloc = YoungArena();
         Alloc large_alloc{std::pmr::new_delete_resource()};
-        Alloc old_alloc{&old_arena};
+        // Alloc old_alloc{&old_arena};
 
     protected: // test inheritance
         using value_ptr = interpreter::Value *;
         // Roots
-        using Roots = std::pmr::vector<value_ptr>;
-        Roots young_roots{young_alloc};
-        Roots large_roots{large_alloc};
-        Roots old_roots{old_alloc};
+        using Roots = std::vector<value_ptr>;
+        Roots young_roots;
+        Roots large_roots;
+        Roots old_roots;
 
     private:
         interpreter::Value* stack_;
@@ -105,11 +130,11 @@ namespace heap {
 
         void reset_young() {
             young_roots.clear();
-            young_arena.release();
-            reset_used();
+            young_alloc.release();
         }
 
-        void mark() {
+        void mark() const {
+            assert(stack_ != nullptr);
             for (int i = 0; i < sp_; ++i) {
                 if (stack_[i].is_object()) {
                     stack_[i].mark();
@@ -133,7 +158,7 @@ namespace heap {
         void large_gc() {
             mark();
             // mb rewerite later
-            Roots keep_large{large_alloc};
+            Roots keep_large;
             for (auto hdr: large_roots) {
                 if (hdr->is_marked()) {
                     hdr->unmark();
@@ -149,7 +174,7 @@ namespace heap {
         void major_gc() {
             mark();
             // mb rewrite later
-            Roots survivors{old_alloc};
+            Roots survivors;
             for (value_ptr ptr: large_roots) {
                 if (ptr->is_marked()) {
                     ptr->unmark();
@@ -163,26 +188,20 @@ namespace heap {
         }
 
     public:
-        GarbageCollector() {
+        GarbageCollector(): stack_(nullptr), sp_(0) {
             young_roots.reserve(YOUNG_BUFFER >> 1);
         }
 
         [[nodiscard]] std::size_t get_used_values() const {
             // assert(used_values_ % sizeof(interpreter::Value) == 0);
-            return used_values_;
+            return young_alloc.get_used();
         }
-
-        // GarbageCollector& operator=(GarbageCollector&& /*other*/) noexcept {
-        //     this->~GarbageCollector();
-        //     new (this) GarbageCollector();
-        //     return *this;
-        // }
 
         value_ptr alloc_array(const size_t len) {
             if (len + 1 >= YOUNG_BUFFER) {
                 return alloc_large(len);
             }
-            if (get_used_values() + len + 1 >= YOUNG_BUFFER) {
+            if (young_alloc.get_used() + len + 1 >= YOUNG_BUFFER) {
                 minor_gc();
             }
 
@@ -193,7 +212,7 @@ namespace heap {
             stack_ = stack;
             sp_ = sp;
 
-            minor_gc();
+            // minor_gc();
 
             if (large_roots.size() > LARGE_THRESHOLD) {
                 large_gc();
