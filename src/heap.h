@@ -90,7 +90,7 @@ namespace heap {
         using Alloc = std::pmr::polymorphic_allocator<interpreter::Value>;
         YoungArena young_alloc = YoungArena();
         Alloc large_alloc{std::pmr::new_delete_resource()};
-        // Alloc old_alloc{&old_arena};
+        Alloc old_alloc{&old_arena};
 
     protected: // test inheritance
         using value_ptr = interpreter::Value *;
@@ -143,12 +143,14 @@ namespace heap {
         }
 
         void minor_gc() {
+            mark();
             // throw survivors to old arena
             for (value_ptr ptr: young_roots) {
                 if (ptr->is_marked()) {
                     ptr->unmark();
                     mem.erase(ptr->object_ptr);
-                    old_roots.push_back(ptr);
+                    auto* old = old_alloc.allocate(ptr->get_len() + 1);
+                    old_roots.push_back(old);
                 }
             }
 
@@ -156,7 +158,6 @@ namespace heap {
         }
 
         void large_gc() {
-            mark();
             // mb rewerite later
             Roots keep_large;
             for (auto hdr: large_roots) {
@@ -172,19 +173,18 @@ namespace heap {
         }
 
         void major_gc() {
-            mark();
             // mb rewrite later
             Roots survivors;
-            for (value_ptr ptr: large_roots) {
+            for (value_ptr ptr: old_roots) {
                 if (ptr->is_marked()) {
                     ptr->unmark();
                     survivors.push_back(ptr);
                 } else {
                     mem.erase(ptr->object_ptr);
-                    large_alloc.deallocate(ptr, ptr->get_len() + 1);
+                    old_alloc.deallocate(ptr, ptr->get_len() + 1);
                 }
             }
-            large_roots.swap(survivors); // constant complexity :)
+            old_roots.swap(survivors); // constant complexity :)
         }
 
     public:
@@ -211,8 +211,10 @@ namespace heap {
         void call(interpreter::Value* stack, const uint32_t sp) {
             stack_ = stack;
             sp_ = sp;
+            // mark(stack, sp); // mb
+            // mark();
 
-            // minor_gc();
+            minor_gc();
 
             if (large_roots.size() > LARGE_THRESHOLD) {
                 large_gc();
