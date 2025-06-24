@@ -9,31 +9,35 @@
 #include <vector>
 #include <memory_resource>
 #include <cstddef>
+#include <unordered_map>
+#include <__ranges/all.h>
 
-#include "heap.h"
 #include "value.h"
 
 namespace heap {
+    inline std::unordered_map<uint32_t, interpreter::Value*> mem{};
+
     class GarbageCollector {
-        // class monotonic_resource final : public std::pmr::monotonic_buffer_resource {
-        //     std::size_t used_values_ = 0;
-        //
-        // public:
-        //     monotonic_resource(void *buf, const std::size_t buf_size)
-        //         : monotonic_buffer_resource(buf, buf_size) {
-        //         reset_used();
-        //     }
-        //
-        //
-        //
-        // protected:
-        //     void *do_allocate(const std::size_t bytes, const std::size_t alignment) override {
-        //         // this->used_values_ += bytes;
-        //         return monotonic_buffer_resource::do_allocate(bytes, alignment);
-        //     }
-        // };
+        class monotonic_resource final : public std::pmr::monotonic_buffer_resource {
+            std::size_t used_values_ = 0;
+
+        public:
+            monotonic_resource(void *buf, const std::size_t buf_size)
+                : monotonic_buffer_resource(buf, buf_size) {
+                // reset_used();
+            }
+
+
+
+        protected:
+            void *do_allocate(const std::size_t bytes, const std::size_t alignment) override {
+                // this->used_values_ += bytes;
+                return monotonic_buffer_resource::do_allocate(bytes, alignment);
+            }
+        };
 
         size_t used_values_ = 0;
+        size_t allocated_ = 0;
 
         static constexpr uint16_t YOUNG_BUFFER = 50;
         static constexpr size_t MAJOR_THRESHOLD = 10;
@@ -78,11 +82,12 @@ namespace heap {
         // reserve len + 1 objects to young arena
         value_ptr alloc_young(const std::size_t len) {
             value_ptr ptr = young_alloc.allocate(len + 1);
-            add_used(len + 1);
+            assert(ptr);
+            // add_used(len + 1);
+            ptr->object_ptr = allocated_;
+            mem.insert({allocated_, ptr});
+            allocated_++;
             ptr->set_array(len, ptr);
-            if (ptr->type_part == 71) {
-
-            }
             young_roots.push_back(ptr);
             return ptr;
         }
@@ -90,6 +95,9 @@ namespace heap {
         // reserve huge array len + 1
         value_ptr alloc_large(const std::size_t len) {
             value_ptr ptr = large_alloc.allocate(len + 1);
+            ptr->object_ptr = allocated_;
+            mem.insert({allocated_, ptr});
+            allocated_++;
             ptr->set_array(len, ptr);
             large_roots.push_back(ptr);
             return ptr;
@@ -114,6 +122,7 @@ namespace heap {
             for (value_ptr ptr: young_roots) {
                 if (ptr->is_marked()) {
                     ptr->unmark();
+                    mem.erase(ptr->object_ptr);
                     old_roots.push_back(ptr);
                 }
             }
@@ -130,8 +139,8 @@ namespace heap {
                     hdr->unmark();
                     keep_large.push_back(hdr);
                 } else {
-                    std::size_t total = hdr[0].i32 + 1;
-                    large_alloc.deallocate(hdr, total);
+                    mem.erase(hdr->object_ptr);
+                    large_alloc.deallocate(hdr, hdr->get_len() + 1);
                 }
             }
             large_roots.swap(keep_large);
@@ -146,8 +155,8 @@ namespace heap {
                     ptr->unmark();
                     survivors.push_back(ptr);
                 } else {
-                    std::size_t total = ptr[0].i32 + 1;
-                    large_alloc.deallocate(ptr, total);
+                    mem.erase(ptr->object_ptr);
+                    large_alloc.deallocate(ptr, ptr->get_len() + 1);
                 }
             }
             large_roots.swap(survivors); // constant complexity :)
@@ -213,12 +222,12 @@ namespace heap {
 
         value_ptr get_obj(const RootsType type, size_t idx) {
             if (type == RootsType::YOUNG)
-                return young_roots[idx]->object_ptr;
+                return mem.at(young_roots[idx]->object_ptr);
 
             if (type == RootsType::OLD)
-                return old_roots[idx]->object_ptr;
+                return mem.at(young_roots[idx]->object_ptr);
 
-            return large_roots[idx]->object_ptr;
+            return mem.at(large_roots[idx]->object_ptr);
         }
 
         size_t get_used_young_arena() const {

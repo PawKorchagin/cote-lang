@@ -494,7 +494,7 @@ namespace interpreter {
 
         // heap::heap.push_back(fields);
 
-        vm.stack[vm.fp + dst].set_array</*mark for gc=*/true>(size, fields->object_ptr);// Array class is always at index 1
+        vm.stack[vm.fp + dst].set_array</*mark for gc=*/true>(size, fields);// Array class is always at index 1
     }
 
     void op_arrget(VMData &vm, uint8_t dst, uint8_t arr, uint8_t idxc) {
@@ -507,7 +507,7 @@ namespace interpreter {
             throw std::runtime_error("Expected array object");
         }
 
-        const auto &obj = arr_val.object_ptr;
+        const auto &obj = heap::mem.at(arr_val.object_ptr);
 
 // #ifdef GC_TEST
 //         // HERE: ask to std::pmr to read arr_val.object_ptr, that can be in young or old arena
@@ -541,7 +541,7 @@ namespace interpreter {
         }
 
         // auto &obj = vm.heap[arr_val.object_ptr];
-        const auto &obj = arr_val.object_ptr;
+        const auto &obj = heap::mem.at(arr_val.object_ptr);
 // #ifdef GC_TEST
 //        // HERE: ask to std::pmr to read arr_val.object_ptr, that can be in young or old arena
 //         auto* obj = heap::get_heap(arr_val.object_ptr).get();

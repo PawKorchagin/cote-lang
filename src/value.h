@@ -31,7 +31,7 @@ namespace interpreter {
         union {
             int32_t i32;
             float f32;
-            Value* object_ptr = nullptr;
+            uint32_t object_ptr;
         }; // low bits
         uint32_t type_part; // high bits
 
@@ -82,7 +82,8 @@ namespace interpreter {
         template<bool marked = true>
         inline void set_obj(const uint32_t class_info, Value* ptr_val) {
             type_part = class_info << 2ull | TYPE_OBJ | static_cast<uint32_t>(marked) << 1;
-            object_ptr = ptr_val;
+            assert(ptr_val);
+            object_ptr = ptr_val->object_ptr;
         }
 
         template<bool marked = true>

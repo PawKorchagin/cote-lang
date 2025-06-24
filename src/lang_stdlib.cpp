@@ -17,7 +17,7 @@ void cote_len(interpreter::VMData &vm, int reg, int cnt) {
 #ifdef GC_TEST
     const auto* obj = heap::get_heap(cur.object_ptr).get();
 #else
-    const auto* obj = cur.object_ptr;
+    const auto* obj = heap::mem.at(cur.object_ptr);
 #endif
     vm.stack[vm.fp + reg] = obj[0];
 }
