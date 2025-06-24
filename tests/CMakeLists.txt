@@ -43,6 +43,9 @@ if(NOT WIN32)
     )
 endif()
 
+
+
+
 target_include_directories(cote_test PUBLIC ${PROJECT_SOURCE_DIR})
 
 include(GoogleTest)

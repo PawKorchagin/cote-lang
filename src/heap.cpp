@@ -5,7 +5,5 @@
 #include "heap.h"
 
 namespace heap {
-    size_t get_size() {
-        return heap.size();
-    }
+    std::byte GarbageCollector::young_buffer[GarbageCollector::YOUNG_BUFFER * sizeof(interpreter::Value)];
 } // heap

@@ -8,93 +8,78 @@
 
 #include "gc.h"
 
+#include <__ranges/all.h>
+
 #include "heap.h"
 #include "vm.h"
 
-#define GC_TEST
-
 using namespace interpreter;
 
-class GCTest : public Test {
-protected:
-    VMData vm;
 
-    void SetUp() override {
-        // vm.heap_size = 0;
-        vm.fp = 0;
-    }
+// class GCTest : public heap::GarbageCollector {
+// public:
+//     size_t get_young_root_size() {
+//         return young_roots.size();
+//     }
+//
+//     size_t get_old_roots_size() {
+//         return old_roots.size();
+//     }
+//
+//
+//
+//     value_ptr get_obj(const RootsType type, size_t idx) {
+//         if (type == RootsType::YOUNG)
+//             return young_roots[idx]->object_ptr;
+//
+//         if (type == RootsType::OLD)
+//             return old_roots[idx]->object_ptr;
+//
+//         return large_roots[idx]->object_ptr;
+//     }
+//
+//     size_t get_used_young_arena() const {
+//         return young_arena.get_used_values();
+//     }
+// };
 
-    /*
-    void op_alloc(VMData &vm, uint8_t dst, uint8_t s) {
-        if (vm.heap_size >= HEAP_MAX_SIZE) {
-            throw std::runtime_error("Heap overflow");
-        }
+using gc_test = Test;
 
-        uint32_t size = vm.stack[s].as.i32;
-
-        auto fields = static_cast<Value *>(malloc((size + 1) * sizeof(Value)));
-        if (!fields) {
-            throw std::runtime_error("Memory allocation failed");
-        }
+TEST_F(gc_test, OldArenaNoThrowing) {
+    VMData &vm = initVM();
+    // vm.gc = heap::GarbageCollector();
 
 
-        // Set len field
-        fields[0].type = ValueType::Int;
-        fields[0].as.i32 = size;
+    vm.fp = 0;
+    // set_size
+    vm.stack[0].set_int(5);
+    // vm.stack[1]
 
-        vm.heap[vm.heap_size] = fields;
+    interpreter::op_alloc(vm, 1, 0);
+    ASSERT_TRUE(vm.stack[1].is_array());
+    ASSERT_EQ(vm.gc.get_used_young_arena(), 6);
+    ASSERT_EQ(vm.gc.get_young_root_size(), 1);
+    vm.gc.call(vm.stack, 2);
+    ASSERT_EQ(vm.gc.get_used_young_arena(), 6);
+    ASSERT_EQ(vm.gc.get_young_root_size(), 1);
 
-        Value obj_val;
-        obj_val.type = ValueType::Object;
-        obj_val.as.object_ptr = vm.heap_size++;
-        obj_val.class_ptr = 0;  // Array class is always at index 0
+    // auto* young = gc.get_obj(RootsType::YOUNG, 0);
+    auto *old = vm.gc.get_obj(heap::GarbageCollector::RootsType::OLD, 0);
+    auto *from_stack = vm.stack[1].object_ptr;
 
-        vm.stack[vm.fp + dst] = obj_val;
-    }
-     */
-
-    std::shared_ptr<Value[]> allocArray(const int size, const int stack_idx) {
-    const std::shared_ptr<Value[]> fields(new Value[size + 1]);
-    //     fields[0].set_int(size);
-    //
-    //     // vm.heap[vm.heap_size] = fields;
-    //     heap::heap.push_back(fields);
-    //
-    //     Value arrVal;
-    //     arrVal.set_obj(1, heap::heap.size() - 1);
-    //
-    //     if (stack_idx >= 0) {
-    //         vm.stack[stack_idx] = arrVal;
-    //         vm.sp++;
-    //     }
-    //
-    return fields;
-    }
-};
-
-TEST_F(GCTest, UnreferencedArrayIsCollected) {
-    std::shared_ptr ptr = allocArray(2, -1);
-    const std::weak_ptr weak = ptr;
-    ASSERT_EQ(heap::heap.size(), 1u);
-    // EXPECT_EQ(heap::heap[0].get(), ptr.get());
-
-    gc::call(vm);
-
-    ptr.reset();
-
-    EXPECT_EQ(heap::heap[0], nullptr);
-    EXPECT_TRUE(weak.expired());
+    // ASSERT_EQ(young, old);
+    ASSERT_EQ(old, from_stack);
 }
 
-TEST_F(GCTest, ReferencedArrayIsKeptWithElements) {
-    const std::shared_ptr ptr = allocArray(2, 0);
-
-    ASSERT_EQ(heap::heap.size(), 1u);
-
-    gc::call(vm);
-
-    ASSERT_TRUE(ptr.use_count() == 2);
-}
+// TEST_F(GCTest, ReferencedArrayIsKeptWithElements) {
+//     const std::shared_ptr ptr = allocArray(2, 0);
+//
+//     ASSERT_EQ(heap::heap.size(), 1u);
+//
+//     // gc::gc::call(vm);
+//
+//     ASSERT_TRUE(ptr.use_count() == 2);
+// }
 
 inline void compile_program(std::istream &fin, const std::string &file_name = "code") {
     std::cerr << "kek\n";
@@ -106,7 +91,7 @@ inline void compile_program(std::istream &fin, const std::string &file_name = "c
     print_vm_data(vm);
     //    print_func_body(p.instructions);
     interpreter::run(true);
-    gc::call(vm, true);
+    // gc::gc::call(vm, true);
     ASSERT_TRUE(vm.call_stack.empty());
     ASSERT_EQ(vm.stack[0].i32, 0);
 

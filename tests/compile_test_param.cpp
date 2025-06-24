@@ -74,7 +74,6 @@ TEST(SimpleCompileFromFileOk, Test7) {
         });
 }
 
-#define GC_TEST
 
 TEST(SimpleCompileFromFileOk, Test8) {
     ASSERT_NO_THROW({

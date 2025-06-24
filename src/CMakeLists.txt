@@ -17,6 +17,7 @@ add_library(cote_lib STATIC
         heap.cpp
         heap.h
         JITRuntime.cpp
+        value.h
 )
 
 target_link_libraries(cote_lib asmjit::asmjit)

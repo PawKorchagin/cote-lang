@@ -11,3 +11,9 @@ add_subdirectory(bin)
 
 enable_testing()
 add_subdirectory(tests)
+
+# --------------------------------------------------------------------------------------------
+# GC_TEST definition to run GC on Manual OpCode Tests, be sure to on/off it for your target
+# --------------------------------------------------------------------------------------------
+
+#add_compile_definitions(GC_TEST)

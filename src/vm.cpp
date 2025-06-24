@@ -10,7 +10,7 @@
 #include "heap.h"
 
 namespace {
-    interpreter::VMData vm_instance_;
+    interpreter::VMData vm_instance_{};
 
     //if already in
     //TODO: one of the most important functions
@@ -41,14 +41,15 @@ namespace interpreter {
 
     void run(const bool with_gc) {
         VMData &vm = vm_instance();
+        // auto gc = gc::gc();
 
         int T = 0;
 
         while (true) {
             T++;
 
-            if (T % 10 == 0 && with_gc) {
-                gc::call(vm, true);
+            if (with_gc && T % 10 == 0) {
+                vm.gc.call(vm.stack, vm.get_sp());
             }
 
             uint32_t instr = vm.code[vm.ip++];
@@ -475,22 +476,25 @@ namespace interpreter {
     }
 
     void op_alloc(VMData &vm, uint8_t dst, uint8_t s) {
-        if (heap::get_size() >= HEAP_MAX_SIZE) {
-            throw std::runtime_error("Heap overflow");
-        }
+        // if (heap::get_size() >= HEAP_MAX_SIZE) {
+        //     throw std::runtime_error("Heap overflow");
+        // }
 
         const uint32_t size = vm.stack[vm.fp + s].i32;
-        const std::shared_ptr<Value[]> fields(new Value[size + 1]);
+
+        auto* fields = vm.gc.alloc_array(size);
+
         if (!fields) {
             throw std::runtime_error("Memory allocation failed");
         }
 
+        // here is moved to alloc_array
         // Set len field
-        fields[0].set_int(size);
+        // fields[0].set_int(size);
 
-        heap::heap.push_back(fields);
+        // heap::heap.push_back(fields);
 
-        vm.stack[vm.fp + dst].set_obj(1, heap::get_size() - 1);// Array class is always at index 1
+        vm.stack[vm.fp + dst].set_array</*mark for gc=*/true>(size, fields->object_ptr);// Array class is always at index 1
     }
 
     void op_arrget(VMData &vm, uint8_t dst, uint8_t arr, uint8_t idxc) {
@@ -503,19 +507,22 @@ namespace interpreter {
             throw std::runtime_error("Expected array object");
         }
 
-        // auto &obj = vm.heap[arr_val.object_ptr];
-#ifdef GC_TEST
-        const auto* obj = heap::get_heap(arr_val.object_ptr).get();
-#else
-        const auto* obj = heap::get_heap(arr_val.object_ptr);
-#endif
+        const auto &obj = arr_val.object_ptr;
 
-        const Value len_val = obj[0];
-        if (!len_val.is_int()) {
-            throw std::runtime_error("Invalid array length");
-        }
+// #ifdef GC_TEST
+//         // HERE: ask to std::pmr to read arr_val.object_ptr, that can be in young or old arena
+//         const auto* obj = heap::get_heap(arr_val.object_ptr).get();
+// #else
+//         const auto* obj = heap::get_heap(arr_val.object_ptr);
+// #endif
+        assert(obj->is_array());
 
-        if (int32_t len = len_val.i32; idx.i32 >= len) {
+        const uint32_t len = obj->get_len();
+        // if (!len_val.is_int()) {
+        //     throw std::runtime_error("Invalid array length");
+        // }
+
+        if (idx.i32 >= len) {
             throw std::out_of_range("Array index out of bounds");
         }
 
@@ -534,19 +541,21 @@ namespace interpreter {
         }
 
         // auto &obj = vm.heap[arr_val.object_ptr];
-#ifdef GC_TEST
-        auto* obj = heap::get_heap(arr_val.object_ptr).get();
-#else
-        auto* obj = heap::get_heap(arr_val.object_ptr);
-#endif
+        const auto &obj = arr_val.object_ptr;
+// #ifdef GC_TEST
+//        // HERE: ask to std::pmr to read arr_val.object_ptr, that can be in young or old arena
+//         auto* obj = heap::get_heap(arr_val.object_ptr).get();
+// #else
+//         auto* obj = heap::get_heap(arr_val.object_ptr);
+// #endif
 
 
-        Value len_val = obj[0];
-        if (!len_val.is_int()) {
-            throw std::runtime_error("Invalid array length");
-        }
+        // Value len_val = obj[0];
+        // if (!len_val.is_int()) {
+        //     throw std::runtime_error("Invalid array length");
+        // }
 
-        int32_t len = len_val.i32;
+        const uint32_t len = obj->get_len();
         if (idx.i32 >= len) {
             throw std::out_of_range("Array index out of bounds");
         }

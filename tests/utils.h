@@ -26,12 +26,14 @@ using namespace parser;
 using namespace ast;
 
 #include "src/ins_to_string.h"
-inline void print_func_body(uint32_t* code, int msize) {
+
+inline void print_func_body(uint32_t *code, int msize) {
     for (int i = 0; i < msize; ++i) {
         std::cout << "    " << interpreter::ins_to_string(code[i]) << "\n";
     }
 }
-inline void print_vm_data(interpreter::VMData& vm) {
+
+inline void print_vm_data(interpreter::VMData &vm) {
     using namespace interpreter;
     std::cout << "constants: [";
     for (int i = 0; i < vm.constanti.size(); ++i) {
@@ -39,14 +41,14 @@ inline void print_vm_data(interpreter::VMData& vm) {
         if (i != vm.constanti.size() - 1) std::cout << ", ";
     }
     std::cout << "]\n";
-    std::unordered_map<int, Function*> functions;
+    std::unordered_map<int, Function *> functions;
     for (int i = 0; i < vm.functions_count; ++i) {
         functions[vm.functions[i].entry_point] = &vm.functions[i];
     }
     for (int i = 0; i < vm.code_size; ++i) {
         auto it = functions.find(i);
         if (it != functions.end()) {
-            std::cout << "func" << it->second - vm.functions << "(args: " << (int)it->second->arity << "):\n";
+            std::cout << "func" << it->second - vm.functions << "(args: " << (int) it->second->arity << "):\n";
         }
         std::cout << "    " << interpreter::ins_to_string(vm.code[i], &vm.constanti);
         if (i == vm.ip) {
@@ -78,13 +80,13 @@ inline auto parse(const std::string &text, T func = parse_expression) {
     return expr;
 }
 
-inline interpreter::VMData& initVM() {
-    interpreter::VMData& vm = interpreter::vm_instance();
-    vm         = interpreter::VMData();
+inline interpreter::VMData &initVM() {
+    interpreter::VMData &vm = interpreter::vm_instance();
+    // vm.gc = heap::GarbageCollector();
 
-    vm.ip = 0;  // Start at first instruction
-    vm.fp = 0;  // Frame pointer at base
-    vm.sp = 0;  // Stack pointer
+    vm.ip = 0; // Start at first instruction
+    vm.fp = 0; // Frame pointer at base
+    vm.sp = 0; // Stack pointer
 
     return vm;
 }
