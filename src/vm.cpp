@@ -507,20 +507,11 @@ namespace interpreter {
             throw std::runtime_error("Expected array object");
         }
 
-        const auto &obj = heap::mem.at(arr_val.object_ptr);
+        auto* obj = heap::mem.at(arr_val.object_ptr);
 
-// #ifdef GC_TEST
-//         // HERE: ask to std::pmr to read arr_val.object_ptr, that can be in young or old arena
-//         const auto* obj = heap::get_heap(arr_val.object_ptr).get();
-// #else
-//         const auto* obj = heap::get_heap(arr_val.object_ptr);
-// #endif
         assert(obj->is_array());
 
         const uint32_t len = obj->get_len();
-        // if (!len_val.is_int()) {
-        //     throw std::runtime_error("Invalid array length");
-        // }
 
         if (idx.i32 >= len) {
             throw std::out_of_range("Array index out of bounds");
@@ -540,20 +531,7 @@ namespace interpreter {
             throw std::runtime_error("Expected array object");
         }
 
-        // auto &obj = vm.heap[arr_val.object_ptr];
-        const auto &obj = heap::mem.at(arr_val.object_ptr);
-// #ifdef GC_TEST
-//        // HERE: ask to std::pmr to read arr_val.object_ptr, that can be in young or old arena
-//         auto* obj = heap::get_heap(arr_val.object_ptr).get();
-// #else
-//         auto* obj = heap::get_heap(arr_val.object_ptr);
-// #endif
-
-
-        // Value len_val = obj[0];
-        // if (!len_val.is_int()) {
-        //     throw std::runtime_error("Invalid array length");
-        // }
+        auto *obj = heap::mem.at(arr_val.object_ptr);
 
         const uint32_t len = obj->get_len();
         if (idx.i32 >= len) {

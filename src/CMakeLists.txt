@@ -16,7 +16,6 @@ add_library(cote_lib STATIC
         misc.cpp
         heap.cpp
         heap.h
-        JITRuntime.cpp
         value.h
 )
 

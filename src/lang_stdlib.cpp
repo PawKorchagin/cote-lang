@@ -13,13 +13,8 @@ void cote_len(interpreter::VMData &vm, int reg, int cnt) {
     if (cnt != 1) throw std::runtime_error("expected only one arg: array");
     auto &cur = vm.stack[vm.fp + reg];
     if (!cur.is_array()) throw std::runtime_error("expected only one arg: array");
-    // auto &obj = vm.heap[cur.object_ptr];
-// #ifdef GC_TEST
-//     const auto* obj = heap::get_heap(cur.object_ptr).get();
-// #else
     auto* obj = heap::mem.at(cur.object_ptr);
     assert(obj);
-// #endif
     vm.stack[vm.fp + reg].set_int( static_cast<int>(obj->get_len()));
 }
 

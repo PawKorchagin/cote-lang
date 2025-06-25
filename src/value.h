@@ -18,19 +18,13 @@ namespace interpreter {
     static constexpr uint64_t OBJ_NIL = (uint64_t) TYPE_NIL << 32ull;
 
     // type_part:
-<<<<<<< main
+    // now is only array
     // static constexpr uint32_t type_part_obj_ = 0b000000000000000000000000000000'0/1'1;
-    //                                          | space for obj idx               |    | obj_mark
-    //                                                                           gc mark
-=======
-    // static constexpr uint32_t type_part_obj_ = 0b00000000000000000000000000000'0'0/1'1;
-    //                                          | space for obj idx                |   | obj
-    //                                                                             mark
->>>>>>> dev
-    // objects: xxxx y 1 - last bits means that it's an object
-    //               y - mark bit
-    // nil has class_type = 0
-    // array has class_type = 1;
+    //                                           | space for array len            |   | is_array
+    //                                                                             mark for gc
+
+    // in future objects third low bit will mean array/object
+
     // non-objects: xxx100 - int
     //              xx1000 - float
     //              xx1100 - callable
@@ -68,7 +62,7 @@ namespace interpreter {
         inline int32_t get_class() const { return (type_part >> 2) & 1; } //1 for obj type; 1 for mark bit, & 1 bc size
 
         uint32_t get_len() {
-            return type_part >> 3;
+            return type_part >> 2;
         }
 
         inline void set_nil() {
@@ -94,18 +88,14 @@ namespace interpreter {
         template<bool marked = false>
         inline void set_obj(const uint32_t class_info, Value *ptr_val) {
             type_part = class_info << 2ull | TYPE_OBJ | static_cast<uint32_t>(marked) << 1;
-            assert(class_info == 0 || ptr_val);
-            object_ptr = !class_info ? 0 : ptr_val->object_ptr; // set nullptr to nil or objectptr
+            assert(ptr_val);
+            // object_ptr = !class_info ? 0 : ptr_val->object_ptr; // set nullptr to nil or objectptr
+            object_ptr = ptr_val->object_ptr;
         }
 
         template<bool marked = true>
         inline void set_array(const uint32_t size, Value *ptr_val) {
-<<<<<<< main
-            set_obj(size << 2ull, ptr_val);
-=======
-            set_obj<marked>(1, ptr_val);
-            type_part |= size << 3ull;
->>>>>>> dev
+            set_obj<marked>(size, ptr_val);
         }
 
         inline bool is_nil() const { return as_unmarked() == OBJ_NIL; }

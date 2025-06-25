@@ -21,6 +21,7 @@ namespace jit {
 namespace interpreter {
     // static auto gc = heap::GarbageCollector();
 
+    // template<uint16_t GC_YOUNG_THRESHOLD=50>
     struct VMData;
 
     enum OpCode {
@@ -204,8 +205,9 @@ namespace interpreter {
 
     static constexpr int HOT_THRESHOLD = 3;
 
+    // template<uint16_t GC_YOUNG_THRESHOLD=50>
     struct VMData {
-        heap::GarbageCollector gc{};
+        heap::GarbageCollector<50> gc{};
 
         //  Static data: must be filled before running vm
         std::vector<Value> constanti;
@@ -283,6 +285,8 @@ namespace interpreter {
     Value div_values(const Value &a, const Value &b);
 
     bool is_truthy(const Value &val);
+
+    // using VMData = VMData<>
 
 // Instruction implementations
     void op_load(VMData &vm, uint8_t reg, uint32_t const_idx);
