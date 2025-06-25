@@ -19,15 +19,16 @@ namespace interpreter {
 
     // type_part:
     // static constexpr uint32_t type_part_obj_ = 0b000000000000000000000000000000'0/1'1;
-    //                                          | space for obj idx               |   | obj_mark
+    //                                          | space for obj idx               |    | obj_mark
     //                                                                           gc mark
     // objects: xxxx y 1 - last bits means that it's an object
     //               y - mark bit
     // nil has class_type = 0
     // array has class_type = 1;
-    // non-objects: xxxx00 - int
-    //              xxxx10 - float
-    //              xxx100 - callable
+    // non-objects: xxx100 - int
+    //              xx1000 - float
+    //              xx1100 - callable
+    //              x10000 - nil
 
 
     struct Value {
