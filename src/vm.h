@@ -155,7 +155,6 @@ namespace interpreter {
         OP_ARRGET,
         OP_ARRSET,
         OP_TAILCALL,
-        OP_NONE
     };
 
 

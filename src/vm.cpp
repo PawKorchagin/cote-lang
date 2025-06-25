@@ -381,6 +381,7 @@ namespace interpreter {
     Value add_values(const Value &a, const Value &b) {
         Value res;
 
+        if (a.get_class() != b.get_class())  throw std::runtime_error("addition expects same types");
         if (!a.is_float() && !a.is_int() ||
             !b.is_float() && !b.is_int())
             throw std::runtime_error("addition is defined for numeric types only");
@@ -394,6 +395,7 @@ namespace interpreter {
 
     Value sub_values(const Value &a, const Value &b) {
         Value res;
+        if (a.get_class() != b.get_class())  throw std::runtime_error("subtraction expects same types");
 
         if (!a.is_float() && !a.is_int() ||
             !b.is_float() && !b.is_int())
@@ -408,6 +410,7 @@ namespace interpreter {
 
     Value mul_values(const Value &a, const Value &b) {
         Value res;
+        if (a.get_class() != b.get_class())  throw std::runtime_error("multiplication expects same types");
 
         if (!a.is_float() && !a.is_int() ||
             !b.is_float() && !b.is_int())
@@ -421,6 +424,7 @@ namespace interpreter {
     }
 
     Value div_values(const Value &a, const Value &b) {
+        if (a.get_class() != b.get_class())  throw std::runtime_error("division expects same types");
         if (!a.is_float() && !a.is_int() ||
             !b.is_float() && !b.is_int())
             throw std::runtime_error("division is defined for numeric types only");
@@ -428,9 +432,6 @@ namespace interpreter {
 
         if (b.is_int() && b.i32 == 0)
             throw std::runtime_error("Division by zero");
-        if (b.is_float() && b.f32 == 0.0f)
-            throw std::runtime_error("Division by zero");
-
         if (a.is_int() && b.is_int())
             res.set_int(a.i32 + b.i32);
         else

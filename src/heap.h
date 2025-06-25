@@ -36,7 +36,7 @@ namespace heap {
                 if (arena == nullptr) {
                     alloc_buffer();
                 }
-                assert(arena != nullptr, "failed to alloc arena");
+                assert(arena != nullptr && "failed to alloc arena");
                 auto* res = arena + used;
                 used += values;
 

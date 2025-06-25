@@ -18,15 +18,9 @@ namespace interpreter {
     static constexpr uint64_t OBJ_NIL = (uint64_t) TYPE_NIL << 32ull;
 
     // type_part:
-<<<<<<< main
-    // static constexpr uint32_t type_part_obj_ = 0b000000000000000000000000000000'0/1'1;
-    //                                          | space for obj idx               |    | obj_mark
-    //                                                                           gc mark
-=======
     // static constexpr uint32_t type_part_obj_ = 0b00000000000000000000000000000'0'0/1'1;
     //                                          | space for obj idx                |   | obj
     //                                                                             mark
->>>>>>> dev
     // objects: xxxx y 1 - last bits means that it's an object
     //               y - mark bit
     // nil has class_type = 0
@@ -100,12 +94,8 @@ namespace interpreter {
 
         template<bool marked = true>
         inline void set_array(const uint32_t size, Value *ptr_val) {
-<<<<<<< main
-            set_obj(size << 2ull, ptr_val);
-=======
             set_obj<marked>(1, ptr_val);
             type_part |= size << 3ull;
->>>>>>> dev
         }
 
         inline bool is_nil() const { return as_unmarked() == OBJ_NIL; }
