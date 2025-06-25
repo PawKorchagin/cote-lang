@@ -18,9 +18,15 @@ namespace interpreter {
     static constexpr uint64_t OBJ_NIL = (uint64_t) TYPE_NIL << 32ull;
 
     // type_part:
+<<<<<<< main
     // static constexpr uint32_t type_part_obj_ = 0b000000000000000000000000000000'0/1'1;
     //                                          | space for obj idx               |    | obj_mark
     //                                                                           gc mark
+=======
+    // static constexpr uint32_t type_part_obj_ = 0b00000000000000000000000000000'0'0/1'1;
+    //                                          | space for obj idx                |   | obj
+    //                                                                             mark
+>>>>>>> dev
     // objects: xxxx y 1 - last bits means that it's an object
     //               y - mark bit
     // nil has class_type = 0
@@ -50,11 +56,7 @@ namespace interpreter {
 
         // TODO simplify
         void flip_mark() {
-            if (this->is_marked()) {
-                this->unmark();
-            } else {
-                this->mark();
-            }
+           type_part ^= MARK_BIT;
         }
 
         bool is_marked() const { return type_part & MARK_BIT; }
@@ -89,7 +91,7 @@ namespace interpreter {
             f32 = val;
         }
 
-        template<bool marked = true>
+        template<bool marked = false>
         inline void set_obj(const uint32_t class_info, Value *ptr_val) {
             type_part = class_info << 2ull | TYPE_OBJ | static_cast<uint32_t>(marked) << 1;
             assert(class_info == 0 || ptr_val);
@@ -98,7 +100,12 @@ namespace interpreter {
 
         template<bool marked = true>
         inline void set_array(const uint32_t size, Value *ptr_val) {
+<<<<<<< main
             set_obj(size << 2ull, ptr_val);
+=======
+            set_obj<marked>(1, ptr_val);
+            type_part |= size << 3ull;
+>>>>>>> dev
         }
 
         inline bool is_nil() const { return as_unmarked() == OBJ_NIL; }
