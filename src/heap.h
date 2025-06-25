@@ -36,6 +36,7 @@ namespace heap {
                 if (arena == nullptr) {
                     alloc_buffer();
                 }
+                assert(arena != nullptr, "failed to alloc arena");
                 auto* res = arena + used;
                 used += values;
 
@@ -136,7 +137,7 @@ namespace heap {
         void mark() const {
             assert(stack_ != nullptr);
             for (int i = 0; i < sp_; ++i) {
-                if (stack_[i].is_object()) {
+                if (stack_[i].is_array()) {
                     stack_[i].mark();
                 }
             }
