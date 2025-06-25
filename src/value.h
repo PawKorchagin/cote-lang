@@ -4,6 +4,7 @@
 
 #ifndef VALUE_H
 #define VALUE_H
+
 #include <cstdint>
 
 namespace interpreter {
@@ -17,16 +18,24 @@ namespace interpreter {
     static constexpr uint64_t OBJ_NIL = (uint64_t) TYPE_NIL << 32ull;
 
     // type_part:
+<<<<<<< main
+    // static constexpr uint32_t type_part_obj_ = 0b000000000000000000000000000000'0/1'1;
+    //                                          | space for obj idx               |    | obj_mark
+    //                                                                           gc mark
+=======
     // static constexpr uint32_t type_part_obj_ = 0b00000000000000000000000000000'0'0/1'1;
     //                                          | space for obj idx                |   | obj
     //                                                                             mark
+>>>>>>> dev
     // objects: xxxx y 1 - last bits means that it's an object
     //               y - mark bit
     // nil has class_type = 0
     // array has class_type = 1;
-    // non-objects: xxxx00 - int
-    //              xxxx10 - float
-    //              xxx100 - callable
+    // non-objects: xxx100 - int
+    //              xx1000 - float
+    //              xx1100 - callable
+    //              x10000 - nil
+
 
     struct Value {
         union {
@@ -35,6 +44,7 @@ namespace interpreter {
             uint32_t object_ptr;
         }; // low bits
         uint32_t type_part; // high bits
+
 
         // Value()=default;
         Value() {
@@ -61,7 +71,10 @@ namespace interpreter {
             return type_part >> 3;
         }
 
-        inline void set_nil() { set_obj<false>(0, nullptr); }
+        inline void set_nil() {
+            type_part = TYPE_NIL;
+            i32 = 0;
+        }
 
         inline void set_int(int val) {
             type_part = TYPE_INT;
@@ -87,8 +100,12 @@ namespace interpreter {
 
         template<bool marked = true>
         inline void set_array(const uint32_t size, Value *ptr_val) {
+<<<<<<< main
+            set_obj(size << 2ull, ptr_val);
+=======
             set_obj<marked>(1, ptr_val);
             type_part |= size << 3ull;
+>>>>>>> dev
         }
 
         inline bool is_nil() const { return as_unmarked() == OBJ_NIL; }
@@ -97,13 +114,11 @@ namespace interpreter {
 
         inline bool is_float() const { return (type_part & UNMARK_BITS) == TYPE_FLOAT; }
 
-
         //TODO: add char support
-        inline bool is_char() const { return false; }
 
         inline bool is_object() const { return type_part & 1; }
 
-        inline bool is_array() const { return is_object() && get_class() == 1; }
+        inline bool is_array() const { return is_object(); }
 
         inline bool is_callable() const { return (type_part & UNMARK_BITS) == TYPE_CALLABLE; }
 
@@ -111,6 +126,8 @@ namespace interpreter {
         inline float cast_to_float() const {
             return is_float() ? f32 : static_cast<float>(i32);
         }
+
+        inline uint64_t as_uint64() { return *reinterpret_cast<uint64_t *>(this); }
     };
 }
 
