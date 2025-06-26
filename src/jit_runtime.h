@@ -58,7 +58,6 @@ namespace jit {
         asmjit::CodeHolder &holder;
         asmjit::x86::Compiler cc;
         asmjit::x86::Gp arg1, arg2;
-        asmjit::x86::Gp stack[256];
 
         inline JitFuncInfo(asmjit::JitRuntime &jit, asmjit::CodeHolder &holder) : asmrt(jit), holder(holder),
                                                                                   cc(&this->holder) {}
@@ -67,9 +66,7 @@ namespace jit {
         void
         binary_operation(int a, int b, int c);
 
-        inline void bailout() { throw std::runtime_error("todo"); }
-
-        void emit_osr(int osr_size);
+        void bailout();
     };
 
     template<int mtype>
@@ -78,68 +75,60 @@ namespace jit {
         using namespace interpreter;
         using namespace asmjit;
         auto err = cc.newLabel();
-        auto sif = cc.newLabel();
         auto sf = cc.newLabel();
-        auto sfi = cc.newLabel();
         auto nxt = cc.newLabel();
 
         auto temp2 = cc.newUInt64();
         auto temp3 = cc.newUInt64();
-        cc.mov(temp2, stack[b]);
-        cc.shr(temp2, 32);
-        cc.mov(temp3, stack[c]);
-        cc.shr(temp3, 32);
-        {//int * int
-            cc.cmp(temp2, TYPE_INT);
-            cc.jne(sf);
-            cc.cmp(temp3, TYPE_INT);
-            cc.jne(err);//sif
 
+        {//int * int
+            cc.cmp(x86::word_ptr(arg1, b * 8 + 4), TYPE_INT);
+            cc.jne(sf);
+            cc.cmp(x86::word_ptr(arg1, c * 8 + 4), TYPE_INT);
+            cc.jne(err);//sif
             auto temp = cc.newInt32();
-            cc.mov(temp, stack[b].r32());
+            cc.mov(temp, x86::ptr(arg1, b * 8));
             interpreter::Value tempInt;
             tempInt.set_int(0);
             if constexpr (mtype == interpreter::OP_ADD) {
-                cc.add(temp, stack[c].r32());
+                cc.add(temp, x86::ptr(arg1, c * 8));
             } else if constexpr (mtype == interpreter::OP_SUB) {
-                cc.sub(temp, stack[c].r32());
+                cc.sub(temp, x86::ptr(arg1, c * 8));
             } else if constexpr (mtype == interpreter::OP_MUL) {
-                cc.mul(temp, stack[c].r32());
+                cc.mul(temp, x86::ptr(arg1, c * 8));
             } else if constexpr (mtype == interpreter::OP_DIV) {
-                cc.div(temp, stack[c].r32());
+                cc.div(temp, x86::ptr(arg1, c * 8));
             }
 
-            //extend with zeros
-            cc.movzx(stack[a], temp);
-            cc.movabs(temp2, tempInt.as_uint64());
-            cc.or_(stack[a], temp2);
-            cc.jmp(nxt);//int * int end
+            cc.mov(x86::word_ptr(arg1, a * 8), temp);
+            cc.mov(x86::word_ptr(arg1, a * 8 + 4), TYPE_INT);
+            cc.mov(temp2, x86::dword_ptr(arg1, a * 8));
+            cc.ret(temp2);
+            cc.jmp(nxt);
         }
         {
             interpreter::Value tempInt;
             tempInt.set_float(0);
             //TODO: float * float
             cc.bind(sf);
-            cc.cmp(temp2, TYPE_FLOAT);
+            cc.cmp(x86::word_ptr(arg1, b * 8 + 4), TYPE_FLOAT);
             cc.jne(err);
-            cc.cmp(temp3, TYPE_FLOAT);
+            cc.cmp(x86::word_ptr(arg1, c * 8 + 4), TYPE_FLOAT);
             cc.jne(err);//sfi
-            cc.mov(x86::dword_ptr(arg1), stack[b].r32());
-            cc.mov(x86::dword_ptr(arg1, 8), stack[c].r32());
             auto temp = cc.newXmmSs();
-            cc.movss(temp, x86::dword_ptr(arg1));
+            cc.movss(temp, x86::dword_ptr(arg1, b * 8));
             if constexpr (mtype == interpreter::OP_ADD) {
-                cc.addss(temp, x86::dword_ptr(arg1, 8));
+                cc.addss(temp, x86::dword_ptr(arg1, c * 8));
             } else if constexpr (mtype == interpreter::OP_SUB) {
-                cc.subss(temp, x86::dword_ptr(arg1, 8));
+                cc.subss(temp, x86::dword_ptr(arg1, c * 8));
             } else if constexpr (mtype == interpreter::OP_MUL) {
-                cc.mulss(temp, x86::dword_ptr(arg1, 8));
+                cc.mulss(temp, x86::dword_ptr(arg1, c * 8));
             } else if constexpr (mtype == interpreter::OP_DIV) {
-                cc.mulss(temp, x86::dword_ptr(arg1, 8));
+                cc.mulss(temp, x86::dword_ptr(arg1, c * 8));
             }
-            cc.movd(stack[a].r32(), temp);
-            cc.movabs(temp2, tempInt.as_uint64());
-            cc.or_(stack[a], temp2);
+//            cc.ret(temp);
+            cc.movd(x86::dword_ptr(arg1, a * 8), temp);
+            cc.mov(x86::word_ptr(arg1, a * 8 + 4), TYPE_FLOAT);
             cc.jmp(nxt);
         }
 
@@ -150,8 +139,6 @@ namespace jit {
         cc.add(failCode, 1);
         cc.ret(failCode);
         cc.bind(nxt);
-//    cc.bind(err);
-//    cc.ret();
 
 //    cc.movabs(temp2, 18446744069414584320ull);
 //    cc.and_(stack[a], temp2);

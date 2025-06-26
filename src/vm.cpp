@@ -65,11 +65,9 @@ namespace interpreter {
             switch (op) {
                 case OP_LOADINT:
                     op_load(vm, a, bx);
-//                    if constexpr (mode == VM_RECORD) vm.trace->parse_loadi(a, bx);
                     break;
                 case OP_MOVE:
                     op_move(vm, a, b);
-//                    if constexpr (mode == VM_RECORD) vm.trace->parse_mov(a, b);
                     break;
                 case OP_LOADNIL:
                     op_loadnil(vm, a);
@@ -130,10 +128,10 @@ namespace interpreter {
                     break;
                 case OP_RETURN:
                     op_return(vm, a);
-                    break;
+                    return;
                 case OP_RETURNNIL:
                     op_returnnil(vm);
-                    break;
+                    return;
                 case OP_HALT:
                     op_halt(vm);
                     return;
@@ -293,6 +291,7 @@ namespace interpreter {
         for (int i = vm.fp + (uint32_t) num_args; i < sp; ++i) {
             vm.stack[i].set_nil();
         }
+        run();
     }
 
     void op_return(VMData &vm, uint8_t result_reg) {

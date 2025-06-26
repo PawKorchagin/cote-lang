@@ -34,15 +34,14 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
 
     info.arg1 = info.cc.newUIntPtr("args*");       // Create `dst` register (destination pointer).
     info.arg2 = info.cc.newUIntPtr("func*");       // Create `dst` register (destination pointer).
+    x86::Gp jtarget = info.cc.newInt32();
 
     node->setArg(0, info.arg1);
     node->setArg(1, info.arg2);
+//    node->setArg(2, jtarget);
 
+//    info.cc.jmp(jtarget);
 
-
-
-    for (auto &i: info.stack) i = info.cc.newUInt64();
-    info.emit_osr(osr_size);
 
 
     for (int i = 0; i < func.code_size; i++) {
@@ -58,9 +57,9 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
 
 
         const uint8_t a = (instr >> A_SHIFT) & A_ARG;
-        const uint8_t b = (instr >> A_SHIFT) & A_ARG;
-        const uint32_t bx = instr & BX_ARG;
+        const uint8_t b = (instr >> B_SHIFT) & B_ARG;
         const uint8_t c = instr & C_ARG;
+        const uint32_t bx = instr & BX_ARG;
 
 
 //        std::cerr << ins_to_string(instr) << std::endl;
@@ -72,9 +71,12 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
             case interpreter::OP_SUB:
                 info.binary_operation<OP_ADD>(a, b, c);
                 break;
-            case interpreter::OP_LOADINT:
-                info.cc.movabs(info.stack[a], vm.constanti[bx].as_uint64());
+            case interpreter::OP_LOADINT: {
+                auto temp = info.cc.newUInt64();
+                info.cc.movabs(temp, vm.constanti[bx].as_uint64());
+                info.cc.mov(x86::ptr(info.arg1, a * 8), temp);
                 break;
+            }
             case interpreter::OP_JMPF:
                 break;
             case interpreter::OP_NATIVE_CALL:
@@ -82,7 +84,9 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
             case interpreter::OP_CALL:
                 break;
             case interpreter::OP_RETURN: {
-                info.cc.ret(info.stack[a]);
+                auto temp = info.cc.newUInt64();
+                info.cc.mov(temp, x86::ptr(info.arg1, a * 8));
+                info.cc.ret(temp);
             }
                 break;
             case interpreter::OP_RETURNNIL: {
@@ -91,13 +95,18 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
                 info.cc.ret(v);
             }
                 break;
-            case OP_MOVE:
-                info.cc.mov(info.stack[a], info.stack[b]);
+            case OP_MOVE: {
+                auto temp = info.cc.newUInt64();
+                info.cc.mov(temp, x86::ptr(info.arg1, b * 8));
+                info.cc.mov(x86::ptr(info.arg1, a * 8), temp);
+            }
                 break;
             case OP_LOADNIL: {
                 Value v;
                 v.set_nil();
-                info.cc.movabs(info.stack[a], v.as_uint64());
+                auto temp = info.cc.newUInt64();
+                info.cc.movabs(temp, v.as_uint64());
+                info.cc.mov(x86::ptr(info.arg1, a * 8), v.as_uint64());
                 break;
             }
             case OP_MUL:
@@ -128,14 +137,21 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
             case OP_LOADFUNC: {
                 Value v;
                 v.set_callable(bx);
-                info.cc.movabs(info.stack[a], v.as_uint64());
+                auto temp = info.cc.newUInt64();
+                info.cc.movabs(temp, v.as_uint64());
+                info.cc.movabs(x86::ptr(info.arg1, a * 8), temp);
                 break;
             }
-            case OP_LOADFLOAT:
-                info.cc.movabs(info.stack[a], vm.constantf[bx].as_uint64());
+            case OP_LOADFLOAT: {
+                auto temp = info.cc.newUInt64();
+                info.cc.movabs(temp, vm.constantf[bx].as_uint64());
+                info.cc.mov(x86::ptr(info.arg1, a * 8), temp);
                 break;
-            case OP_ALLOC:
+            }
+            case OP_ALLOC: {
+
                 break;
+            }
             case OP_ARRGET:
                 break;
             case OP_ARRSET:
@@ -153,12 +169,12 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
     return jit::CompilationResult::SUCCESS;
 }
 
-void
-jit::JitFuncInfo::emit_osr(int osr_size) {
 
-    for (int i = 0; i < osr_size; ++i) {
-        cc.mov(stack[i], asmjit::x86::dword_ptr(arg1, i * 8));
+void jit::JitFuncInfo::bailout() {
+    for (int i = 0; i < 256; ++i) {
+//        cc.mov(asmjit::x86::dword_ptr(arg1, i * 8), stack[i]);
     }
+    cc.ret();
 }
 
 
