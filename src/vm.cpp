@@ -42,6 +42,7 @@ namespace interpreter {
     void run(const bool with_gc) {
         VMData &vm = vm_instance();
         // auto gc = gc::gc();
+        vm.gc.init(vm.stack, &vm.call_stack, &vm.fp);
 
         int T = 0;
 
@@ -49,7 +50,8 @@ namespace interpreter {
             T++;
 
             if (with_gc && T % 10 == 0) {
-                vm.gc.call(vm.stack, vm.get_sp());
+                // vm.gc.call(vm.stack, vm.get_sp());
+                vm.gc.call();
             }
 
             uint32_t instr = vm.code[vm.ip++];
@@ -287,7 +289,7 @@ namespace interpreter {
 
         vm.fp = vm.fp + first_arg_ind;
         vm.ip = func.entry_point;
-        const uint32_t sp = vm.get_sp();
+        const uint32_t sp = vm.gc.get_sp();
         for (int i = vm.fp + (uint32_t) num_args; i < sp; ++i) {
             vm.stack[i].set_nil();
         }
@@ -494,7 +496,7 @@ namespace interpreter {
 
         // heap::heap.push_back(fields);
 
-        vm.stack[vm.fp + dst].set_array</*mark for gc=*/true>(size, fields);// Array class is always at index 1
+        vm.stack[vm.fp + dst].set_array</*mark for gc=*/false>(size, fields);// Array class is always at index 1
     }
 
     void op_arrget(VMData &vm, uint8_t dst, uint8_t arr, uint8_t idxc) {
@@ -505,6 +507,11 @@ namespace interpreter {
         Value &arr_val = vm.stack[vm.fp + arr];
         if (!arr_val.is_object()) {
             throw std::runtime_error("Expected array object");
+        }
+
+        // inner test
+        if (arr_val.object_ptr == 1 && heap::mem.size() == 1) {
+
         }
 
         auto* obj = heap::mem.at(arr_val.object_ptr);

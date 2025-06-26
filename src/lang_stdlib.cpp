@@ -44,9 +44,14 @@ void cote_println(interpreter::VMData &vm, int reg, int cnt) {
     std::cout << std::endl;
 }
 
+// void GC_DROP_MINOR(interpreter::VMDaVta& vm, int reg, int cnt) {
+    // vm.gc.rese
+// }
+
 void cote_stdlib::initStdlib(interpreter::VMData &data, parser::VarManager &vars) {
     data.natives[vars.add_native("print")] = cote_print;
     data.natives[vars.add_native("str")] = cote_str;
     data.natives[vars.add_native("println")] = cote_println;
     data.natives[vars.add_native("len")] = cote_len;
+    // data.natives[vars.add_native("GC_DROP_MINOR")] = GC_DROP_MINOR;
 }

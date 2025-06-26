@@ -9,7 +9,9 @@
 #include <vector>
 #include <memory_resource>
 #include <cstddef>
+#include <iostream>
 #include <map>
+#include <stack>
 
 #include "value.h"
 
@@ -117,7 +119,22 @@ namespace heap {
         DynamicRoot old_roots;
 
         interpreter::Value *stack_;
-        uint32_t sp_;
+        std::stack<interpreter::CallFrame> *call_stack_;
+        uint32_t *fp_;
+
+        void init(interpreter::Value *stack, std::stack<interpreter::CallFrame> *call_stack, uint32_t *fp) {
+            stack_ = stack;
+            call_stack_ = call_stack;
+            fp_ = fp;
+        }
+
+        [[nodiscard]] uint32_t get_sp() const {
+            if (call_stack_ == nullptr || call_stack_->empty()) {
+                return fp_? *fp_  : 0;
+            }
+
+            return (fp_? *fp_ : 0) + call_stack_->top().cur_func->max_stack;
+        }
 
         // reserve len + 1 objects to young arena
         value_ptr alloc_young(const std::size_t len) {
@@ -147,12 +164,34 @@ namespace heap {
             young_alloc.release();
         }
 
+        void mark(value_ptr ptr) const {
+            // auto* ptr = mem.at(object_ptr);
+            if (!ptr->is_array() || ptr->is_marked()) return;
+            uint32_t len = ptr->get_len();
+            ptr->mark();
+            for (auto *elem = ptr + 1; ptr < elem + len; ++ptr) {
+                mark(elem);
+            }
+        }
+
+        // value_ptr extract_mem(uint32_t obj_ptr) {
+        //     return mem.at(obj_ptr);
+        // }
+
         void mark() const {
-            assert(stack_ != nullptr || sp_ == 0);
-            for (int i = 0; i < sp_; ++i) {
-                if (stack_[i].is_array()) {
-                    stack_[i].mark();
+            assert(stack_ != nullptr || get_sp() == 0);
+            try {
+                for (int i = 0; i < get_sp(); ++i) {
+                    if (stack_[i].is_array()) {
+                        auto* ptr = mem.at(stack_[i].object_ptr);
+                        ptr->mark();
+                        // mark(ptr);
+                        // mark(stack_ + i);
+                    }
                 }
+            } catch (std::runtime_error& e) {
+                std::cerr << e.what() << std::endl;
+                exit(1);
             }
         }
 
@@ -199,6 +238,11 @@ namespace heap {
         }
 
         void major_gc() {
+            // test_inner
+            if (old_roots.size() == 5) {
+
+            }
+
             mark(); // not needed
             // mb rewrite later
             DynamicRoot survivors;
@@ -214,7 +258,7 @@ namespace heap {
             old_roots.swap(survivors); // constant complexity :)
         }
 
-        GarbageCollector(): stack_(nullptr), sp_(0) {
+        GarbageCollector(): stack_(nullptr), call_stack_(nullptr), fp_(nullptr) {
             // young_roots.reserve(YOUNG_THRESHOLD >> 1);
         }
 
@@ -233,9 +277,10 @@ namespace heap {
             return alloc_young(len);
         }
 
-        void call(interpreter::Value *stack, const uint32_t sp) {
-            stack_ = stack;
-            sp_ = sp;
+        void call(
+            // interpreter::Value *stack, const uint32_t sp
+            ) {
+            // stack_ = stack; sp_ = sp;
 
             // minor_gc();
 

@@ -161,14 +161,7 @@ namespace interpreter {
 
 
 
-    struct Function {
-        uint32_t entry_point;
-        uint8_t arity;
-        uint32_t code_size = 0;
-        uint32_t max_stack = 120;
-        uint32_t hotness = 0;
-//        util::int_int_map hot_loc;
-    };
+
 
     typedef void (*NativeFunction)(VMData &, int reg, int cnt);
 
@@ -194,12 +187,6 @@ namespace interpreter {
     static constexpr uint32_t C_SHIFT = 0;
     static constexpr uint32_t SBX_SHIFT = 0;
     static constexpr uint32_t J_ZERO = BX_ARG >> 1;
-    struct CallFrame {
-        uint32_t return_ip;
-        uint32_t base_ptr;
-        Function *cur_func;
-    };
-
     static constexpr int VM_NORMAL = 0;
     static constexpr int VM_RECORD = 1;
 
@@ -207,7 +194,7 @@ namespace interpreter {
 
     // template<uint16_t GC_YOUNG_THRESHOLD=50>
     struct VMData {
-        heap::GarbageCollector<50> gc{};
+        heap::GarbageCollector<16+4+1> gc{};
 
         //  Static data: must be filled before running vm
         std::vector<Value> constanti;
@@ -239,12 +226,7 @@ namespace interpreter {
 //        util::int_ptr_map trace_head;
         jit::Trace *trace = nullptr;
 
-        inline uint32_t get_sp() {
-            if (call_stack.empty()) {
-                return fp;
-            }
-            return fp + call_stack.top().cur_func->max_stack;
-        }
+
     };
 
 // Core VM functions

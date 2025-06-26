@@ -119,6 +119,21 @@ namespace interpreter {
 
         inline uint64_t as_uint64() { return *reinterpret_cast<uint64_t *>(this); }
     };
+
+    struct Function {
+        uint32_t entry_point;
+        uint8_t arity;
+        uint32_t code_size = 0;
+        uint32_t max_stack = 120;
+        uint32_t hotness = 0;
+        //        util::int_int_map hot_loc;
+    };
+
+    struct CallFrame {
+        uint32_t return_ip;
+        uint32_t base_ptr;
+        Function *cur_func;
+    };
 }
 
 
