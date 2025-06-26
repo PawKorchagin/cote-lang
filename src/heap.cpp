@@ -5,5 +5,5 @@
 #include "heap.h"
 
 namespace heap {
-    std::byte GarbageCollector::young_buffer[GarbageCollector::YOUNG_BUFFER * sizeof(interpreter::Value)];
+    // std::byte GarbageCollector::young_buffer[GarbageCollector::YOUNG_THRESHOLD * sizeof(interpreter::Value)];
 } // heap

@@ -9,35 +9,38 @@
 #include <vector>
 #include <memory_resource>
 #include <cstddef>
+#include <iostream>
 #include <map>
+#include <stack>
 
 #include "value.h"
 
 namespace heap {
-    inline std::map<uint32_t, interpreter::Value*> mem{};
+    inline std::map<uint32_t, interpreter::Value *> mem{};
 
-    class GarbageCollector {
+    template<uint16_t YOUNG_THRESHOLD>
+    struct GarbageCollector {
         class YoungArena {
-            interpreter::Value* arena = nullptr;
+            interpreter::Value *arena = nullptr;
             uint16_t used = 0;
 
             void alloc_buffer() {
-                arena = new interpreter::Value[YOUNG_BUFFER];
+                arena = new interpreter::Value[YOUNG_THRESHOLD];
             }
-
 
         public:
             YoungArena() {
                 alloc_buffer();
             }
 
-            interpreter::Value* allocate(size_t values) {
-                assert(used + values < YOUNG_BUFFER);
+            interpreter::Value *allocate(size_t values) {
+                assert(used + values < YOUNG_THRESHOLD);
                 if (arena == nullptr) {
                     alloc_buffer();
                 }
-                assert(arena != nullptr && "failed to alloc arena");
-                auto* res = arena + used;
+                // failed to alloc arena
+                assert(arena != nullptr);
+                auto *res = arena + used;
                 used += values;
 
                 return res;
@@ -72,20 +75,13 @@ namespace heap {
         //     }
         // };
 
-        size_t allocated_ = 0;
+        size_t allocated_ = 1;
 
-        static constexpr uint16_t YOUNG_BUFFER = 50;
-        static constexpr size_t MAJOR_THRESHOLD = 10;
-        static constexpr size_t LARGE_THRESHOLD = 0;
+        // static constexpr uint16_t YOUNG_THRESHOLD = 50;
+        size_t MAJOR_THRESHOLD = 10;
+        size_t LARGE_THRESHOLD = 10;
 
-        static std::byte young_buffer[YOUNG_BUFFER * sizeof(interpreter::Value)];
-
-    protected:
-        // std::pmr::monotonic_buffer_resource young_arena {
-        //     young_buffer, sizeof(young_buffer)
-        // };
-        std::pmr::unsynchronized_pool_resource old_arena;
-    private:
+        std::pmr::unsynchronized_pool_resource old_arena{};
 
         // Allocators
         using Alloc = std::pmr::polymorphic_allocator<interpreter::Value>;
@@ -93,23 +89,57 @@ namespace heap {
         Alloc large_alloc{std::pmr::new_delete_resource()};
         Alloc old_alloc{&old_arena};
 
-    protected: // test inheritance
         using value_ptr = interpreter::Value *;
-        // Roots
-        using Roots = std::vector<value_ptr>;
-        Roots young_roots;
-        Roots large_roots;
-        Roots old_roots;
 
-    private:
-        interpreter::Value* stack_;
-        uint32_t sp_;
+        struct YoungRoot {
+            value_ptr roots[YOUNG_THRESHOLD]{};
+            uint16_t size_ = 0;
+
+            void push_back(value_ptr ptr) {
+                roots[size_++] = ptr;
+            }
+
+            void clear() {
+                size_ = 0;
+            }
+
+            value_ptr operator[](const size_t i) const {
+                return roots[i];
+            }
+
+            uint16_t size() {
+                return size_;
+            }
+        };
+
+        // Roots
+        using DynamicRoot = std::vector<value_ptr>;
+        YoungRoot young_roots = YoungRoot();
+        DynamicRoot large_roots;
+        DynamicRoot old_roots;
+
+        interpreter::Value *stack_;
+        std::stack<interpreter::CallFrame> *call_stack_;
+        uint32_t *fp_;
+
+        void init(interpreter::Value *stack, std::stack<interpreter::CallFrame> *call_stack, uint32_t *fp) {
+            stack_ = stack;
+            call_stack_ = call_stack;
+            fp_ = fp;
+        }
+
+        [[nodiscard]] uint32_t get_sp() const {
+            if (call_stack_ == nullptr || call_stack_->empty()) {
+                return fp_? *fp_  : 0;
+            }
+
+            return (fp_? *fp_ : 0) + call_stack_->top().cur_func->max_stack;
+        }
 
         // reserve len + 1 objects to young arena
         value_ptr alloc_young(const std::size_t len) {
             value_ptr ptr = young_alloc.allocate(len + 1);
             assert(ptr);
-            // add_used(len + 1);
             ptr->object_ptr = allocated_;
             mem.insert({allocated_, ptr});
             allocated_++;
@@ -134,33 +164,67 @@ namespace heap {
             young_alloc.release();
         }
 
+        void mark(value_ptr ptr) const {
+            // auto* ptr = mem.at(object_ptr);
+            if (!ptr->is_array() || ptr->is_marked()) return;
+            uint32_t len = ptr->get_len();
+            ptr->mark();
+            for (auto *elem = ptr + 1; ptr < elem + len; ++ptr) {
+                mark(elem);
+            }
+        }
+
+        // value_ptr extract_mem(uint32_t obj_ptr) {
+        //     return mem.at(obj_ptr);
+        // }
+
         void mark() const {
-            assert(stack_ != nullptr);
-            for (int i = 0; i < sp_; ++i) {
-                if (stack_[i].is_array()) {
-                    stack_[i].mark();
+            assert(stack_ != nullptr || get_sp() == 0);
+            try {
+                for (int i = 0; i < get_sp(); ++i) {
+                    if (stack_[i].is_array()) {
+                        auto* ptr = mem.at(stack_[i].object_ptr);
+                        ptr->mark();
+                        // mark(ptr);
+                        // mark(stack_ + i);
+                    }
                 }
+            } catch (std::runtime_error& e) {
+                std::cerr << e.what() << std::endl;
+                exit(1);
             }
         }
 
         void minor_gc() {
             mark();
             // throw survivors to old arena
-            for (value_ptr ptr: young_roots) {
-                if (ptr->is_marked()) {
+            // for (value_ptr ptr: young_roots) {
+            for (uint16_t i = 0; i < young_roots.size(); ++i) {
+                if (auto *ptr = young_roots[i]; ptr->is_marked()) {
+                    assert(ptr != nullptr);
                     ptr->unmark();
-                    mem.erase(ptr->object_ptr);
-                    auto* old = old_alloc.allocate(ptr->get_len() + 1);
+                    auto *old = old_alloc.allocate(ptr->get_len() + 1);
+                    // rebind ptr
+                    *old = *ptr;
+                    mem[old->object_ptr] = old;
+                    // *old = *ptr;
+                    // old->type_part = ptr->type_part;
+                    // old->set_array(ptr->get_len(), old);
                     old_roots.push_back(old);
                 }
             }
 
             reset_young();
+
+            if (old_roots.size() >= MAJOR_THRESHOLD) {
+                major_gc();
+            }
         }
 
         void large_gc() {
-            // mb rewerite later
-            Roots keep_large;
+            mark();
+            // mb rewrite later
+            DynamicRoot keep_large;
             for (auto hdr: large_roots) {
                 if (hdr->is_marked()) {
                     hdr->unmark();
@@ -174,8 +238,14 @@ namespace heap {
         }
 
         void major_gc() {
+            // test_inner
+            if (old_roots.size() == 5) {
+
+            }
+
+            mark(); // not needed
             // mb rewrite later
-            Roots survivors;
+            DynamicRoot survivors;
             for (value_ptr ptr: old_roots) {
                 if (ptr->is_marked()) {
                     ptr->unmark();
@@ -188,113 +258,41 @@ namespace heap {
             old_roots.swap(survivors); // constant complexity :)
         }
 
-    public:
-        GarbageCollector(): stack_(nullptr), sp_(0) {
-            young_roots.reserve(YOUNG_BUFFER >> 1);
-        }
-
-        [[nodiscard]] std::size_t get_used_values() const {
-            // assert(used_values_ % sizeof(interpreter::Value) == 0);
-            return young_alloc.get_used();
+        GarbageCollector(): stack_(nullptr), call_stack_(nullptr), fp_(nullptr) {
+            // young_roots.reserve(YOUNG_THRESHOLD >> 1);
         }
 
         value_ptr alloc_array(const size_t len) {
-            if (len + 1 >= YOUNG_BUFFER) {
+            if (large_roots.size() >= LARGE_THRESHOLD) {
+                large_gc();
+            }
+
+            if (len + 1 >= YOUNG_THRESHOLD) {
                 return alloc_large(len);
             }
-            if (young_alloc.get_used() + len + 1 >= YOUNG_BUFFER) {
+            if (young_alloc.get_used() + len + 1 >= YOUNG_THRESHOLD) {
                 minor_gc();
             }
 
             return alloc_young(len);
         }
 
-        void call(interpreter::Value* stack, const uint32_t sp) {
-            stack_ = stack;
-            sp_ = sp;
-            // mark(stack, sp); // mb
-            // mark();
+        void call(
+            // interpreter::Value *stack, const uint32_t sp
+            ) {
+            // stack_ = stack; sp_ = sp;
 
-            minor_gc();
+            // minor_gc();
 
-            if (large_roots.size() > LARGE_THRESHOLD) {
-                large_gc();
-            }
+            // if (large_roots.size() >= LARGE_THRESHOLD) {
+            large_gc();
+            // }
 
-            if (old_roots.size() > MAJOR_THRESHOLD) {
-                major_gc();
-            }
-        }
-
-        // TESTING:
-
-        size_t get_young_root_size() {
-            return young_roots.size();
-        }
-
-        size_t get_old_roots_size() {
-            return old_roots.size();
-        }
-
-        enum class RootsType {
-            YOUNG,
-            OLD,
-            LARGE
-        };
-
-        value_ptr get_obj(const RootsType type, size_t idx) {
-            if (type == RootsType::YOUNG)
-                return mem.at(young_roots[idx]->object_ptr);
-
-            if (type == RootsType::OLD)
-                return mem.at(young_roots[idx]->object_ptr);
-
-            return mem.at(large_roots[idx]->object_ptr);
-        }
-
-        size_t get_used_young_arena() const {
-            return get_used_values();
+            // if (old_roots.size() >= MAJOR_THRESHOLD) {
+            major_gc();
+            // }
         }
     };
-
-
-    // #ifdef GC_TEST
-    //
-    //     inline std::vector<std::shared_ptr<interpreter::Value[]> > heap;
-    // #else
-    //     inline std::vector<interpreter::Value*> heap;
-    // #endif
-    //
-    //
-    //     // inline auto &get_heap() {
-    //     //     return heap;
-    //     // }
-    //     //
-    //     inline auto &get_heap(const size_t addr, const bool nullable = false) {
-    //         if (addr >= heap.size()) {
-    //             throw std::out_of_range("out of heap range while getting heap by addr");
-    //         }
-    //
-    //         if (!nullable) {
-    // #ifdef GC_TEST
-    //             const auto *obj = heap[addr].get();
-    // #else
-    //             const auto* obj = heap[addr];
-    // #endif
-    //
-    //             if (obj == nullptr) {
-    //                 throw std::runtime_error("get non nullable heap addr, but got nullptr obj");
-    //             }
-    //         }
-    //
-    //         return heap[addr];
-    //     }
-
-    // size_t get_size();
-    //
-    // inline auto is_empty() {
-    //     return heap.empty();
-    // }
 } // heap
 
 #endif //HEAP_H

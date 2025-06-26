@@ -14,41 +14,11 @@
 #include "vm.h"
 
 using namespace interpreter;
-
-
-// class GCTest : public heap::GarbageCollector {
-// public:
-//     size_t get_young_root_size() {
-//         return young_roots.size();
-//     }
-//
-//     size_t get_old_roots_size() {
-//         return old_roots.size();
-//     }
-//
-//
-//
-//     value_ptr get_obj(const RootsType type, size_t idx) {
-//         if (type == RootsType::YOUNG)
-//             return young_roots[idx]->object_ptr;
-//
-//         if (type == RootsType::OLD)
-//             return old_roots[idx]->object_ptr;
-//
-//         return large_roots[idx]->object_ptr;
-//     }
-//
-//     size_t get_used_young_arena() const {
-//         return YoungArena.get_used_values();
-//     }
-// };
-
 using gc_test = Test;
 
-TEST_F(gc_test, OldArenaNoThrowing) {
+TEST(gc_test, OldArenaNoPromoting) {
     VMData &vm = initVM();
     // vm.gc = heap::GarbageCollector();
-
 
     vm.fp = 0;
     // set_size
@@ -57,17 +27,141 @@ TEST_F(gc_test, OldArenaNoThrowing) {
 
     interpreter::op_alloc(vm, 1, 0);
     ASSERT_TRUE(vm.stack[1].is_array());
-    ASSERT_EQ(vm.gc.get_used_young_arena(), 6);
-    ASSERT_EQ(vm.gc.get_young_root_size(), 1);
-    vm.gc.call(vm.stack, 2);
-    ASSERT_EQ(vm.gc.get_used_young_arena(), 6);
-    ASSERT_EQ(vm.gc.get_young_root_size(), 1);
+    ASSERT_EQ(vm.gc.young_alloc.get_used(), 6);
+    ASSERT_EQ(vm.gc.young_roots.size(), 1);
 
-    auto *young = vm.gc.get_obj(heap::GarbageCollector::RootsType::YOUNG, 0);
+    auto *young = vm.gc.young_roots[0];
     auto *from_stack = heap::mem.at(vm.stack[1].object_ptr);
 
     ASSERT_EQ(young, from_stack);
 }
+
+TEST(gc_test, LargeTest) {
+    heap::mem.clear();
+    auto gc = heap::GarbageCollector<5>();
+    ASSERT_TRUE(gc.young_roots.size() == 0);
+    ASSERT_TRUE(gc.large_roots.empty());
+    ASSERT_TRUE(gc.old_roots.empty());
+    auto* ptr = gc.alloc_array(4);
+    ASSERT_EQ(gc.large_roots.size(), 1u);
+    // Value*
+}
+
+TEST(gc_test, YoungVsLarge) {
+    heap::mem.clear();
+    auto gc = heap::GarbageCollector<5>();  // YOUNG_THRESHOLD = 5
+
+    // 1) Массив len=3 → len+1=4 < 5 → young
+    auto* small = gc.alloc_array(3);
+    EXPECT_EQ(gc.young_roots.size(), 1u);
+    EXPECT_TRUE(gc.large_roots.empty());
+
+    // 2) Массив len=4 → len+1=5 >= 5 → large
+    auto* big = gc.alloc_array(4);
+    EXPECT_EQ(gc.large_roots.size(), 1u);
+    EXPECT_EQ(gc.young_roots.size(), 1u);
+}
+
+TEST(gc_test, LargeGcEvictsUnmarked) {
+    heap::mem.clear();
+    auto gc = heap::GarbageCollector<5>();
+
+    uint32_t fp = 0;
+
+    gc.LARGE_THRESHOLD = 2;
+
+    auto* a = gc.alloc_array(4);
+    auto* b = gc.alloc_array(4);
+    ASSERT_TRUE(a->is_marked());
+    ASSERT_TRUE(b->is_marked());
+    // здесь запускается large_gc и unmark a, b
+    auto* c = gc.alloc_array(4);
+    ASSERT_TRUE(!a->is_marked());
+    ASSERT_TRUE(!b->is_marked());
+    ASSERT_TRUE(c->is_marked());
+    ASSERT_EQ(gc.large_roots.size(), 3u);
+    gc.call();
+    ASSERT_TRUE(!c->is_marked());
+    EXPECT_EQ(gc.large_roots.size(), 1u);
+    gc.call();
+    EXPECT_TRUE(gc.large_roots.empty());
+}
+
+TEST(gc_test, MemMapConsistency) {
+    heap::mem.clear();
+    auto gc = heap::GarbageCollector<5>();
+
+    // add young
+    auto* y = gc.alloc_array(1);
+
+    ASSERT_EQ(y->type_part, 7u);
+    // add large
+    auto* L = gc.alloc_array(4);
+    ASSERT_EQ(L->type_part, 19u);
+    ASSERT_TRUE(heap::mem.count(y->object_ptr));
+    ASSERT_TRUE(heap::mem.count(L->object_ptr));
+    ASSERT_EQ(L->object_ptr, 2);
+
+    // unmark
+    gc.call();
+    ASSERT_TRUE(y);
+    ASSERT_TRUE(L);
+    ASSERT_EQ(y->type_part, 7u);
+    ASSERT_EQ(L->type_part, 17u); // unmarked
+    // delete
+    gc.call();
+
+    EXPECT_TRUE(heap::mem.count(y->object_ptr));
+
+    EXPECT_FALSE(heap::mem.count(/*deleted L object ptr =*/2));
+
+    ASSERT_EQ(gc.young_roots.size(), 1u);
+
+    uint32_t y_object_ptr = y->object_ptr;
+    ASSERT_EQ(y_object_ptr, 1u);
+    gc.minor_gc(); // unmark
+    // y invalids after young->old
+    EXPECT_NO_THROW({ y = heap::mem.at(y_object_ptr); }); // reset y here
+
+    // ASSERT_TRUE(y != nullptr);
+    ASSERT_EQ(y->type_part, 5u); // unmarked array of len 1
+
+    ASSERT_EQ(gc.young_roots.size(), 0u);
+    ASSERT_EQ(gc.old_roots.size(), 1u);
+
+    EXPECT_TRUE(heap::mem.count(y->object_ptr));
+}
+
+TEST(gc_test, DoubleMinorGc) {
+    heap::mem.clear();
+    auto gc = heap::GarbageCollector<10>();
+    auto* a = gc.alloc_array(2);
+    gc.minor_gc();  // промоутит всё живое в old
+    gc.minor_gc();  // здесь should be no-op: young пуст, old не трогаем
+    EXPECT_EQ(gc.old_roots.size(), 1u);
+}
+
+TEST(gc_test, Thresholds) {
+    heap::mem.clear();
+    auto gc = heap::GarbageCollector<10>();
+    auto* a = gc.alloc_array(1);
+    auto* b = gc.alloc_array(1);
+    auto* c = gc.alloc_array(1);
+    auto* d = gc.alloc_array(1);
+    ASSERT_EQ(a->object_ptr, 7u);
+    ASSERT_EQ(b->object_ptr, 7u);
+    ASSERT_EQ(c->object_ptr, 7u);
+    ASSERT_EQ(d->object_ptr, 7u);
+    // no calling minor_gc before this line
+    auto* e = gc.alloc_array(1); // here calling minor_gc
+
+    gc.LARGE_THRESHOLD = 1;
+    gc.MAJOR_THRESHOLD = 1;
+}
+
+// TEST(gc_test, QTest) {
+//
+// }
 
 // TEST_F(GCTest, ReferencedArrayIsKeptWithElements) {
 //     const std::shared_ptr ptr = allocArray(2, 0);

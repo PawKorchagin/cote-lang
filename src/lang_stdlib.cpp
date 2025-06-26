@@ -13,13 +13,8 @@ void cote_len(interpreter::VMData &vm, int reg, int cnt) {
     if (cnt != 1) throw std::runtime_error("expected only one arg: array");
     auto &cur = vm.stack[vm.fp + reg];
     if (!cur.is_array()) throw std::runtime_error("expected only one arg: array");
-    // auto &obj = vm.heap[cur.object_ptr];
-// #ifdef GC_TEST
-//     const auto* obj = heap::get_heap(cur.object_ptr).get();
-// #else
     auto* obj = heap::mem.at(cur.object_ptr);
     assert(obj);
-// #endif
     vm.stack[vm.fp + reg].set_int( static_cast<int>(obj->get_len()));
 }
 
@@ -49,9 +44,14 @@ void cote_println(interpreter::VMData &vm, int reg, int cnt) {
     std::cout << std::endl;
 }
 
+// void GC_DROP_MINOR(interpreter::VMDaVta& vm, int reg, int cnt) {
+    // vm.gc.rese
+// }
+
 void cote_stdlib::initStdlib(interpreter::VMData &data, parser::VarManager &vars) {
     data.natives[vars.add_native("print")] = cote_print;
     data.natives[vars.add_native("str")] = cote_str;
     data.natives[vars.add_native("println")] = cote_println;
     data.natives[vars.add_native("len")] = cote_len;
+    // data.natives[vars.add_native("GC_DROP_MINOR")] = GC_DROP_MINOR;
 }

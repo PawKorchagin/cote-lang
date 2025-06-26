@@ -89,6 +89,12 @@ TEST(SimpleCompileFromFileOk, TestGC1) {
         });
 }
 
+TEST(SimpleCompileFromFileOk, TestInner) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/gc/test_innerlink.ct" );
+        return compile_program(fin);
+        });
+}
 
 // INSTANTIATE_TEST_SUITE_P(
 //     CorrectGroup,
