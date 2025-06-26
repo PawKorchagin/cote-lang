@@ -29,8 +29,25 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
     FileLogger logger(stdout);
     holder.setLogger(&logger);
 
-    //                                                          Value (*) (int osr_size, Value* vm, Function* func)
-    FuncNode *node = info.cc.addFunc(FuncSignature::build<uint64_t, void *, void *>());
+    std::unordered_map<int, Label> labels;
+    int start = func.entry_point;
+    for (int i = 0; i < func.code_size; i++) {
+        const uint32_t instr = vm.code[start++];
+        const auto opcode = static_cast<OpCode>(instr >> OPCODE_SHIFT);
+        if (opcode == OP_JMP || opcode == OP_JMPF || opcode == OP_JMPT) {
+            const int32_t sbx = static_cast<int32_t>(instr & BX_ARG) - J_ZERO;
+            const int loc = i + 1 + sbx;
+            auto it = labels.find(loc);
+            if (it == labels.end()) {
+                labels.emplace(loc, info.cc.newLabel());
+            }
+        }
+
+    }
+    start -= func.code_size;
+
+    //                                                          Value (*) (Value* vm, Function* func)
+    FuncNode *node = info.cc.addFunc(FuncSignature::build<uint64_t, void *, void *, void *>());
 
     info.arg1 = info.cc.newUIntPtr("args*");       // Create `dst` register (destination pointer).
     info.arg2 = info.cc.newUIntPtr("func*");       // Create `dst` register (destination pointer).
@@ -51,17 +68,20 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
 //        if (it == merge_flow_points.end()) {
 //            info.clear();
 //        }
+        auto it = labels.find(i);
+        if (it != labels.end()) {
+            info.cc.bind(it->second);
+        }
 
-
-        const uint32_t instr = vm.code[vm.ip++];
+        const uint32_t instr = vm.code[start++];
 
 
         const uint8_t a = (instr >> A_SHIFT) & A_ARG;
         const uint8_t b = (instr >> B_SHIFT) & B_ARG;
         const uint8_t c = instr & C_ARG;
         const uint32_t bx = instr & BX_ARG;
-
-
+        const int32_t sbx = static_cast<int32_t>(instr & BX_ARG) - J_ZERO;
+        const int jump_loc = i + 1 + sbx;
 //        std::cerr << ins_to_string(instr) << std::endl;
 
         switch (static_cast<OpCode>(instr >> OPCODE_SHIFT)) {
@@ -69,19 +89,36 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
                 info.binary_operation<OP_ADD>(a, b, c);
                 break;
             case interpreter::OP_SUB:
-                info.binary_operation<OP_ADD>(a, b, c);
+                info.binary_operation<OP_SUB>(a, b, c);
                 break;
+            case interpreter::OP_MUL:
+                info.binary_operation<OP_MUL>(a, b, c);
+                break;
+            case interpreter::OP_DIV:
+                info.binary_operation<OP_DIV>(a, b, c);
+                break;
+            case OP_LT: {
+                info.binary_operation<OP_LT>(a, b, c);
+                break;
+            }
+            case OP_LE: {
+                info.binary_operation<OP_LE>(a, b, c);
+                break;
+            }
             case interpreter::OP_LOADINT: {
                 auto temp = info.cc.newUInt64();
                 info.cc.movabs(temp, vm.constanti[bx].as_uint64());
                 info.cc.mov(x86::ptr(info.arg1, a * 8), temp);
                 break;
             }
-            case interpreter::OP_JMPF:
+            case interpreter::OP_JMPF: {
+                info.cjmp<false>(a, sbx);
                 break;
+            }
             case interpreter::OP_NATIVE_CALL:
                 break;
             case interpreter::OP_CALL:
+                throw std::runtime_error("cannot compile");
                 break;
             case interpreter::OP_RETURN: {
                 auto temp = info.cc.newUInt64();
@@ -106,29 +143,39 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
                 v.set_nil();
                 auto temp = info.cc.newUInt64();
                 info.cc.movabs(temp, v.as_uint64());
-                info.cc.mov(x86::ptr(info.arg1, a * 8), v.as_uint64());
+                info.cc.mov(x86::dword_ptr(info.arg1, a * 8), temp);
                 break;
             }
-            case OP_MUL:
+            case OP_MOD: {
+                info.modulo_operation(a, b, c);
                 break;
-            case OP_DIV:
+            }
+            case OP_NEG: {
+                info.neg(a, b);
+            }
                 break;
-            case OP_MOD:
-                break;
-            case OP_NEG:
-                break;
-            case OP_EQ:
+            case OP_EQ: {
+                auto t1 = info.cc.newUInt64();
+                auto t2 = info.cc.newUInt64();
+                info.cc.mov(t1, x86::dword_ptr(info.arg1, b * 8));
+                info.cc.mov(t2, x86::dword_ptr(info.arg1, c * 8));
+                info.cc.bts(t1, 33);
+                info.cc.bts(t2, 33);
+                info.cc.cmp(t1, t2);
+                info.cc.sete(x86::word_ptr(info.arg1, a * 8));
+                info.cc.mov(x86::word_ptr(info.arg1, a * 8 + 4), TYPE_INT);
+            }
                 break;
             case OP_NEQ:
                 break;
-            case OP_LT:
+            case OP_JMP: {
+                info.cc.jmp(labels[i + 1 + sbx]);
                 break;
-            case OP_LE:
+            }
+            case OP_JMPT: {
+                info.cjmp<true>(a, sbx);
                 break;
-            case OP_JMP:
-                break;
-            case OP_JMPT:
-                break;
+            }
             case OP_INVOKEDYNAMIC:
                 break;
             case OP_HALT:
@@ -175,6 +222,84 @@ void jit::JitFuncInfo::bailout() {
 //        cc.mov(asmjit::x86::dword_ptr(arg1, i * 8), stack[i]);
     }
     cc.ret();
+}
+
+void jit::JitFuncInfo::modulo_operation(int a, int b, int c) {
+    using namespace interpreter;
+    using namespace asmjit;
+    auto err = cc.newLabel();
+    auto nxt = cc.newLabel();
+
+    auto temp2 = cc.newUInt64();
+    auto temp3 = cc.newUInt64();
+
+    {//int * int
+        cc.cmp(x86::word_ptr(arg1, b * 8 + 4), TYPE_INT);
+        cc.jne(err);
+        cc.cmp(x86::word_ptr(arg1, c * 8 + 4), TYPE_INT);
+        cc.jne(err);
+        auto temp = cc.newInt32();
+        cc.mov(temp, x86::ptr(arg1, b * 8));
+        interpreter::Value tempInt;
+        tempInt.set_int(0);
+        {
+            cc.cmp(x86::word_ptr(arg1, c * 8), 0);
+            cc.je(err);
+            x86::Gp dummy2 = cc.newInt32();
+            cc.xor_(dummy2, dummy2);
+            cc.idiv(dummy2, temp, x86::word_ptr(arg1, c * 8));
+            cc.mov(temp, dummy2);
+        }
+        cc.mov(x86::word_ptr(arg1, a * 8), temp);
+        cc.mov(x86::word_ptr(arg1, a * 8 + 4), TYPE_INT);
+        cc.mov(temp2, x86::dword_ptr(arg1, a * 8));
+        cc.ret(temp2);
+        cc.jmp(nxt);
+    }
+    cc.bind(err);
+    auto failCode = cc.newUInt64();
+    cc.movabs(failCode, OBJ_NIL);
+    cc.add(failCode, 1);
+    cc.ret(failCode);
+    cc.bind(nxt);
+
+//    cc.movabs(temp2, 18446744069414584320ull);
+//    cc.and_(stack[a], temp2);
+}
+
+void jit::JitFuncInfo::neg(int a, int b) {
+    using namespace asmjit;
+    using namespace interpreter;
+    auto err = cc.newLabel();
+    auto sf = cc.newLabel();
+    auto nxt = cc.newLabel();
+    {
+        cc.cmp(x86::word_ptr(arg1, b * 8 + 4), TYPE_INT);
+        cc.jne(sf);
+        auto temp = cc.newInt32();
+        cc.mov(temp, x86::word_ptr(arg1, b * 8));
+        cc.neg(temp);
+        cc.mov(x86::word_ptr(arg1, a * 8), temp);
+        cc.mov(x86::word_ptr(arg1, a * 8 + 4), TYPE_INT);
+        cc.jmp(nxt);
+    }
+    {
+        cc.bind(sf);
+        cc.cmp(x86::word_ptr(arg1, b * 8 + 4), TYPE_FLOAT);
+        cc.jne(err);
+        auto xmm = cc.newXmmSs();
+        cc.xorps(xmm, xmm);
+        cc.subss(xmm, x86::word_ptr(arg1, b * 8));
+        cc.movd(x86::dword_ptr(arg1, a * 8), xmm);
+        cc.mov(x86::word_ptr(arg1, a * 8 + 4), TYPE_FLOAT);
+        cc.jmp(nxt);
+    }
+    cc.bind(err);
+    auto failCode = cc.newUInt64();
+    cc.movabs(failCode, OBJ_NIL);
+    cc.add(failCode, 1);
+    cc.ret(failCode);
+    cc.bind(nxt);
 }
 
 

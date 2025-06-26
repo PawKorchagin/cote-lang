@@ -183,11 +183,16 @@ void interpreter::BytecodeEmitter::initVM(interpreter::VMData &vm) {
     for (auto &it: iconstants) {
         vm.constanti[it.second - 1].set_int(it.first);
     }
+    vm.constantf.resize(fconstant_count);
+    for (auto &it: fconstants) {
+        vm.constantf[it.second - 1].set_float(it.first);
+    }
     size_t offset = 0;
     vm.functions_count = cur_func;
     for (int i = 0; i < cur_func; ++i) {
         vm.functions[i].arity = funcs[i].arity;
         vm.functions[i].entry_point = offset;
+        vm.functions[i].code_size = funcs[i].code.size();
         std::memcpy(vm.code + offset, funcs[i].code.data(), funcs[i].code.size() * sizeof(uint32_t));
         offset += funcs[i].code.size();
     }
@@ -236,6 +241,12 @@ void interpreter::BytecodeEmitter::emit_alloc(uint32_t reg, uint32_t reg2) {
 
 void interpreter::BytecodeEmitter::emit_neq(int a, int b, int c) {
     add(opcode(OpCode::OP_NEQ, a, b, c));
+}
+
+void interpreter::BytecodeEmitter::emit_loadf(uint32_t reg, float imm) {
+    auto &it = fconstants[imm];
+    if (it == 0) it = ++fconstant_count;
+    add(opcode(OpCode::OP_LOADFLOAT, reg, it - 1));
 }
 
 

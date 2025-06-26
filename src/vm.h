@@ -73,11 +73,11 @@ namespace interpreter {
         // Equality comparison
         // Args: a - result register, b - first operand, c - second operand
         // Behavior: registers[a] = (registers[b] == registers[c]) ? 1 : 0
-        OP_EQ,
+        OP_EQ,//TODO
 
         // Args: a - result register, b - first operand, c - second operand
         // Behavior: registers[a] = (registers[b] != registers[c]) ? 1 : 0
-        OP_NEQ,
+        OP_NEQ,//TODO
 
         // Less-than comparison
         // Args: Same as OP_EQ
@@ -97,12 +97,12 @@ namespace interpreter {
         // Jump if true
         // Args: a - condition register, sbx - signed offset
         // Behavior: if (registers[a]) ip += sbx
-        OP_JMPT,
+        OP_JMPT,//TODO
 
         // Jump if false
         // Args: Same as OP_JMPT
         // Behavior: if (!registers[a]) ip += sbx
-        OP_JMPF,
+        OP_JMPF,//TODO
 
         // Function call
         // Args:
@@ -121,7 +121,7 @@ namespace interpreter {
         // a - native function index
         // Behavior:
         // natives[a](vm)
-        OP_NATIVE_CALL,
+        OP_NATIVE_CALL,//TODO
 
         // Call function dynamically
         // Args:
@@ -150,16 +150,14 @@ namespace interpreter {
         // Behavior: terminates VM execution
         OP_HALT,
 
-        OP_LOADFUNC,
+        OP_LOADFUNC,//TODO
         OP_LOADFLOAT,
-        OP_ALLOC,
-        OP_ARRGET,
-        OP_ARRSET,
+        OP_ALLOC,//TODO
+        OP_ARRGET,//TODO
+        OP_ARRSET,//TODO
         OP_TAILCALL,
     };
-
-
-
+    //TODO: parse float in parser
 
 
     typedef void (*NativeFunction)(VMData &, int reg, int cnt);
@@ -193,7 +191,7 @@ namespace interpreter {
 
     // template<uint16_t GC_YOUNG_THRESHOLD=50>
     struct VMData {
-        heap::GarbageCollector<16+4+1> gc{};
+        heap::GarbageCollector<16 + 4 + 1> gc{};
 
         //  Static data: must be filled before running vm
         std::vector<Value> constanti;

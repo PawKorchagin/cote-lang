@@ -22,7 +22,9 @@ namespace interpreter {
         std::vector<std::pair<int, int>> pending_labels;
         std::vector<uint32_t> global;
         std::unordered_map<int, int> iconstants;
+        std::unordered_map<float, int> fconstants;
         int iconstant_count = 0;
+        int fconstant_count = 0;
         int cur_func = 0;
         bool is_in_func = false;
         EmitFunc funcs[1024];
@@ -31,7 +33,10 @@ namespace interpreter {
 
 
     public:
+        void emit_loadf(uint32_t reg, float val);
+
         void emit_alloc(uint32_t reg, uint32_t cnt);
+
         void emit_loadfunc(uint32_t reg, uint32_t fid);
 
         void label(int32_t pos);
@@ -54,6 +59,7 @@ namespace interpreter {
         void emit_retnil();
 
         void emit_call(int funcid, int reg, int count);
+
         void emit_call_direct(int funcid, int reg, int count);
 
         // Adds two values

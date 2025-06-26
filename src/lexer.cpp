@@ -67,8 +67,8 @@ namespace parser {
             cur.identifier.push_back(static_cast<char>(cur_char));
             cur_char = in.get();
         } while (isalnum(cur_char) || cur_char == '_');
-        if (cur.identifier == "and") return cur.token = TOKEN_AND;
-        if (cur.identifier == "or") return cur.token = TOKEN_OR;
+//        if (cur.identifier == "and") return cur.token = TOKEN_AND;
+//        if (cur.identifier == "or") return cur.token = TOKEN_OR;
         if (cur.identifier == "fn") return cur.token = TOKEN_FN;
         if (cur.identifier == "break") return cur.token = TOKEN_BREAK;
         if (cur.identifier == "continue") return cur.token = TOKEN_BREAK;
