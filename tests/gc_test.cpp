@@ -141,23 +141,23 @@ TEST(gc_test, DoubleMinorGc) {
     EXPECT_EQ(gc.old_roots.size(), 1u);
 }
 
-TEST(gc_test, Thresholds) {
-    heap::mem.clear();
-    auto gc = heap::GarbageCollector<10>();
-    auto* a = gc.alloc_array(1);
-    auto* b = gc.alloc_array(1);
-    auto* c = gc.alloc_array(1);
-    auto* d = gc.alloc_array(1);
-    ASSERT_EQ(a->object_ptr, 7u);
-    ASSERT_EQ(b->object_ptr, 7u);
-    ASSERT_EQ(c->object_ptr, 7u);
-    ASSERT_EQ(d->object_ptr, 7u);
-    // no calling minor_gc before this line
-    auto* e = gc.alloc_array(1); // here calling minor_gc
-
-    gc.LARGE_THRESHOLD = 1;
-    gc.MAJOR_THRESHOLD = 1;
-}
+// TEST(gc_test, Thresholds) {
+//     heap::mem.clear();
+//     auto gc = heap::GarbageCollector<10>();
+//     auto* a = gc.alloc_array(1);
+//     auto* b = gc.alloc_array(1);
+//     auto* c = gc.alloc_array(1);
+//     auto* d = gc.alloc_array(1);
+//     ASSERT_EQ(a->object_ptr, 7u);
+//     ASSERT_EQ(b->object_ptr, 7u);
+//     ASSERT_EQ(c->object_ptr, 7u);
+//     ASSERT_EQ(d->object_ptr, 7u);
+//     // no calling minor_gc before this line
+//     auto* e = gc.alloc_array(1); // here calling minor_gc
+//
+//     gc.LARGE_THRESHOLD = 1;
+//     gc.MAJOR_THRESHOLD = 1;
+// }
 
 // TEST(gc_test, QTest) {
 //

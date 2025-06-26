@@ -14,26 +14,27 @@ namespace {
 
     //if already in
     //TODO: one of the most important functions
-//    void update_hot(util::int_int_map &mp, interpreter::VMData &vm, int ip, int add = 0) {
-//        using namespace interpreter;
-//        util::int_int_map_itr it = util::int_int_map_get_or_insert(&mp, ip, 1);
+    //    void update_hot(util::int_int_map &mp, interpreter::VMData &vm, int ip, int add = 0) {
+    //        using namespace interpreter;
+    //        util::int_int_map_itr it = util::int_int_map_get_or_insert(&mp, ip, 1);
     //TODO: check that not end(out of mem)
     //already hot => do not increase
-//        if (it.data->val >= HOT_THRESHOLD)
-//            return;
-//
-//        it.data->val += 1;
-//        //became hot => need to record
-//        if (it.data->val >= HOT_THRESHOLD) {
-//            // vm.trace_head[ip] - is empty, because this position was never recorded
-//            auto entry = new jit::TraceEntry();
-//            util::int_ptr_map_insert(&vm.trace_head, ip, entry);
-//            //TODO: check that not end(out of mem)
-//            //record trace
-//            record_fully(*entry);
-//        }
-//    }
+    //        if (it.data->val >= HOT_THRESHOLD)
+    //            return;
+    //
+    //        it.data->val += 1;
+    //        //became hot => need to record
+    //        if (it.data->val >= HOT_THRESHOLD) {
+    //            // vm.trace_head[ip] - is empty, because this position was never recorded
+    //            auto entry = new jit::TraceEntry();
+    //            util::int_ptr_map_insert(&vm.trace_head, ip, entry);
+    //            //TODO: check that not end(out of mem)
+    //            //record trace
+    //            record_fully(*entry);
+    //        }
+    //    }
 }
+
 namespace interpreter {
     VMData &vm_instance() {
         return vm_instance_;
@@ -254,7 +255,6 @@ namespace interpreter {
                 return v1.f32 <= v2.f32;
             }
             return v1.f32 < v2.f32;
-
         } else throw std::runtime_error("Comparison requires compatible types");
     }
 
@@ -326,31 +326,31 @@ namespace interpreter {
         CallFrame frame = vm.call_stack.top();
         vm.call_stack.pop();
 
-        vm.fp = frame.base_ptr;   // Restore frame pointer
-        vm.ip = frame.return_ip;  // Restore instruction pointer
+        vm.fp = frame.base_ptr; // Restore frame pointer
+        vm.ip = frame.return_ip; // Restore instruction pointer
     }
 
-// TAG: GC maybe want to do smth here
+    // TAG: GC maybe want to do smth here
     void op_newobj(VMData &vm, uint8_t dst, uint32_t class_idx) {
         throw std::runtime_error("todo");
-//        if (class_idx >= vm.classes.size()) {
-//            throw std::out_of_range("context index out of range");
-//        }
-//        if (vm.heap_size >= HEAP_MAX_SIZE) {
-//            // TAG: GC
-//        }
-//
-//        const ObjClass context = vm.classes[class_idx];
-//        // auto obj = vm.heap[context.indexes.size()].get();
-//        // vm.heap[vm.heap_size] = obj;
-//
-//        Value newobj;
-//        newobj.type = ValueType::Object;
-//        newobj.as.object_ptr = vm.heap_size;
-//        newobj.class_ptr = class_idx;
-//        vm.stack[vm.fp + dst] = newobj;
-//
-//        vm.heap_size++;
+        //        if (class_idx >= vm.classes.size()) {
+        //            throw std::out_of_range("context index out of range");
+        //        }
+        //        if (vm.heap_size >= HEAP_MAX_SIZE) {
+        //            // TAG: GC
+        //        }
+        //
+        //        const ObjClass context = vm.classes[class_idx];
+        //        // auto obj = vm.heap[context.indexes.size()].get();
+        //        // vm.heap[vm.heap_size] = obj;
+        //
+        //        Value newobj;
+        //        newobj.type = ValueType::Object;
+        //        newobj.as.object_ptr = vm.heap_size;
+        //        newobj.class_ptr = class_idx;
+        //        vm.stack[vm.fp + dst] = newobj;
+        //
+        //        vm.heap_size++;
     }
 
     void op_getfield(VMData &vm, uint8_t dst, uint8_t obj, uint8_t field_idx) {
@@ -376,7 +376,7 @@ namespace interpreter {
     }
 
     void op_halt(VMData &vm) {
-        vm.ip = CODE_MAX_SIZE - 1;  // Stop execution
+        vm.ip = CODE_MAX_SIZE - 1; // Stop execution
     }
 
     Value add_values(const Value &a, const Value &b) {
@@ -484,7 +484,7 @@ namespace interpreter {
 
         const uint32_t size = vm.stack[vm.fp + s].i32;
 
-        auto* fields = vm.gc.alloc_array(size);
+        auto *fields = vm.gc.alloc_array(size);
 
         if (!fields) {
             throw std::runtime_error("Memory allocation failed");
@@ -496,7 +496,7 @@ namespace interpreter {
 
         // heap::heap.push_back(fields);
 
-        vm.stack[vm.fp + dst].set_array</*mark for gc=*/false>(size, fields);// Array class is always at index 1
+        vm.stack[vm.fp + dst].set_array</*mark for gc=*/false>(size, fields); // Array class is always at index 1
     }
 
     void op_arrget(VMData &vm, uint8_t dst, uint8_t arr, uint8_t idxc) {
@@ -506,15 +506,14 @@ namespace interpreter {
         }
         Value &arr_val = vm.stack[vm.fp + arr];
         if (!arr_val.is_object()) {
-            throw std::runtime_error("Expected array object");
+            throw std::runtime_error("Expected array object while arrayget");
         }
 
         // inner test
         if (arr_val.object_ptr == 1 && heap::mem.size() == 1) {
-
         }
 
-        auto* obj = heap::mem.at(arr_val.object_ptr);
+        auto *obj = heap::mem.at(arr_val.object_ptr);
 
         assert(obj->is_array());
 
@@ -524,7 +523,12 @@ namespace interpreter {
             throw std::out_of_range("Array index out of bounds");
         }
 
-        vm.stack[vm.fp + dst] = obj[idx.i32 + 1];  // +1 because index 0 is len
+        // vm.stack[vm.fp + dst] = obj[idx.i32 + 1];  // +1 because index 0 is len
+        // if (obj[idx.i32 + 1].is_array()) {
+        // vm.stack[vm.fp + dst].set_array(len, obj + idx.i32 + 1);
+        // } else {
+        vm.stack[vm.fp + dst] = obj[idx.i32 + 1];
+        // }
     }
 
     void op_arrset(VMData &vm, uint8_t arr, uint8_t idxc, uint8_t src) {
@@ -535,7 +539,7 @@ namespace interpreter {
         }
 
         if (!arr_val.is_array()) {
-            throw std::runtime_error("Expected array object");
+            throw std::runtime_error("Expected array object while arrayset");
         }
 
         auto *obj = heap::mem.at(arr_val.object_ptr);
@@ -545,7 +549,19 @@ namespace interpreter {
             throw std::out_of_range("Array index out of bounds");
         }
 
-        obj[idx.i32 + 1] = vm.stack[vm.fp + src];  // +1 because index 0 is len
+        // bool marked = obj[idx.i32 + 1].is_marked();
+
+        // obj[idx.i32 + 1] = vm.stack[vm.fp + src];  // +1 because index 0 is len
+        // if (marked) {
+        //     obj[idx.i32 + 1].mark();
+        // }
+        // if (vm.stack[vm.fp + src].is_array()) {
+        // norm if object unmarked?
+        // obj[idx.i32 + 1].set_array(len, vm.stack + vm.fp + src);
+        // obj[idx.i32 + 1].object_ptr = vm.stack[vm.fp + src].object_ptr;
+        // } else {
+        obj[idx.i32 + 1] = vm.stack[vm.fp + src];
+        // }
     }
 
 
@@ -658,7 +674,7 @@ namespace interpreter {
                 break;
             case OP_CALL:
                 std::cout << "CALL        func[" << (int) a << "](args R" << (int) b << "..R" << (int) (b + c - 1)
-                          << ")";
+                        << ")";
                 break;
             case OP_RETURN:
                 std::cout << "RETURN      return R" << (int) a;
@@ -680,7 +696,4 @@ namespace interpreter {
         // Initialization logic would go here
         // Load bytecode, constants, contextes, etc.
     }
-
-
-
-}  // namespace interpreter
+} // namespace interpreter

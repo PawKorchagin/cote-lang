@@ -11,18 +11,15 @@ fn main() {
     a[0] = array(3);
     a[0][0] = array(3);
     a[0][0][0] = array(3);
-    a[0][0][0][0] = nil;
-    a[0][0][0][1] = nil;
-    a[0][0][0][2] = nil;
     for (i = 0; i < 3; i += 1) {
         println(a[0][0][0][i]);
     }
     foo(a);
     // gc 16 + 4 + 1 young buffer to fail
     d = array(1);
+    // for (i = 0; i < 1; i += 1) {
+    println(a[0][1][0]);
+    // }
 
-    for (i = 0; i < 1; i += 1) {
-        println(a[0][1][i]);
-    }
     // a[0][0][0] = array(3);
 }
