@@ -96,6 +96,13 @@ TEST(SimpleCompileFromFileOk, TestInner) {
         });
 }
 
+TEST(SimpleCompileFromFileOk, TestInnerMini) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/gc/test_innerlink_mini.ct" );
+        return compile_program(fin);
+        });
+}
+
 // INSTANTIATE_TEST_SUITE_P(
 //     CorrectGroup,
 //     SimpleCompileFromFileParam,

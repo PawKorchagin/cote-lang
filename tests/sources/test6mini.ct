@@ -11,6 +11,7 @@ fn sort(arr) {
 }
 fn main() {
     arr = array(10);
+
     for (i = 0; i < len(arr); i += 1) {
         arr[i] = len(arr) - i;
     }

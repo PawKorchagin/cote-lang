@@ -165,12 +165,37 @@ namespace heap {
         }
 
         void mark(value_ptr ptr) const {
+            if (ptr->object_ptr == 1) {
+
+            }
+            if (ptr->object_ptr == 2) {
+
+            }
+            if (ptr->object_ptr == 3) {
+
+            }
+            if (ptr->object_ptr == 4) {
+
+            }
+            if (ptr->object_ptr == 5) {
+
+            }
+            if (ptr->object_ptr == 6) {
+
+            }
             // auto* ptr = mem.at(object_ptr);
-            if (!ptr->is_array() || ptr->is_marked()) return;
+            // if (ptr->is_marked()) return;
             uint32_t len = ptr->get_len();
             ptr->mark();
-            for (auto *elem = ptr + 1; ptr < elem + len; ++ptr) {
-                mark(elem);
+            // for (auto *elem = ptr + 1; ptr < elem + len; ++ptr) {
+            //     mark(elem);
+            // }
+            for (int i = 1; i < len + 1; ++i) {
+                auto* neigh = ptr + i;
+                if (neigh->is_array()) {
+                    auto* obj_neigh = mem.at(neigh->object_ptr);
+                    mark(obj_neigh);
+                }
             }
         }
 
@@ -184,14 +209,23 @@ namespace heap {
                 for (int i = 0; i < get_sp(); ++i) {
                     if (stack_[i].is_array()) {
                         auto* ptr = mem.at(stack_[i].object_ptr);
-                        ptr->mark();
-                        // mark(ptr);
+                        ptr->unmark();
+                        // ptr->mark();
+                        mark(ptr);
                         // mark(stack_ + i);
                     }
                 }
             } catch (std::runtime_error& e) {
                 std::cerr << e.what() << std::endl;
                 exit(1);
+            }
+        }
+
+        void rebind_mem(value_ptr ptr, value_ptr old) {
+            auto len = ptr->get_len();
+            for (int i = 1; i < len + 1; ++i) {
+                mem[ptr[i].object_ptr] = old + i;
+                old[i] = ptr[i];
             }
         }
 
@@ -204,6 +238,7 @@ namespace heap {
                     assert(ptr != nullptr);
                     ptr->unmark();
                     auto *old = old_alloc.allocate(ptr->get_len() + 1);
+                    this->rebind_mem(ptr, old);
                     // rebind ptr
                     *old = *ptr;
                     mem[old->object_ptr] = old;
@@ -239,7 +274,7 @@ namespace heap {
 
         void major_gc() {
             // test_inner
-            if (old_roots.size() == 5) {
+            if (old_roots.size() == 2) {
 
             }
 
@@ -267,14 +302,25 @@ namespace heap {
                 large_gc();
             }
 
+            value_ptr ptr;
+
             if (len + 1 >= YOUNG_THRESHOLD) {
-                return alloc_large(len);
+                ptr = alloc_large(len);
+                for (int i = 1; i < len + 1; ++i) {
+                    ptr[i].set_nil();
+                }
+                return ptr;
             }
             if (young_alloc.get_used() + len + 1 >= YOUNG_THRESHOLD) {
                 minor_gc();
             }
 
-            return alloc_young(len);
+            ptr = alloc_young(len);
+            for (int i = 1; i < len + 1; ++i) {
+                ptr[i].set_nil();
+            }
+
+            return ptr;
         }
 
         void call(

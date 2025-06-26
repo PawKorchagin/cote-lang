@@ -194,7 +194,7 @@ namespace interpreter {
 
     // template<uint16_t GC_YOUNG_THRESHOLD=50>
     struct VMData {
-        heap::GarbageCollector<16+4+1> gc{};
+        heap::GarbageCollector<9> gc{};
 
         //  Static data: must be filled before running vm
         std::vector<Value> constanti;
