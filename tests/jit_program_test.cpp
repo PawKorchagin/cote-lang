@@ -118,7 +118,7 @@ void simple_perfomance_cmp(std::string filename) {
     std::cout << "Jit on\n";
     interpreter::set_jit_on();
 //    print_vm_data(vm_instance());
-//    interpreter::vm_instance().jit_log_level = 2;
+    interpreter::vm_instance().jit_log_level = 1;
     emitter->initVM(vm_instance());
     for (int i = 0; i < vm_instance().functions_count; i++) {
         vm_instance().functions[i].hotness = 100;
