@@ -13,8 +13,7 @@ inline void compile_program(std::istream &fin, const std::string &file_name = "c
     using namespace interpreter;
     auto &vm = initVM();
     parser::init_parser(fin, new BytecodeEmitter());
-    ast::Program p;
-    ASSERT_NO_THROW(p = parser::parse_program(vm));
+    ASSERT_NO_THROW(parser::parse_program(vm));
     print_vm_data(vm);
     vm.jit_log_level = 1;
     interpreter::run(true);
@@ -52,6 +51,15 @@ TEST(SimpleCompileFromFileOk, Test3) {
                         return compile_program(fin);
                     });
 }
+
+
+TEST(SimpleCompileFromFileOk, TestJitTemp) {
+    ASSERT_NO_THROW({
+                        std::ifstream fin("../../tests/sources/jitSimple2.ct");
+                        return compile_program(fin);
+                    });
+}
+
 
 TEST(SimpleCompileFromFileOk, Test4) {
     ASSERT_NO_THROW({

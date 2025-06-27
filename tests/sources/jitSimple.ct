@@ -2,7 +2,7 @@ fn jitf() {
     println(1);
 }
 fn main() {
-    for (i = 0; i < 20; i += 1) {
+    for (i = 0; i < 1000000; i += 1) {
         jitf();
     }
 }

@@ -102,7 +102,7 @@ inline interpreter::VMData &initVM() {
 */
 inline void parse_program_throws(std::istream &fin, const std::string &file_name = "code") {
     parser::init_parser(fin, new interpreter::BytecodeEmitter());
-    ast::Program p = parser::parse_program(interpreter::vm_instance());
+    parser::parse_program(interpreter::vm_instance());
     if (!parser::get_errors().empty()) {
         for (auto x: get_errors()) {
             std::cerr << file_name << ":" << x << std::endl;

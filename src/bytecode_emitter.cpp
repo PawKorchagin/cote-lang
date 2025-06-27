@@ -33,6 +33,7 @@ void interpreter::BytecodeEmitter::emit_mod(int a, int b, int c) {
 
 void interpreter::BytecodeEmitter::emit_move(int a, int b) {
     using namespace interpreter;
+    if (a == b) return;
     add(opcode(OpCode::OP_MOVE, a, b, 0));
 }
 

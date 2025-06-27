@@ -74,9 +74,9 @@ namespace jit {
 
         void native_call(void *func, int b, int c);
 
-        inline void op_arrget(int instr) { throw std::runtime_error("not supported"); }
+        void op_arrget(int instr);
 
-        inline void op_arrset(int instr) { throw std::runtime_error("not supported"); }
+        void op_arrset(int instr);
 
         template<bool jmpT>
         void cjmp(int a, const asmjit::Label &label) {

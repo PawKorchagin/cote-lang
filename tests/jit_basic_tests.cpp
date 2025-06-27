@@ -279,7 +279,7 @@ TEST_P(JitTestWithParam, GenericTest) {
     Value res = get<2>(p);
     auto temp = *reinterpret_cast<uint64_t *>(&res);
     get<1>(p)(vm_instance().stack);
-//    ASSERT_EQ(func(vm_instance().stack), temp);
+    ASSERT_EQ(func(vm_instance().stack), temp);
 
 //    std::cout << func(vm_instance().stack) << std::endl;
 }
@@ -698,7 +698,7 @@ INSTANTIATE_TEST_SUITE_P(
                }, [](Value *stack) {
                    stack[0].set_nil();
                    stack[1].set_nil();
-               }, fromInt(0)),
+               }, *reinterpret_cast<const Value *>(&OBJ_NIL)),
                make_tuple([](BytecodeEmitter &emitter) {
                    std::cout << "call native\n";
                    emitter.begin_func(0, "main");

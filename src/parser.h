@@ -59,7 +59,7 @@ namespace parser {
 
     void parse_annotations();
 
-    ast::Program parse_program(interpreter::VMData &vm);
+    void parse_program(interpreter::VMData &vm);
 
     void init_parser(std::istream &in, interpreter::BytecodeEmitter *emitter);
 

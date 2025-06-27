@@ -510,8 +510,7 @@ namespace parser {
         }
     }
 
-    ast::Program parse_program(interpreter::VMData &vm) {
-        Program res;
+    void parse_program(interpreter::VMData &vm) {
         jmp_uid = 0;
         while (cur.token != TOKEN_EOF) {
             if (match(TOKEN_FN)) {
@@ -520,9 +519,6 @@ namespace parser {
                 parser_throws(error_msg("expected function declaration"));
         }
         emitter->initVM(vm);
-        res.instructions = {};
-        delete emitter;
-        return res;
     }
 
     //if anonymous: cur = first argument

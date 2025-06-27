@@ -25,9 +25,10 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
     CodeHolder holder;
     holder.init(asmrt.environment(), asmrt.cpuFeatures());
     jit::JitFuncInfo info(asmrt, holder, vm);
-
-    FileLogger logger(stdout);
-    holder.setLogger(&logger);
+    if (vm.jit_log_level > 1) {
+        FileLogger logger(stdout);
+        holder.setLogger(&logger);
+    }
 
     std::unordered_map<int, Label> labels;
     int start = func.entry_point;
@@ -254,7 +255,7 @@ void jit::JitFuncInfo::modulo_operation(int a, int b, int c) {
         cc.cmp(x86::word_ptr(arg1, c * 8 + 4), TYPE_INT);
         cc.jne(err);
         auto temp = cc.newInt32();
-        cc.mov(temp, x86::ptr(arg1, b * 8));
+        cc.mov(temp, x86::word_ptr(arg1, b * 8));
         interpreter::Value tempInt;
         tempInt.set_int(0);
         {
@@ -268,7 +269,6 @@ void jit::JitFuncInfo::modulo_operation(int a, int b, int c) {
         cc.mov(x86::word_ptr(arg1, a * 8), temp);
         cc.mov(x86::word_ptr(arg1, a * 8 + 4), TYPE_INT);
         cc.mov(temp2, x86::dword_ptr(arg1, a * 8));
-        cc.ret(temp2);
         cc.jmp(nxt);
     }
     cc.bind(err);
@@ -361,6 +361,14 @@ void jit::JitFuncInfo::native_call(void *func, int b, int c) {
     cc.pop(getArg3());
     cc.pop(getArg2());
     cc.pop(getArg1());
+}
+
+void jit::JitFuncInfo::op_arrget(int instr) {
+
+}
+
+void jit::JitFuncInfo::op_arrset(int instr) {
+
 }
 
 
