@@ -160,7 +160,6 @@ TEST(SimpleJitTest, TestDiv) {
     rt.compile(vm, vm.functions[0], func);
 
 
-
     Value res;
     res.set_int(3);
     auto temp = *reinterpret_cast<uint64_t *>(&res);
@@ -628,6 +627,18 @@ INSTANTIATE_TEST_SUITE_P(
                               stack[0].set_float(3.0f);
                               stack[1].set_int(2.0f);
                           }, *reinterpret_cast<const Value *>(&TEST_BAD_NIL)
+               ),
+
+               make_tuple([](BytecodeEmitter &emitter) {
+                              std::cout << "load less(difficult)\n";
+                              emitter.begin_func(0, "main");
+                              emitter.emit_less(0, 0, 1);
+                              emitter.emit_return(0);
+                              emitter.end_func();
+                          }, [](Value *stack) {
+                              stack[0].set_int(257);
+                              stack[1].set_int(257);
+                          }, fromInt(0)
                ),
                make_tuple([](BytecodeEmitter &emitter) {
                    std::cout << "jmpt\n";

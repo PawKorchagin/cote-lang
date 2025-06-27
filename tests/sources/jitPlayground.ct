@@ -1,0 +1,15 @@
+fn factorial(n) {
+    res = 1;
+    for (i = 1; i < n; i += 1) {
+        res *= i;
+    }
+    return res;
+}
+
+
+fn main() {
+    for (i = 0; i < 1000; i += 1) {
+        println(factorial(20));
+    }
+    return 0;
+}

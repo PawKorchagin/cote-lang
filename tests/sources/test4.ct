@@ -14,7 +14,7 @@ fn main() {
     n = 1000;
     for (i = 2; i < n; i += 1) {
         if (x(i))
-            println(i);
+            print(i);
     }
     return 0;
 }

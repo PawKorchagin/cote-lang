@@ -86,9 +86,9 @@ namespace jit {
             auto obj = cc.newLabel();
             auto nxt = cc.newLabel();
             {
-                cc.cmp(x86::word_ptr(arg1, a * 8 + 4), TYPE_INT);
+                cc.cmp(x86::dword_ptr(arg1, a * 8 + 4), TYPE_INT);
                 cc.jne(sf);
-                cc.cmp(x86::word_ptr(arg1, a * 8), 0);
+                cc.cmp(x86::dword_ptr(arg1, a * 8), 0);
                 if constexpr (jmpT) {
                     cc.jne(label);
                 } else {
@@ -99,9 +99,9 @@ namespace jit {
             {
                 cc.bind(sf);
                 const float cnst = 0.0f;
-                cc.cmp(x86::word_ptr(arg1, a * 8 + 4), TYPE_FLOAT);
+                cc.cmp(x86::dword_ptr(arg1, a * 8 + 4), TYPE_FLOAT);
                 cc.jne(obj);
-                cc.cmp(x86::word_ptr(arg1, a * 8), *reinterpret_cast<const int *>(&cnst));
+                cc.cmp(x86::dword_ptr(arg1, a * 8), *reinterpret_cast<const int *>(&cnst));
                 if constexpr (jmpT) {
                     cc.jne(label);
                 } else {
@@ -111,7 +111,7 @@ namespace jit {
             }
             {
                 cc.bind(obj);
-                cc.cmp(x86::word_ptr(arg1, a * 8 + 4), TYPE_OBJ);
+                cc.cmp(x86::dword_ptr(arg1, a * 8 + 4), TYPE_OBJ);
                 if constexpr (jmpT) {
                     cc.jne(label);
                 } else {
@@ -138,40 +138,46 @@ namespace jit {
         auto temp3 = cc.newUInt64();
 
         {//int * int
-            cc.cmp(x86::word_ptr(arg1, b * 8 + 4), TYPE_INT);
+            cc.cmp(x86::dword_ptr(arg1, b * 8 + 4), TYPE_INT);
             cc.jne(sf);
-            cc.cmp(x86::word_ptr(arg1, c * 8 + 4), TYPE_INT);
+            cc.cmp(x86::dword_ptr(arg1, c * 8 + 4), TYPE_INT);
             cc.jne(err);//sif
             auto temp = cc.newInt32();
             cc.mov(temp, x86::ptr(arg1, b * 8));
             interpreter::Value tempInt;
             tempInt.set_int(0);
             if constexpr (mtype == interpreter::OP_ADD) {
-                cc.add(temp, x86::word_ptr(arg1, c * 8));
+                cc.add(temp, x86::dword_ptr(arg1, c * 8));
             } else if constexpr (mtype == interpreter::OP_SUB) {
-                cc.sub(temp, x86::word_ptr(arg1, c * 8));
+                cc.sub(temp, x86::dword_ptr(arg1, c * 8));
             } else if constexpr (mtype == interpreter::OP_MUL) {
-                cc.imul(temp, x86::word_ptr(arg1, c * 8));
+                cc.imul(temp, x86::dword_ptr(arg1, c * 8));
             } else if constexpr (mtype == interpreter::OP_DIV) {
-                cc.cmp(x86::word_ptr(arg1, c * 8), 0);
+                cc.cmp(x86::dword_ptr(arg1, c * 8), 0);
                 cc.je(err);
                 x86::Gp dummy2 = cc.newInt32();
                 cc.cdq(dummy2, temp);
-                cc.idiv(dummy2, temp, x86::word_ptr(arg1, c * 8));
+                cc.idiv(dummy2, temp, x86::dword_ptr(arg1, c * 8));
             } else if constexpr (mtype == interpreter::OP_LT) {
-                cc.cmp(temp, x86::word_ptr(arg1, c * 8));
-                cc.setl(x86::al);
-                cc.mov(x86::word_ptr(arg1, a * 8), x86::al);
-                cc.mov(x86::word_ptr(arg1, a * 8 + 4), TYPE_INT);
+                cc.cmp(temp, x86::dword_ptr(arg1, c * 8));
+                auto dummy = cc.newInt8();
+                cc.setl(dummy);
+                auto t2 = cc.newInt32();
+                cc.movzx(t2, dummy);
+                cc.mov(x86::dword_ptr(arg1, a * 8), t2);
+                cc.mov(x86::dword_ptr(arg1, a * 8 + 4), TYPE_INT);
             } else if constexpr (mtype == interpreter::OP_LE) {
-                cc.cmp(temp, x86::word_ptr(arg1, c * 8));
-                cc.setle(x86::al);
-                cc.mov(x86::word_ptr(arg1, a * 8), x86::al);
-                cc.mov(x86::word_ptr(arg1, a * 8 + 4), TYPE_INT);
+                cc.cmp(temp, x86::dword_ptr(arg1, c * 8));
+                auto dummy = cc.newInt8();
+                cc.setle(dummy);
+                auto t2 = cc.newInt32();
+                cc.movzx(t2, dummy);
+                cc.mov(x86::dword_ptr(arg1, a * 8), t2);
+                cc.mov(x86::dword_ptr(arg1, a * 8 + 4), TYPE_INT);
             }
             if constexpr (mtype != interpreter::OP_LT && mtype != interpreter::OP_LE) {
-                cc.mov(x86::word_ptr(arg1, a * 8), temp);
-                cc.mov(x86::word_ptr(arg1, a * 8 + 4), TYPE_INT);
+                cc.mov(x86::dword_ptr(arg1, a * 8), temp);
+                cc.mov(x86::dword_ptr(arg1, a * 8 + 4), TYPE_INT);
             }
             cc.jmp(nxt);
         }
@@ -180,34 +186,35 @@ namespace jit {
             tempInt.set_float(0);
             //TODO: float * float
             cc.bind(sf);
-            cc.cmp(x86::word_ptr(arg1, b * 8 + 4), TYPE_FLOAT);
+            cc.cmp(x86::dword_ptr(arg1, b * 8 + 4), TYPE_FLOAT);
             cc.jne(err);
-            cc.cmp(x86::word_ptr(arg1, c * 8 + 4), TYPE_FLOAT);
+            cc.cmp(x86::dword_ptr(arg1, c * 8 + 4), TYPE_FLOAT);
             cc.jne(err);//sfi
             auto temp = cc.newXmmSs();
-            cc.movss(temp, x86::word_ptr(arg1, b * 8));
+            cc.movss(temp, x86::dword_ptr(arg1, b * 8));
             if constexpr (mtype == interpreter::OP_ADD) {
-                cc.addss(temp, x86::dword_ptr(arg1, c * 8));
+                cc.addss(temp, x86::qword_ptr(arg1, c * 8));
             } else if constexpr (mtype == interpreter::OP_SUB) {
-                cc.subss(temp, x86::dword_ptr(arg1, c * 8));
+                cc.subss(temp, x86::qword_ptr(arg1, c * 8));
             } else if constexpr (mtype == interpreter::OP_MUL) {
-                cc.mulss(temp, x86::dword_ptr(arg1, c * 8));
+                cc.mulss(temp, x86::qword_ptr(arg1, c * 8));
             } else if constexpr (mtype == interpreter::OP_DIV) {
-                cc.divss(temp, x86::dword_ptr(arg1, c * 8));
+                cc.divss(temp, x86::qword_ptr(arg1, c * 8));
             } else if constexpr (mtype == interpreter::OP_LT) {
-                cc.comiss(temp, x86::dword_ptr(arg1, c * 8));
+                cc.comiss(temp, x86::qword_ptr(arg1, c * 8));
                 cc.setl(x86::al);
-                cc.mov(x86::word_ptr(arg1, a * 8), x86::al);
-                cc.mov(x86::word_ptr(arg1, a * 8 + 4), TYPE_INT);
+                cc.mov(x86::dword_ptr(arg1, a * 8), x86::al);
+                cc.mov(x86::dword_ptr(arg1, a * 8 + 4), TYPE_INT);
+
             } else if constexpr (mtype == interpreter::OP_LE) {
-                cc.comiss(temp, x86::dword_ptr(arg1, c * 8));
+                cc.comiss(temp, x86::qword_ptr(arg1, c * 8));
                 cc.setle(x86::al);
-                cc.mov(x86::word_ptr(arg1, a * 8), x86::al);
-                cc.mov(x86::word_ptr(arg1, a * 8 + 4), TYPE_INT);
+                cc.mov(x86::dword_ptr(arg1, a * 8), x86::al);
+                cc.mov(x86::dword_ptr(arg1, a * 8 + 4), TYPE_INT);
             }
             if constexpr (mtype != interpreter::OP_LT && mtype != interpreter::OP_LE) {
-                cc.movd(x86::dword_ptr(arg1, a * 8), temp);
-                cc.mov(x86::word_ptr(arg1, a * 8 + 4), TYPE_FLOAT);
+                cc.movd(x86::qword_ptr(arg1, a * 8), temp);
+                cc.mov(x86::dword_ptr(arg1, a * 8 + 4), TYPE_FLOAT);
             }
             cc.jmp(nxt);
         }

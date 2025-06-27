@@ -14,7 +14,17 @@
 #include "ins_to_string.h"
 
 namespace {
+    class SimpleErrorHandler : public asmjit::ErrorHandler {
+    public:
+        asmjit::Error err;
 
+        inline SimpleErrorHandler() : err(asmjit::kErrorOk) {}
+
+        void handleError(asmjit::Error err, const char *message, asmjit::BaseEmitter *origin) override {
+            this->err = err;
+            fprintf(stderr, "ERROR: %s\n", message);
+        }
+    };
 }
 
 jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
@@ -24,9 +34,11 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
     using namespace asmjit;
     CodeHolder holder;
     holder.init(asmrt.environment(), asmrt.cpuFeatures());
+    SimpleErrorHandler eh;
+    holder.setErrorHandler(&eh);
     jit::JitFuncInfo info(asmrt, holder, vm);
+    FileLogger logger(stderr);
     if (vm.jit_log_level > 1) {
-        FileLogger logger(stdout);
         holder.setLogger(&logger);
     }
 
@@ -118,15 +130,15 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
                 break;
             case interpreter::OP_RETURN: {
                 auto temp = info.cc.newUInt64();
-                info.cc.mov(temp, x86::dword_ptr(info.arg1, a * 8));
-                info.cc.mov(x86::dword_ptr(info.arg1), temp);
+                info.cc.mov(temp, x86::qword_ptr(info.arg1, a * 8));
+                info.cc.mov(x86::qword_ptr(info.arg1), temp);
                 info.cc.ret(temp);
             }
                 break;
             case interpreter::OP_RETURNNIL: {
                 auto v = info.cc.newUInt64();
                 info.cc.movabs(v, OBJ_NIL);
-                info.cc.mov(x86::dword_ptr(info.arg1), v);
+                info.cc.mov(x86::qword_ptr(info.arg1), v);
                 info.cc.ret(v);
             }
                 break;
@@ -141,7 +153,7 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
                 v.set_nil();
                 auto temp = info.cc.newUInt64();
                 info.cc.movabs(temp, v.as_uint64());
-                info.cc.mov(x86::dword_ptr(info.arg1, a * 8), temp);
+                info.cc.mov(x86::qword_ptr(info.arg1, a * 8), temp);
                 break;
             }
             case OP_MOD: {
@@ -155,25 +167,33 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
             case OP_EQ: {
                 auto t1 = info.cc.newUInt64();
                 auto t2 = info.cc.newUInt64();
-                info.cc.mov(t1, x86::dword_ptr(info.arg1, b * 8));
-                info.cc.mov(t2, x86::dword_ptr(info.arg1, c * 8));
+                info.cc.mov(t1, x86::qword_ptr(info.arg1, b * 8));
+                info.cc.mov(t2, x86::qword_ptr(info.arg1, c * 8));
                 info.cc.bts(t1, 33);
                 info.cc.bts(t2, 33);
                 info.cc.cmp(t1, t2);
-                info.cc.sete(x86::word_ptr(info.arg1, a * 8));
-                info.cc.mov(x86::word_ptr(info.arg1, a * 8 + 4), TYPE_INT);
+                auto dummy = info.cc.newInt8();
+                auto dummy2 = info.cc.newInt32();
+                info.cc.sete(dummy);
+                info.cc.movzx(dummy2, dummy);
+                info.cc.mov(x86::dword_ptr(info.arg1, a * 8), dummy2);
+                info.cc.mov(x86::dword_ptr(info.arg1, a * 8 + 4), TYPE_INT);
             }
                 break;
             case OP_NEQ: {
                 auto t1 = info.cc.newUInt64();
                 auto t2 = info.cc.newUInt64();
-                info.cc.mov(t1, x86::dword_ptr(info.arg1, b * 8));
-                info.cc.mov(t2, x86::dword_ptr(info.arg1, c * 8));
+                info.cc.mov(t1, x86::qword_ptr(info.arg1, b * 8));
+                info.cc.mov(t2, x86::qword_ptr(info.arg1, c * 8));
                 info.cc.bts(t1, 33);
                 info.cc.bts(t2, 33);
                 info.cc.cmp(t1, t2);
-                info.cc.setne(x86::word_ptr(info.arg1, a * 8));
-                info.cc.mov(x86::word_ptr(info.arg1, a * 8 + 4), TYPE_INT);
+                auto dummy = info.cc.newInt8();
+                auto dummy2 = info.cc.newInt32();
+                info.cc.setne(dummy);
+                info.cc.movzx(dummy2, dummy);
+                info.cc.mov(x86::dword_ptr(info.arg1, a * 8), dummy2);
+                info.cc.mov(x86::dword_ptr(info.arg1, a * 8 + 4), TYPE_INT);
             }
                 break;
             case OP_JMP: {
@@ -223,8 +243,9 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
     }
     info.cc.endFunc();
     info.cc.finalize();
+
     asmjit::Error err = asmrt.add(&res, &holder);          // Add the generated code to the runtime.
-    if (err)
+    if (err != asmjit::ErrorCode::kErrorOk)
         return jit::CompilationResult::ABORT;
     return jit::CompilationResult::SUCCESS;
 }
@@ -250,25 +271,25 @@ void jit::JitFuncInfo::modulo_operation(int a, int b, int c) {
     auto temp3 = cc.newUInt64();
 
     {//int * int
-        cc.cmp(x86::word_ptr(arg1, b * 8 + 4), TYPE_INT);
+        cc.cmp(x86::dword_ptr(arg1, b * 8 + 4), TYPE_INT);
         cc.jne(err);
-        cc.cmp(x86::word_ptr(arg1, c * 8 + 4), TYPE_INT);
+        cc.cmp(x86::dword_ptr(arg1, c * 8 + 4), TYPE_INT);
         cc.jne(err);
         auto temp = cc.newInt32();
-        cc.mov(temp, x86::word_ptr(arg1, b * 8));
+        cc.mov(temp, x86::dword_ptr(arg1, b * 8));
         interpreter::Value tempInt;
         tempInt.set_int(0);
         {
-            cc.cmp(x86::word_ptr(arg1, c * 8), 0);
+            cc.cmp(x86::dword_ptr(arg1, c * 8), 0);
             cc.je(err);
             x86::Gp dummy2 = cc.newInt32();
             cc.cdq(dummy2, temp);
-            cc.idiv(dummy2, temp, x86::word_ptr(arg1, c * 8));
+            cc.idiv(dummy2, temp, x86::dword_ptr(arg1, c * 8));
             cc.mov(temp, dummy2);
         }
-        cc.mov(x86::word_ptr(arg1, a * 8), temp);
-        cc.mov(x86::word_ptr(arg1, a * 8 + 4), TYPE_INT);
-        cc.mov(temp2, x86::dword_ptr(arg1, a * 8));
+        cc.mov(x86::dword_ptr(arg1, a * 8), temp);
+        cc.mov(x86::dword_ptr(arg1, a * 8 + 4), TYPE_INT);
+        cc.mov(temp2, x86::qword_ptr(arg1, a * 8));
         cc.jmp(nxt);
     }
     cc.bind(err);
@@ -289,24 +310,24 @@ void jit::JitFuncInfo::neg(int a, int b) {
     auto sf = cc.newLabel();
     auto nxt = cc.newLabel();
     {
-        cc.cmp(x86::word_ptr(arg1, b * 8 + 4), TYPE_INT);
+        cc.cmp(x86::dword_ptr(arg1, b * 8 + 4), TYPE_INT);
         cc.jne(sf);
         auto temp = cc.newInt32();
-        cc.mov(temp, x86::word_ptr(arg1, b * 8));
+        cc.mov(temp, x86::dword_ptr(arg1, b * 8));
         cc.neg(temp);
-        cc.mov(x86::word_ptr(arg1, a * 8), temp);
-        cc.mov(x86::word_ptr(arg1, a * 8 + 4), TYPE_INT);
+        cc.mov(x86::dword_ptr(arg1, a * 8), temp);
+        cc.mov(x86::dword_ptr(arg1, a * 8 + 4), TYPE_INT);
         cc.jmp(nxt);
     }
     {
         cc.bind(sf);
-        cc.cmp(x86::word_ptr(arg1, b * 8 + 4), TYPE_FLOAT);
+        cc.cmp(x86::dword_ptr(arg1, b * 8 + 4), TYPE_FLOAT);
         cc.jne(err);
         auto xmm = cc.newXmmSs();
         cc.xorps(xmm, xmm);
-        cc.subss(xmm, x86::word_ptr(arg1, b * 8));
-        cc.movd(x86::dword_ptr(arg1, a * 8), xmm);
-        cc.mov(x86::word_ptr(arg1, a * 8 + 4), TYPE_FLOAT);
+        cc.subss(xmm, x86::dword_ptr(arg1, b * 8));
+        cc.movd(x86::qword_ptr(arg1, a * 8), xmm);
+        cc.mov(x86::dword_ptr(arg1, a * 8 + 4), TYPE_FLOAT);
         cc.jmp(nxt);
     }
     cc.bind(err);
@@ -318,6 +339,7 @@ void jit::JitFuncInfo::neg(int a, int b) {
 }
 
 namespace {
+
 
     asmjit::x86::Gp getArg1() {
 #if defined(_WIN32)

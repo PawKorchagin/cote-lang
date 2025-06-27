@@ -102,10 +102,12 @@ void simple_perfomance_cmp(std::string filename) {
     std::cout << "Time: " << y / 1000 << '.' << y % 1000 << std::endl;
     std::cout << "Jit on\n";
     interpreter::set_jit_on();
+//    print_vm_data(vm_instance());
+//    interpreter::vm_instance().jit_log_level = 2;
     emitter->initVM(vm_instance());
-//    for (int i = 0; i < vm_instance().functions_count; i++) {
-//        vm_instance().functions[i].hotness = 100;
-//    }
+    for (int i = 0; i < vm_instance().functions_count; i++) {
+        vm_instance().functions[i].hotness = 100;
+    }
     auto x = measure1([]() {
         interpreter::run();
     });
@@ -117,9 +119,15 @@ void simple_perfomance_cmp(std::string filename) {
 TEST(PerfomanceJitOnAndOff, Test1_StupidCalculation) {
     simple_perfomance_cmp("../../tests/sources/jitSimple2.ct");
 }
+
 TEST(PerfomanceJitOnAndOff, TestPrimes) {
     simple_perfomance_cmp("../../tests/sources/test4.ct");
 }
+
 TEST(PerfomanceJitOnAndOff, TestEvenOdd) {
     simple_perfomance_cmp("../../tests/sources/jitSimple.ct");
+}
+
+TEST(PerfomanceJitOnAndOff, Playground) {
+    simple_perfomance_cmp("../../tests/sources/jitPlayground.ct");
 }
