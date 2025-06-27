@@ -262,7 +262,7 @@ void jit::JitFuncInfo::modulo_operation(int a, int b, int c) {
             cc.cmp(x86::word_ptr(arg1, c * 8), 0);
             cc.je(err);
             x86::Gp dummy2 = cc.newInt32();
-            cc.xor_(dummy2, dummy2);
+            cc.cdq(dummy2, temp);
             cc.idiv(dummy2, temp, x86::word_ptr(arg1, c * 8));
             cc.mov(temp, dummy2);
         }

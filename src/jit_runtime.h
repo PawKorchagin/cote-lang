@@ -156,7 +156,7 @@ namespace jit {
                 cc.cmp(x86::word_ptr(arg1, c * 8), 0);
                 cc.je(err);
                 x86::Gp dummy2 = cc.newInt32();
-                cc.xor_(dummy2, dummy2);
+                cc.cdq(dummy2, temp);
                 cc.idiv(dummy2, temp, x86::word_ptr(arg1, c * 8));
             } else if constexpr (mtype == interpreter::OP_LT) {
                 cc.cmp(temp, x86::word_ptr(arg1, c * 8));

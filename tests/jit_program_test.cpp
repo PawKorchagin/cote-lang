@@ -99,13 +99,20 @@ TEST(PerfomanceJitOnAndOff, Test1) {
     interpreter::run();
     std::cout << "Jit off\n";
     emitter->initVM(vm_instance());
-    std::cout << "Time: " << measure1([]() {
+    auto y = measure1([]() {
         interpreter::run();
-    }) << std::endl;
+    });
+    std::cout << "Time: " << y << std::endl;
     std::cout << "Jit on\n";
     interpreter::set_jit_on();
     emitter->initVM(vm_instance());
-    std::cout << "Time: " << measure1([]() {
+    for (int i = 0; i < vm_instance().functions_count; i++) {
+        vm_instance().functions[i].hotness = 100;
+    }
+    auto x = measure1([]() {
         interpreter::run();
-    }) << std::endl;
+    });
+    std::cout << "Time: " << x << std::endl;
+    std::cout << "Results: Jit off:  " << y << std::endl;
+    std::cout << "         Jit on:  " << x << std::endl;
 }

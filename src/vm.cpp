@@ -445,9 +445,9 @@ namespace interpreter {
         if (b.is_int() && b.i32 == 0)
             throw std::runtime_error("Division by zero");
         if (a.is_int() && b.is_int())
-            res.set_int(a.i32 + b.i32);
+            res.set_int(a.i32 / b.i32);
         else
-            res.set_float(a.cast_to_float() + b.cast_to_float());
+            res.set_float(a.cast_to_float() / b.cast_to_float());
 
 
         return res;

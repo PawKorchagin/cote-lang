@@ -156,7 +156,9 @@ TEST(SimpleJitTest, TestDiv) {
     jit::JitRuntime rt;
     jit::FuncCompiled func;
     vm.functions[0].arity = 2;
+    vm.jit_log_level = 2;
     rt.compile(vm, vm.functions[0], func);
+
 
 
     Value res;
@@ -164,7 +166,12 @@ TEST(SimpleJitTest, TestDiv) {
     auto temp = *reinterpret_cast<uint64_t *>(&res);
     vm.stack[0].set_int(9.0f);
     vm.stack[1].set_int(3.0f);
-//    return;
+    ASSERT_EQ(func(vm.stack), temp);
+
+    res.set_int(-87);
+    temp = *reinterpret_cast<uint64_t *>(&res);
+    vm.stack[0].set_int(-870);
+    vm.stack[1].set_int(10);
     ASSERT_EQ(func(vm.stack), temp);
 
     res.set_float(3.0f);
