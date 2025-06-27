@@ -14,7 +14,7 @@ namespace parser {
         TOKEN_DIV,
         TOKEN_MOD,
         TOKEN_IDENTIFIER,
-        TOKEN_INT_LIT,
+        TOKEN_NUMBER,
         TOKEN_STR_LIT,
         TOKEN_LBRACKET,
         TOKEN_RBRACKET,

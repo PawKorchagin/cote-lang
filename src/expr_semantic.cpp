@@ -104,6 +104,9 @@ parser::eval_expr(ast::Node *expr, interpreter::BytecodeEmitter &emitter, parser
         case NodeType::IntLit:
             emitter.emit_loadi(vars.push_var(), dynamic_cast<IntLitExpr *>(expr)->number);
             break;
+        case NodeType::FloatLit:
+            emitter.emit_loadf(vars.push_var(), dynamic_cast<FloatLitExpr *>(expr)->number);
+            break;
         case NodeType::Var: {
             std::string mname = dynamic_cast<VarExpr *>(expr)->name;
             if (mname == "nil") {

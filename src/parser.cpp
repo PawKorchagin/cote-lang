@@ -67,29 +67,33 @@ namespace {
     }
 
     std::unique_ptr<Node> pfn_number() {
-        int64_t mul = 1;
-        int start = 0;
-        if (cur.identifier.size() > 1 && cur.identifier[0] == '-') {
-            if (cur.identifier.size() > 20 ||
-                cur.identifier.size() == 20 && cur.identifier > "-9223372036854775808")
-                parser_throws("Invalid number format: " + cur.identifier);
-            mul = -1;
-            start = 1;
-        } else if (cur.identifier.size() > 19 ||
-                   cur.identifier.size() == 19 && cur.identifier > "9223372036854775807")
-            parser_throws("Invalid number format: " + cur.identifier);
-        int64_t res = 0;
-        for (int i = start; i < cur.identifier.size(); ++i) {
-            res *= 10ll;
-            res += (int64_t) (cur.identifier[i] - '0') * mul;
+        auto it = cur.identifier.find('.');
+        if (it == std::string::npos) {
+            int64_t mul = 1;
+            int start = 0;
+            if (cur.identifier.size() >= 1 && cur.identifier[0] == '-') {
+                mul = -1;
+                start = 1;
+            }
+            if (cur.identifier.size() - start == 0) parser_throws(error_msg("invalid number"));
+            int64_t res = 0;
+            for (int i = start; i < cur.identifier.size(); ++i) {
+                res *= 10ll;
+                res += (int64_t) (cur.identifier[i] - '0') * mul;
+            }
+            get_tok();
+            return std::make_unique<IntLitExpr>(res);
+        } else {
+            auto res = std::make_unique<FloatLitExpr>(std::stof(cur.identifier));
+            get_tok();
+            return std::move(res);
         }
-        get_tok();
-        return std::make_unique<IntLitExpr>(res);
+
     }
 
     std::unique_ptr<Node> pfn_unary() {
         get_tok();
-        if (test(TOKEN_INT_LIT)) {
+        if (test(TOKEN_NUMBER)) {
             cur.identifier = "-" + cur.identifier;
             return pfn_number();
         }
@@ -140,7 +144,7 @@ namespace {
     /* TOKEN_DIV */        {nullptr,        ifn_binary, PREC_FACTOR},
     /* TOKEN_MOD */        {nullptr,        ifn_binary, PREC_FACTOR},
     /* TOKEN_IDENTIFIER */ {pfn_identifier, nullptr,    PREC_PRIMARY},
-    /* TOKEN_INT_LIT */    {pfn_number,     nullptr,    PREC_PRIMARY},
+    /* TOKEN_NUMBER */     {pfn_number,     nullptr,    PREC_PRIMARY},
     /* TOKEN_STR_LIT */    {pfn_string_lit,     nullptr,    PREC_PRIMARY},
     /* TOKEN_LBRACKET */   {nullptr,   ifn_arrayget,    PREC_CALL},
     /* TOKEN_RBRACKET */   {nullptr,   nullptr,    PREC_NONE},

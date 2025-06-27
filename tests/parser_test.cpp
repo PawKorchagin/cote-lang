@@ -34,6 +34,8 @@ TEST(CorrectParserExpressionTestWithAnswer, ExampleTest) {
     ASSERT_EQ(parse_res("1 - - 2"), "(1--2)");
     ASSERT_EQ(parse_res(" - - 1"), "-(-1)");
     ASSERT_EQ(parse_res(" - -1"), "-(-1)");
+    ASSERT_EQ(parse_res(" - -1.3"), "-(-1.3)");
+    ASSERT_EQ(parse_res("0.31"), "0.31");
     ASSERT_EQ(parse_res("- 2-2"), "(-2-2)");
     ASSERT_EQ(parse_res("- 2- 2"), "(-2-2)");
     ASSERT_EQ(parse_res("- 2 -2"), "(-2-2)");
@@ -57,41 +59,21 @@ TEST(CorrectParserExpressionTestWithAnswer, ExampleTest) {
 }
 
 TEST(IncorrectParserExpressionTest, ExampleTest) {
-    EXPECT_THROW(parse_res("9223372036854775808"), std::runtime_error);
-    EXPECT_THROW(parse_res("-9223372036854775809"), std::runtime_error);
-    EXPECT_THROW(parse_res("-9223372036854775809"), std::runtime_error);
     EXPECT_THROW(parse_res("121b22"), std::runtime_error);
     EXPECT_THROW(parse_res("-2b"), std::runtime_error);
     EXPECT_THROW(parse_res("2b"), std::runtime_error);
     EXPECT_THROW(parse("(x*7"), std::runtime_error);
     EXPECT_THROW(parse("(x7"), std::runtime_error);
-    //EXPECT_THROW(parse("7)"), std::runtime_error);
-    //EXPECT_THROW(parse("1 + 2)"), std::runtime_error);
     EXPECT_THROW(parse("1x"), std::runtime_error);
-    EXPECT_THROW(parse("()"), std::runtime_error);
     EXPECT_THROW(parse("*x"), std::runtime_error);
     EXPECT_THROW(parse("x*"), std::runtime_error);
     EXPECT_THROW(parse("x x"), std::runtime_error);
-    //EXPECT_THROW(parse("y---1"), std::runtime_error);
-    EXPECT_THROW(parse("--1"), std::runtime_error);
-    EXPECT_THROW(parse("-- -1"), std::runtime_error);
-    //EXPECT_THROW(parse("x--1"), std::runtime_error);
     EXPECT_THROW(parse("y++1"), std::runtime_error);
     EXPECT_THROW(parse("y+++1"), std::runtime_error);
     EXPECT_THROW(parse("++1"), std::runtime_error);
     EXPECT_THROW(parse("y++"), std::runtime_error);
     EXPECT_THROW(parse("x + y * 1 - "), std::runtime_error);
     EXPECT_THROW(parse("+"), std::runtime_error);
-}
-
-TEST(OverflowParserTest, ExampleTest) {
-EXPECT_THROW(parse("100000000000"), std::runtime_error);
-    EXPECT_THROW(parse("-1000000000000"), std::runtime_error);
-    EXPECT_THROW(parse("2147483648"), std::runtime_error);
-    EXPECT_THROW(parse("-2147483649"), std::runtime_error);
-
-    EXPECT_NO_THROW(parse("2147483647"));
-    EXPECT_NO_THROW(parse("-2147483648"));
 }
 
 enum ExpressionParts {

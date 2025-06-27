@@ -11,7 +11,8 @@
 namespace interpreter {
 
 //-- for debugging --
-    inline std::string ins_to_string(uint32_t instr, std::vector<Value>* consti = nullptr) {
+    inline std::string
+    ins_to_string(uint32_t instr, std::vector<Value> *consti = nullptr, std::vector<Value> *constf = nullptr) {
         using namespace interpreter;
 
         OpCode op = static_cast<OpCode>(instr >> OPCODE_SHIFT);
@@ -26,6 +27,11 @@ namespace interpreter {
                     return std::format("mov [{}] C[{}]", a, bx);
                 else
                     return std::format("mov [{}] {}", a, (*consti)[bx].i32);
+            case OP_LOADFLOAT:
+                if (constf == nullptr)
+                    return std::format("mov [{}] C[{}]f", a, bx);
+                else
+                    return std::format("mov [{}] {}f", a, (*constf)[bx].f32);
             case OP_MOVE:
                 return std::format("mov [{}] [{}]", a, b);
             case OP_LOADNIL:
@@ -82,8 +88,6 @@ namespace interpreter {
                 return std::format("arrget [{}] [{}][{}]", a, b, c);
             case OP_ARRSET:
                 return std::format("arrset [{}][{}] [{}]", a, b, c);
-            case OP_LOADFLOAT:
-                return std::format("loadfloat TODO");
             case OP_TAILCALL:
                 return std::format("tailcall [{}]", a);
         }

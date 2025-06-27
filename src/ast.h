@@ -55,6 +55,7 @@ namespace ast {
         Member,
         Return,
         IntLit,
+        FloatLit,
         StringLit,
         Var,
         If,
@@ -414,6 +415,25 @@ namespace ast {
 
         std::unique_ptr<Node> move_upcasting() override {
             return std::make_unique<IntLitExpr>(number); // No move needed for primitive type
+        }
+    };
+
+    class FloatLitExpr : public Node {
+    public:
+        const float number;
+
+        FloatLitExpr(float val) : number(val) {}
+
+        NodeType get_type() const override { return NodeType::FloatLit; }
+
+        [[nodiscard]] std::string to_str1() const override;
+
+        std::unique_ptr<Node> clone_upcasting() const override {
+            return std::make_unique<FloatLitExpr>(number);
+        }
+
+        std::unique_ptr<Node> move_upcasting() override {
+            return std::make_unique<FloatLitExpr>(number); // No move needed for primitive type
         }
     };
 

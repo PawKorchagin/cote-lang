@@ -50,7 +50,7 @@ inline void print_vm_data(interpreter::VMData &vm) {
         if (it != functions.end()) {
             std::cout << "func" << it->second - vm.functions << "(args: " << (int) it->second->arity << "):\n";
         }
-        std::cout << "    " << interpreter::ins_to_string(vm.code[i], &vm.constanti);
+        std::cout << "    " << interpreter::ins_to_string(vm.code[i], &vm.constanti, &vm.constantf);
         if (i == vm.ip) {
             std::cout << " <- ip";
         }

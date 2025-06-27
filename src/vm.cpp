@@ -467,7 +467,7 @@ namespace interpreter {
         if (const_idx >= vm.constantf.size()) {
             throw std::out_of_range("Float constant index out of range");
         }
-        vm.stack[vm.fp + reg].set_float(vm.constanti[const_idx].f32);
+        vm.stack[vm.fp + reg].set_float(vm.constantf[const_idx].f32);
     }
 
     void op_loadfunc(VMData &vm, uint8_t reg, uint32_t const_idx) {
