@@ -10,7 +10,7 @@
 using namespace asmjit;
 using namespace interpreter;
 
-void test_jit1(std::istream &fin, int id) {
+void test_jit1(std::istream &fin, Value res) {
     auto &vm = initVM();
     parser::init_parser(fin, new BytecodeEmitter());
     ASSERT_NO_THROW(parser::parse_program(vm));
@@ -20,6 +20,8 @@ void test_jit1(std::istream &fin, int id) {
     }
     vm.jit_log_level = 1;
     interpreter::run();
+    ASSERT_EQ(*reinterpret_cast<const uint64_t *>(&vm_instance().stack[0]), *reinterpret_cast<uint64_t *>(&res));
+
 }
 
 BytecodeEmitter *test_jit_compile(std::string filename) {
@@ -32,9 +34,22 @@ BytecodeEmitter *test_jit_compile(std::string filename) {
     return emitter;
 }
 
-TEST(ProgramJitTest, Test1) {
-    std::ifstream fin("../../tests/sources/jitSimple2.ct");
-    test_jit1(fin, 0);
+TEST(ProgramJitTest, TestArrSet) {
+    std::ifstream fin("../../tests/sources/arrset1.ct");
+    Value v;
+    v.set_int(10);
+    test_jit1(fin, v);
+    //res
+//    auto temp = *reinterpret_cast<uint64_t *>(&res);
+    //set stack
+}
+
+
+TEST(ProgramJitTest, TestArrGet) {
+    std::ifstream fin("../../tests/sources/arrget1.ct");
+    Value v;
+    v.set_int(1);
+    test_jit1(fin, v);
     //res
 //    auto temp = *reinterpret_cast<uint64_t *>(&res);
     //set stack
@@ -126,6 +141,10 @@ TEST(PerfomanceJitOnAndOff, TestPrimes) {
 
 TEST(PerfomanceJitOnAndOff, TestEvenOdd) {
     simple_perfomance_cmp("../../tests/sources/jitSimple.ct");
+}
+
+TEST(PerfomanceJitOnAndOff, QuadraticSort) {
+    simple_perfomance_cmp("../../tests/sources/test_sort1.ct");
 }
 
 TEST(PerfomanceJitOnAndOff, Playground) {

@@ -36,6 +36,14 @@ void cote_println(interpreter::VMData &vm, int reg, int cnt) {
     std::cout << std::endl;
 }
 
+void cote_rand(interpreter::VMData &vm, int reg, int cnt) {
+    if (cnt != 0) throw std::runtime_error("rand requires no arguments");
+    vm.stack[vm.fp + reg].set_int(rand());
+}
+void cote_throw(interpreter::VMData &vm, int reg, int cnt) {
+    if (cnt != 0) throw std::runtime_error("throw requires no arguments");
+    throw std::runtime_error("cote throw was called");
+}
 // void GC_DROP_MINOR(interpreter::VMDaVta& vm, int reg, int cnt) {
 // vm.gc.rese
 // }
@@ -45,5 +53,7 @@ void cote_stdlib::initStdlib(interpreter::VMData &data, parser::VarManager &vars
     data.natives[vars.add_native("str")] = cote_str;
     data.natives[vars.add_native("println")] = cote_println;
     data.natives[vars.add_native("len")] = cote_len;
+    data.natives[vars.add_native("rand")] = cote_rand;
+    data.natives[vars.add_native("throw")] = cote_throw;
     // data.natives[vars.add_native("GC_DROP_MINOR")] = GC_DROP_MINOR;
 }

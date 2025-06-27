@@ -122,7 +122,7 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
                 break;
             }
             case interpreter::OP_NATIVE_CALL: {
-                info.native_call((void *) vm.natives[a], b, c);
+                info.native_call3((void *) vm.natives[a], b, c);
                 break;
             }
             case interpreter::OP_CALL:
@@ -229,11 +229,11 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
                 break;
             }
             case OP_ARRGET: {
-                info.op_arrget(instr);
+                info.op_arrget(a, b, c);
                 break;
             }
             case OP_ARRSET: {
-                info.op_arrset(instr);
+                info.op_arrset(a, b, c);
                 break;
             }
             default:
@@ -364,9 +364,17 @@ namespace {
         return asmjit::x86::rdx;
 #endif
     }
+
+    asmjit::x86::Gp getArg4() {
+#if defined(_WIN32)
+        return asmjit::x86::r9;
+#else
+        return asmjit::x86::rcx;
+#endif
+    }
 }
 
-void jit::JitFuncInfo::native_call(void *func, int b, int c) {
+void jit::JitFuncInfo::native_call3(void *func, int b, int c) {
     using namespace asmjit;
     cc.push(getArg1());
     cc.push(getArg2());
@@ -385,12 +393,34 @@ void jit::JitFuncInfo::native_call(void *func, int b, int c) {
     cc.pop(getArg1());
 }
 
-void jit::JitFuncInfo::op_arrget(int instr) {
-
+void jit::JitFuncInfo::native_call4(void *func, int a, int b, int c) {
+    using namespace asmjit;
+    cc.push(getArg1());
+    cc.push(getArg2());
+    cc.push(getArg3());
+    cc.push(getArg4());
+    cc.push(x86::rax);//save registers
+    cc.sub(x86::rsp, 32);//move rsp
+    cc.mov(getArg1(), &vm);//set up args...
+    cc.mov(getArg2(), a);
+    cc.mov(getArg3(), b);
+    cc.mov(getArg4(), c);
+    cc.mov(x86::rax, func);
+    cc.call(x86::rax);//call
+    cc.add(x86::rsp, 32);//mov back rsp
+    cc.pop(x86::rax);//restore registers
+    cc.pop(getArg4());
+    cc.pop(getArg3());
+    cc.pop(getArg2());
+    cc.pop(getArg1());
 }
 
-void jit::JitFuncInfo::op_arrset(int instr) {
+void jit::JitFuncInfo::op_arrget(int a, int b, int c) {
+    native_call4((void *) interpreter::op_arrget, a, b, c);
+}
 
+void jit::JitFuncInfo::op_arrset(int a, int b, int c) {
+    native_call4((void *) interpreter::op_arrset, a, b, c);
 }
 
 

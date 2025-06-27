@@ -72,11 +72,13 @@ namespace jit {
 
         void modulo_operation(int a, int b, int c);
 
-        void native_call(void *func, int b, int c);
+        void native_call3(void *func, int b, int c);
 
-        void op_arrget(int instr);
+        void native_call4(void *func, int a, int b, int c);
 
-        void op_arrset(int instr);
+        void op_arrget(int a, int b, int c);
+
+        void op_arrset(int a, int b, int c);
 
         template<bool jmpT>
         void cjmp(int a, const asmjit::Label &label) {

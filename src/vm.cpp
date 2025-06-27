@@ -32,7 +32,7 @@ namespace interpreter {
             T++;
 
             if (with_gc && T >= GC_CALL_INTERVAL) {
-                vm.gc.call();
+//                vm.gc.call();
                 T = 0;
             }
 

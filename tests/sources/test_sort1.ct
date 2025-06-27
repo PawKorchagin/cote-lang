@@ -22,5 +22,6 @@ fn main() {
         cnt += arr[i] <= arr[i + 1];
         println(arr[i]);
     }
+    if (cnt - n + 1) throw();
     return cnt - n + 1;
 }
