@@ -74,19 +74,19 @@ auto measure1(T func) {
     using std::chrono::high_resolution_clock;
     using std::chrono::duration_cast;
     using std::chrono::duration;
-    using std::chrono::milliseconds;
+    using std::chrono::microseconds;
 
     auto t1 = high_resolution_clock::now();
     func();
     auto t2 = high_resolution_clock::now();
 
     /* Getting number of milliseconds as an integer. */
-    return duration_cast<milliseconds>(t2 - t1).count();
+    return duration_cast<microseconds>(t2 - t1).count();
 }
 
-TEST(PerfomanceJitOnAndOff, Test1) {
+void simple_perfomance_cmp(std::string filename) {
     interpreter::set_jit_off();
-    auto emitter = test_jit_compile("../../tests/sources/jitSimple2.ct");
+    auto emitter = test_jit_compile(filename);
     //Warm up 1
     std::cout << "Warm up 1\n";
     emitter->initVM(vm_instance());
@@ -94,25 +94,32 @@ TEST(PerfomanceJitOnAndOff, Test1) {
     std::cout << "Warm up 2\n";
     emitter->initVM(vm_instance());
     interpreter::run();
-    std::cout << "Warm up 3\n";
-    emitter->initVM(vm_instance());
-    interpreter::run();
     std::cout << "Jit off\n";
     emitter->initVM(vm_instance());
     auto y = measure1([]() {
         interpreter::run();
     });
-    std::cout << "Time: " << y << std::endl;
+    std::cout << "Time: " << y / 1000 << '.' << y % 1000 << std::endl;
     std::cout << "Jit on\n";
     interpreter::set_jit_on();
     emitter->initVM(vm_instance());
-    for (int i = 0; i < vm_instance().functions_count; i++) {
-        vm_instance().functions[i].hotness = 100;
-    }
+//    for (int i = 0; i < vm_instance().functions_count; i++) {
+//        vm_instance().functions[i].hotness = 100;
+//    }
     auto x = measure1([]() {
         interpreter::run();
     });
-    std::cout << "Time: " << x << std::endl;
-    std::cout << "Results: Jit off:  " << y << std::endl;
-    std::cout << "         Jit on:  " << x << std::endl;
+    std::cout << "Time: " << x / 1000 << '.' << x % 1000 << std::endl;
+    std::cout << "Results: Jit off:  " << y / 1000 << '.' << y % 1000 << std::endl;
+    std::cout << "         Jit on:  " << x / 1000 << '.' << x % 1000 << std::endl;
+}
+
+TEST(PerfomanceJitOnAndOff, Test1_StupidCalculation) {
+    simple_perfomance_cmp("../../tests/sources/jitSimple2.ct");
+}
+TEST(PerfomanceJitOnAndOff, TestPrimes) {
+    simple_perfomance_cmp("../../tests/sources/test4.ct");
+}
+TEST(PerfomanceJitOnAndOff, TestEvenOdd) {
+    simple_perfomance_cmp("../../tests/sources/jitSimple.ct");
 }
