@@ -35,28 +35,20 @@ TEST(SimpleJitTest, TestAdd) {
     vm.stack[1].set_int(3.0f);
 //    return;
     ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
 
-    std::cout << func(vm.stack) << std::endl;
 
     res.set_float(5.0);
     temp = *reinterpret_cast<uint64_t *>(&res);
     vm.stack[0].set_float(2.0f);
     vm.stack[1].set_float(3.0f);
     ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
 
-    std::cout << func(vm.stack) << std::endl;
 
     res.set_nil();
     res.i32 += 1;
     temp = *reinterpret_cast<uint64_t *>(&res);
     vm.stack[0].set_float(2.0f);
     vm.stack[1].set_int(3.0f);
-    ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
     ASSERT_EQ(func(vm.stack), temp);
 
 }
@@ -88,28 +80,18 @@ TEST(SimpleJitTest, TestSub) {
     vm.stack[1].set_int(5.0f);
 //    return;
     ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
-
-    std::cout << func(vm.stack) << std::endl;
 
     res.set_float(-3.0);
     temp = *reinterpret_cast<uint64_t *>(&res);
     vm.stack[0].set_float(2.0f);
     vm.stack[1].set_float(5.0f);
     ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
-
-    std::cout << func(vm.stack) << std::endl;
 
     res.set_nil();
     res.i32 += 1;
     temp = *reinterpret_cast<uint64_t *>(&res);
     vm.stack[0].set_float(2.0f);
     vm.stack[1].set_int(5.0f);
-    ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
     ASSERT_EQ(func(vm.stack), temp);
 
 }
@@ -141,28 +123,18 @@ TEST(SimpleJitTest, TestMul) {
     vm.stack[1].set_int(3.0f);
 //    return;
     ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
-
-    std::cout << func(vm.stack) << std::endl;
 
     res.set_float(6.0f);
     temp = *reinterpret_cast<uint64_t *>(&res);
     vm.stack[0].set_float(2.0f);
     vm.stack[1].set_float(3.0f);
     ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
-
-    std::cout << func(vm.stack) << std::endl;
 
     res.set_nil();
     res.i32 += 1;
     temp = *reinterpret_cast<uint64_t *>(&res);
     vm.stack[0].set_float(2.0f);
     vm.stack[1].set_int(3.0f);
-    ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
     ASSERT_EQ(func(vm.stack), temp);
 
 }
@@ -194,20 +166,12 @@ TEST(SimpleJitTest, TestDiv) {
     vm.stack[1].set_int(3.0f);
 //    return;
     ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
-
-    std::cout << func(vm.stack) << std::endl;
 
     res.set_float(3.0f);
     temp = *reinterpret_cast<uint64_t *>(&res);
     vm.stack[0].set_float(9.0f);
     vm.stack[1].set_float(3.0f);
     ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
-
-    std::cout << func(vm.stack) << std::endl;
 
     res.set_nil();
     res.i32 += 1;
@@ -215,24 +179,18 @@ TEST(SimpleJitTest, TestDiv) {
     vm.stack[0].set_float(9.0f);
     vm.stack[1].set_int(3.0f);
     ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
 
     res.set_nil();
     res.i32 += 1;
     temp = *reinterpret_cast<uint64_t *>(&res);
     vm.stack[0].set_float(9.0f);
     vm.stack[1].set_int(3.0f);
-    ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
     ASSERT_EQ(func(vm.stack), temp);
 
     res.set_float(std::numeric_limits<float>::infinity());
     temp = *reinterpret_cast<uint64_t *>(&res);
     vm.stack[0].set_float(9.0f);
     vm.stack[1].set_float(0.0f);
-    ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
     ASSERT_EQ(func(vm.stack), temp);
 
     res.set_nil();
@@ -241,10 +199,6 @@ TEST(SimpleJitTest, TestDiv) {
     vm.stack[0].set_int(9.0f);
     vm.stack[1].set_int(0.0f);
     ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
-    ASSERT_EQ(func(vm.stack), temp);
-
-
 }
 
 TEST(SimpleJitTest, TestModulo) {

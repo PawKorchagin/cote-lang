@@ -19,7 +19,6 @@ void cote_len(interpreter::VMData &vm, int reg, int cnt) {
 }
 
 void cote_print(interpreter::VMData &vm, int reg, int cnt) {
-    std::cerr << "HERE\n";
     int off = vm.fp + reg;
     for (int i = 0; i < cnt; ++i) {
         auto &cur = vm.stack[off + i];

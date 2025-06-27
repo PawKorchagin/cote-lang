@@ -31,9 +31,9 @@ namespace interpreter {
         while (true) {
             T++;
 
-            if (with_gc && T % 10 == 0) {
-                // vm.gc.call(vm.stack, vm.get_sp());
+            if (with_gc && T >= GC_CALL_INTERVAL) {
                 vm.gc.call();
+                T = 0;
             }
 
             uint32_t instr = vm.code[vm.ip++];
@@ -251,6 +251,13 @@ namespace interpreter {
         vm.stack[vm.fp + dst].set_int(cmp<true>(v1, v2));
     }
 
+    void invoke_jit(VMData &vm, Function &func) {
+        func.jitted(vm.stack + vm.fp);
+        vm.fp = vm.call_stack.top().base_ptr;
+        vm.ip = vm.call_stack.top().return_ip;
+        vm.call_stack.pop();
+    }
+
     void op_call(VMData &vm, uint8_t func_idx, uint8_t first_arg_ind, uint8_t num_args) {
         if (func_idx >= FUNCTIONS_MAX) {
             throw std::out_of_range("Function index out of range");
@@ -273,8 +280,7 @@ namespace interpreter {
             vm.stack[i].set_nil();
         }
         if (func.jitted != nullptr) {
-            func.jitted(vm.stack + vm.fp);
-            vm.call_stack.pop();
+            invoke_jit(vm, func);
             return;
         }
         func.hotness += 1;
@@ -292,8 +298,7 @@ namespace interpreter {
                 if (vm.jit_log_level > 0) std::cerr << "Discard hot at: " << func.entry_point << std::endl;
             } else {
                 if (vm.jit_log_level > 0) std::cerr << "Compiled hot at: " << func.entry_point << std::endl;
-                func.jitted(vm.stack);
-                vm.call_stack.pop();
+                invoke_jit(vm, func);
                 return;
             }
         }
@@ -701,11 +706,11 @@ namespace interpreter {
         return jit_on;
     }
 
-    void vm_use_jit() {
+    void set_jit_on() {
         jit_on = true;
     }
 
-    void vm_dont_use_jit() {
+    void set_jit_off() {
         jit_on = false;
     }
 

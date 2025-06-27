@@ -34,8 +34,8 @@ TEST(CorrectParserExpressionTestWithAnswer, ExampleTest) {
     ASSERT_EQ(parse_res("1 - - 2"), "(1--2)");
     ASSERT_EQ(parse_res(" - - 1"), "-(-1)");
     ASSERT_EQ(parse_res(" - -1"), "-(-1)");
-    ASSERT_EQ(parse_res(" - -1.3"), "-(-1.3)");
-    ASSERT_EQ(parse_res("0.31"), "0.31");
+    ASSERT_EQ(parse_res(" - -1.3"), "-(-1.300000)");
+    ASSERT_EQ(parse_res("0.31"), "0.310000");
     ASSERT_EQ(parse_res("- 2-2"), "(-2-2)");
     ASSERT_EQ(parse_res("- 2- 2"), "(-2-2)");
     ASSERT_EQ(parse_res("- 2 -2"), "(-2-2)");

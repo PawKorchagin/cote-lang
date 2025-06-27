@@ -125,6 +125,7 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
             case interpreter::OP_RETURNNIL: {
                 auto v = info.cc.newUInt64();
                 info.cc.movabs(v, OBJ_NIL);
+                info.cc.mov(x86::dword_ptr(info.arg1), v);
                 info.cc.ret(v);
             }
                 break;

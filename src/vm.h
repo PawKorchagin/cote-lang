@@ -185,7 +185,8 @@ namespace interpreter {
     static constexpr uint32_t SBX_SHIFT = 0;
     static constexpr uint32_t J_ZERO = BX_ARG >> 1;
 
-    static constexpr int HOT_THRESHOLD = 3;
+    static constexpr int HOT_THRESHOLD = 10;
+    static constexpr int GC_CALL_INTERVAL = 2000;
 
     // template<uint16_t GC_YOUNG_THRESHOLD=50>
     struct VMData {
@@ -223,9 +224,9 @@ namespace interpreter {
 
     bool is_jit_on();
 
-    void vm_use_jit();
+    void set_jit_on();
 
-    void vm_dont_use_jit();
+    void set_jit_off();
 
 // Core VM functions
     void run(bool with_gc = true);

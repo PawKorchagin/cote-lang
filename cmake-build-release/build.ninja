@@ -934,8 +934,15 @@ build tests/CMakeFiles/cote_test.dir/parser_test_param.cpp.obj: CXX_COMPILER__co
   OBJECT_DIR = tests\CMakeFiles\cote_test.dir
   OBJECT_FILE_DIR = tests\CMakeFiles\cote_test.dir
 
-build tests/CMakeFiles/cote_test.dir/jit_tests.cpp.obj: CXX_COMPILER__cote_test_unscanned_Release C$:/proj/cpp/Crypto/crypt-compiler/tests/jit_tests.cpp || cmake_object_order_depends_target_cote_test
-  DEP_FILE = tests\CMakeFiles\cote_test.dir\jit_tests.cpp.obj.d
+build tests/CMakeFiles/cote_test.dir/jit_basic_tests.cpp.obj: CXX_COMPILER__cote_test_unscanned_Release C$:/proj/cpp/Crypto/crypt-compiler/tests/jit_basic_tests.cpp || cmake_object_order_depends_target_cote_test
+  DEP_FILE = tests\CMakeFiles\cote_test.dir\jit_basic_tests.cpp.obj.d
+  FLAGS = -O3 -DNDEBUG -std=gnu++20 -fdiagnostics-color=always -DASMJIT_STATIC
+  INCLUDES = -IC:/proj/cpp/Crypto/crypt-compiler -IC:/proj/cpp/Crypto/crypt-compiler/src -IC:/proj/cpp/Crypto/crypt-compiler/libs/asmjit/src -isystem C:/proj/cpp/Crypto/crypt-compiler/cmake-build-release/_deps/googletest-src/googletest/include -isystem C:/proj/cpp/Crypto/crypt-compiler/cmake-build-release/_deps/googletest-src/googletest
+  OBJECT_DIR = tests\CMakeFiles\cote_test.dir
+  OBJECT_FILE_DIR = tests\CMakeFiles\cote_test.dir
+
+build tests/CMakeFiles/cote_test.dir/jit_program_test.cpp.obj: CXX_COMPILER__cote_test_unscanned_Release C$:/proj/cpp/Crypto/crypt-compiler/tests/jit_program_test.cpp || cmake_object_order_depends_target_cote_test
+  DEP_FILE = tests\CMakeFiles\cote_test.dir\jit_program_test.cpp.obj.d
   FLAGS = -O3 -DNDEBUG -std=gnu++20 -fdiagnostics-color=always -DASMJIT_STATIC
   INCLUDES = -IC:/proj/cpp/Crypto/crypt-compiler -IC:/proj/cpp/Crypto/crypt-compiler/src -IC:/proj/cpp/Crypto/crypt-compiler/libs/asmjit/src -isystem C:/proj/cpp/Crypto/crypt-compiler/cmake-build-release/_deps/googletest-src/googletest/include -isystem C:/proj/cpp/Crypto/crypt-compiler/cmake-build-release/_deps/googletest-src/googletest
   OBJECT_DIR = tests\CMakeFiles\cote_test.dir
@@ -963,7 +970,7 @@ build tests/CMakeFiles/cote_test.dir/gc_test.cpp.obj: CXX_COMPILER__cote_test_un
 #############################################
 # Link the executable tests\cote_test.exe
 
-build tests/cote_test.exe tests/cote_test[1]_tests.cmake | ${cmake_ninja_workdir}tests/cote_test[1]_tests.cmake: CXX_EXECUTABLE_LINKER__cote_test_Release tests/CMakeFiles/cote_test.dir/parser_test.cpp.obj tests/CMakeFiles/cote_test.dir/vm_test.cpp.obj tests/CMakeFiles/cote_test.dir/parser_test_param.cpp.obj tests/CMakeFiles/cote_test.dir/jit_tests.cpp.obj tests/CMakeFiles/cote_test.dir/compile_test_param.cpp.obj tests/CMakeFiles/cote_test.dir/gc_test.cpp.obj | src/libcote_lib.a lib/libgtest_main.a libs/asmjit/libasmjit.a lib/libgtest.a || lib/libgtest.a lib/libgtest_main.a libs/asmjit/libasmjit.a src/libcote_lib.a
+build tests/cote_test.exe tests/cote_test[1]_tests.cmake | ${cmake_ninja_workdir}tests/cote_test[1]_tests.cmake: CXX_EXECUTABLE_LINKER__cote_test_Release tests/CMakeFiles/cote_test.dir/parser_test.cpp.obj tests/CMakeFiles/cote_test.dir/vm_test.cpp.obj tests/CMakeFiles/cote_test.dir/parser_test_param.cpp.obj tests/CMakeFiles/cote_test.dir/jit_basic_tests.cpp.obj tests/CMakeFiles/cote_test.dir/jit_program_test.cpp.obj tests/CMakeFiles/cote_test.dir/compile_test_param.cpp.obj tests/CMakeFiles/cote_test.dir/gc_test.cpp.obj | src/libcote_lib.a lib/libgtest_main.a libs/asmjit/libasmjit.a lib/libgtest.a || lib/libgtest.a lib/libgtest_main.a libs/asmjit/libasmjit.a src/libcote_lib.a
   FLAGS = -O3 -DNDEBUG
   LINK_LIBRARIES = src/libcote_lib.a  lib/libgtest_main.a  libs/asmjit/libasmjit.a  lib/libgtest.a  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
   OBJECT_DIR = tests\CMakeFiles\cote_test.dir

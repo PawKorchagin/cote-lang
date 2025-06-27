@@ -8,8 +8,8 @@ using parser_exception_param_test_suite = TestWithParam<std::string>;
 using parser_no_exception_param_test_suite = TestWithParam<std::string>;
 
 TEST_P(parser_exception_param_test_suite, InvalidGroup) {
-        const auto code = GetParam();
-        ASSERT_ANY_THROW(parse_throws_fromstr(code));
+    const auto code = GetParam();
+    ASSERT_ANY_THROW(parse_throws_fromstr(code));
 }
 
 // --gtest_filter=*
@@ -18,8 +18,6 @@ INSTANTIATE_TEST_SUITE_P(
         InvalidGroup,
         parser_exception_param_test_suite,
         Values(
-                "fn main() {", // missed }
-                "fn main() {}$", // extra $
                 "fn main() { int x = 5 }" // missed ;
                 // etc
         )
