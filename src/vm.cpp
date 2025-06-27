@@ -8,31 +8,11 @@
 
 #include "gc.h"
 #include "heap.h"
+#include "jit_runtime.h"
 
 namespace {
     interpreter::VMData vm_instance_{};
-
-    //if already in
-    //TODO: one of the most important functions
-    //    void update_hot(util::int_int_map &mp, interpreter::VMData &vm, int ip, int add = 0) {
-    //        using namespace interpreter;
-    //        util::int_int_map_itr it = util::int_int_map_get_or_insert(&mp, ip, 1);
-    //TODO: check that not end(out of mem)
-    //already hot => do not increase
-    //        if (it.data->val >= HOT_THRESHOLD)
-    //            return;
-    //
-    //        it.data->val += 1;
-    //        //became hot => need to record
-    //        if (it.data->val >= HOT_THRESHOLD) {
-    //            // vm.trace_head[ip] - is empty, because this position was never recorded
-    //            auto entry = new jit::TraceEntry();
-    //            util::int_ptr_map_insert(&vm.trace_head, ip, entry);
-    //            //TODO: check that not end(out of mem)
-    //            //record trace
-    //            record_fully(*entry);
-    //        }
-    //    }
+    bool jit_on = true;
 }
 
 namespace interpreter {
@@ -46,6 +26,7 @@ namespace interpreter {
         vm.gc.init(vm.stack, &vm.call_stack, &vm.fp);
 
         int T = 0;
+        vm.jitrt = new jit::JitRuntime();
 
         while (true) {
             T++;
@@ -291,6 +272,31 @@ namespace interpreter {
         for (int i = vm.fp + (uint32_t) num_args; i < sp; ++i) {
             vm.stack[i].set_nil();
         }
+        if (func.jitted != nullptr) {
+            func.jitted(vm.stack + vm.fp);
+            vm.call_stack.pop();
+            return;
+        }
+        func.hotness += 1;
+        if (is_jit_on() && func.hotness >= HOT_THRESHOLD) {
+            if (func.banned) {
+                run();
+                return;
+            }
+            if (vm.jit_log_level > 0) {
+                std::cerr << "Hot function at: " << func.entry_point << std::endl;
+            }
+            func.jitted = vm.jitrt->compile_safe(vm, func);
+            if (func.jitted == nullptr) {
+                func.banned = true;
+                if (vm.jit_log_level > 0) std::cerr << "Discard hot at: " << func.entry_point << std::endl;
+            } else {
+                if (vm.jit_log_level > 0) std::cerr << "Compiled hot at: " << func.entry_point << std::endl;
+                func.jitted(vm.stack);
+                vm.call_stack.pop();
+                return;
+            }
+        }
         run();
     }
 
@@ -382,7 +388,7 @@ namespace interpreter {
     Value add_values(const Value &a, const Value &b) {
         Value res;
 
-        if (a.get_class() != b.get_class())  throw std::runtime_error("addition expects same types");
+        if (a.get_class() != b.get_class()) throw std::runtime_error("addition expects same types");
         if (!a.is_float() && !a.is_int() ||
             !b.is_float() && !b.is_int())
             throw std::runtime_error("addition is defined for numeric types only");
@@ -396,7 +402,7 @@ namespace interpreter {
 
     Value sub_values(const Value &a, const Value &b) {
         Value res;
-        if (a.get_class() != b.get_class())  throw std::runtime_error("subtraction expects same types");
+        if (a.get_class() != b.get_class()) throw std::runtime_error("subtraction expects same types");
 
         if (!a.is_float() && !a.is_int() ||
             !b.is_float() && !b.is_int())
@@ -411,7 +417,7 @@ namespace interpreter {
 
     Value mul_values(const Value &a, const Value &b) {
         Value res;
-        if (a.get_class() != b.get_class())  throw std::runtime_error("multiplication expects same types");
+        if (a.get_class() != b.get_class()) throw std::runtime_error("multiplication expects same types");
 
         if (!a.is_float() && !a.is_int() ||
             !b.is_float() && !b.is_int())
@@ -425,7 +431,7 @@ namespace interpreter {
     }
 
     Value div_values(const Value &a, const Value &b) {
-        if (a.get_class() != b.get_class())  throw std::runtime_error("division expects same types");
+        if (a.get_class() != b.get_class()) throw std::runtime_error("division expects same types");
         if (!a.is_float() && !a.is_int() ||
             !b.is_float() && !b.is_int())
             throw std::runtime_error("division is defined for numeric types only");
@@ -566,13 +572,12 @@ namespace interpreter {
 
 
     bool is_truthy(const Value &val) {
-        if (val.is_object())
-            return !val.is_nil(); // Objects are always truthy(except nil)
+        if (val.is_nil()) return false;
         if (val.is_int())
             return val.i32 != 0;
         if (val.is_float())
             return val.f32 != 0.0f;
-        return false;
+        return true;//it's an object and is not nil
     }
 
     uint32_t opcode(OpCode code, uint8_t a, uint32_t bx) {
@@ -674,7 +679,7 @@ namespace interpreter {
                 break;
             case OP_CALL:
                 std::cout << "CALL        func[" << (int) a << "](args R" << (int) b << "..R" << (int) (b + c - 1)
-                        << ")";
+                          << ")";
                 break;
             case OP_RETURN:
                 std::cout << "RETURN      return R" << (int) a;
@@ -690,6 +695,18 @@ namespace interpreter {
                 break;
         }
         std::cout << std::endl;
+    }
+
+    bool is_jit_on() {
+        return jit_on;
+    }
+
+    void vm_use_jit() {
+        jit_on = true;
+    }
+
+    void vm_dont_use_jit() {
+        jit_on = false;
     }
 
     void init_vm(std::istream &in) {

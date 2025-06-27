@@ -16,6 +16,7 @@ namespace jit {
     struct Trace;
     struct TraceEntry;
     enum class TraceResult;
+    struct JitRuntime;
 }
 
 namespace interpreter {
@@ -73,11 +74,11 @@ namespace interpreter {
         // Equality comparison
         // Args: a - result register, b - first operand, c - second operand
         // Behavior: registers[a] = (registers[b] == registers[c]) ? 1 : 0
-        OP_EQ,//TODO
+        OP_EQ,
 
         // Args: a - result register, b - first operand, c - second operand
         // Behavior: registers[a] = (registers[b] != registers[c]) ? 1 : 0
-        OP_NEQ,//TODO
+        OP_NEQ,
 
         // Less-than comparison
         // Args: Same as OP_EQ
@@ -97,12 +98,12 @@ namespace interpreter {
         // Jump if true
         // Args: a - condition register, sbx - signed offset
         // Behavior: if (registers[a]) ip += sbx
-        OP_JMPT,//TODO
+        OP_JMPT,
 
         // Jump if false
         // Args: Same as OP_JMPT
         // Behavior: if (!registers[a]) ip += sbx
-        OP_JMPF,//TODO
+        OP_JMPF,
 
         // Function call
         // Args:
@@ -121,7 +122,7 @@ namespace interpreter {
         // a - native function index
         // Behavior:
         // natives[a](vm)
-        OP_NATIVE_CALL,//TODO
+        OP_NATIVE_CALL,
 
         // Call function dynamically
         // Args:
@@ -150,14 +151,13 @@ namespace interpreter {
         // Behavior: terminates VM execution
         OP_HALT,
 
-        OP_LOADFUNC,//TODO
+        OP_LOADFUNC,
         OP_LOADFLOAT,
-        OP_ALLOC,//TODO
+        OP_ALLOC,
         OP_ARRGET,//TODO
         OP_ARRSET,//TODO
         OP_TAILCALL,
     };
-    //TODO: parse float in parser
 
 
     typedef void (*NativeFunction)(VMData &, int reg, int cnt);
@@ -184,8 +184,6 @@ namespace interpreter {
     static constexpr uint32_t C_SHIFT = 0;
     static constexpr uint32_t SBX_SHIFT = 0;
     static constexpr uint32_t J_ZERO = BX_ARG >> 1;
-    static constexpr int VM_NORMAL = 0;
-    static constexpr int VM_RECORD = 1;
 
     static constexpr int HOT_THRESHOLD = 3;
 
@@ -218,13 +216,16 @@ namespace interpreter {
         uint32_t sp = 0;  // Stack pointer
         uint32_t fp = 0;  // Frame pointer
         std::stack<CallFrame> call_stack;
-
-        // -- JIT data --
-//        util::int_ptr_map trace_head;
-        jit::Trace *trace = nullptr;
-
+        jit::JitRuntime *jitrt;
+        int jit_log_level = 0;
 
     };
+
+    bool is_jit_on();
+
+    void vm_use_jit();
+
+    void vm_dont_use_jit();
 
 // Core VM functions
     void run(bool with_gc = true);

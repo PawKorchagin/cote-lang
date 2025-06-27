@@ -13,39 +13,32 @@ void cote_len(interpreter::VMData &vm, int reg, int cnt) {
     if (cnt != 1) throw std::runtime_error("expected only one arg: array");
     auto &cur = vm.stack[vm.fp + reg];
     if (!cur.is_array()) throw std::runtime_error("expected only one arg: array");
-    auto* obj = heap::mem.at(cur.object_ptr);
+    auto *obj = heap::mem.at(cur.object_ptr);
     assert(obj);
-    vm.stack[vm.fp + reg].set_int( static_cast<int>(obj->get_len()));
+    vm.stack[vm.fp + reg].set_int(static_cast<int>(obj->get_len()));
 }
 
 void cote_print(interpreter::VMData &vm, int reg, int cnt) {
+    std::cerr << "HERE\n";
     int off = vm.fp + reg;
     for (int i = 0; i < cnt; ++i) {
         auto &cur = vm.stack[off + i];
         if (cur.is_callable()) std::cout << "callable " << cur.i32;
-        else if (cur.is_int()) std::cout << cur.i32;
-        else if (cur.is_float()) std::cout << cur.f32;
-        else if (cur.is_nil()) std::cout << "nil";
+        else if (cur.is_int()) std::cout << cur.i32 << ' ';
+        else if (cur.is_float()) std::cout << cur.f32 << ' ';
+        else if (cur.is_nil()) std::cout << "nil ";
         else throw std::runtime_error("todo");
     }
 }
 
 
 void cote_println(interpreter::VMData &vm, int reg, int cnt) {
-    int off = vm.fp + reg;
-    for (int i = 0; i < cnt; ++i) {
-        auto &cur = vm.stack[off + i];
-        if (cur.is_callable()) std::cout << "callable " << cur.i32 << ' ';
-        else if (cur.is_int()) std::cout << cur.i32 << ' ';
-        else if (cur.is_float()) std::cout << cur.f32 << ' ';
-        else if (cur.is_nil()) std::cout << "nil" << ' ';
-        else throw std::runtime_error("todo or println dont know what is it");
-    }
+    cote_print(vm, reg, cnt);
     std::cout << std::endl;
 }
 
 // void GC_DROP_MINOR(interpreter::VMDaVta& vm, int reg, int cnt) {
-    // vm.gc.rese
+// vm.gc.rese
 // }
 
 void cote_stdlib::initStdlib(interpreter::VMData &data, parser::VarManager &vars) {

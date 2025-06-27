@@ -16,6 +16,7 @@ inline void compile_program(std::istream &fin, const std::string &file_name = "c
     ast::Program p;
     ASSERT_NO_THROW(p = parser::parse_program(vm));
     print_vm_data(vm);
+    vm.jit_log_level = 1;
     interpreter::run(true);
     ASSERT_TRUE(vm.call_stack.empty());
     ASSERT_EQ(vm.stack[0].i32, 0);
@@ -34,6 +35,13 @@ inline void compile_program(std::istream &fin, const std::string &file_name = "c
 TEST(SimpleCompileFromFileOk, TestFloatArithmetic) {
     ASSERT_NO_THROW({
                         std::ifstream fin("../../tests/sources/floatarithmetic.ct");
+                        return compile_program(fin);
+                    });
+}
+
+TEST(SimpleCompileFromFileOk, TestJit1) {
+    ASSERT_NO_THROW({
+                        std::ifstream fin("../../tests/sources/jitSimple.ct");
                         return compile_program(fin);
                     });
 }

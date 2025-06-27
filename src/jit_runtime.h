@@ -37,7 +37,7 @@ namespace jit {
         SUCCESS,
     };
 
-    using FuncCompiled = uint64_t (*)(void *, void *);
+    using FuncCompiled = uint64_t (*)(void *);
 
     static constexpr uint64_t HIGH32 = 18446744069414584320ull;
     static constexpr uint64_t ERR_TYPE = interpreter::OBJ_NIL + 1;
@@ -46,8 +46,9 @@ namespace jit {
 
 
         CompilationResult
-        compile(interpreter::VMData &vm, interpreter::Function &func, FuncCompiled &res, int osr);
+        compile(interpreter::VMData &vm, interpreter::Function &func, FuncCompiled &res);
 
+        FuncCompiled compile_safe(interpreter::VMData &vm, interpreter::Function &func);
 
     private:
         asmjit::JitRuntime asmrt;
@@ -55,12 +56,15 @@ namespace jit {
 
     struct JitFuncInfo {
         asmjit::JitRuntime &asmrt;
+        interpreter::VMData &vm;
         asmjit::CodeHolder &holder;
         asmjit::x86::Compiler cc;
         asmjit::x86::Gp arg1, arg2;
 
-        inline JitFuncInfo(asmjit::JitRuntime &jit, asmjit::CodeHolder &holder) : asmrt(jit), holder(holder),
-                                                                                  cc(&this->holder) {}
+        inline JitFuncInfo(asmjit::JitRuntime &jit, asmjit::CodeHolder &holder, interpreter::VMData &vm) : asmrt(jit),
+                                                                                                           holder(holder),
+                                                                                                           cc(&this->holder),
+                                                                                                           vm(vm) {}
 
         template<int mtype>
         void
@@ -68,14 +72,57 @@ namespace jit {
 
         void modulo_operation(int a, int b, int c);
 
-        template<bool jmpT>
-        void cjmp(int a, int sbx) {
+        void native_call(void *func, int b, int c);
 
+        inline void op_arrget(int instr) { throw std::runtime_error("not supported"); }
+
+        inline void op_arrset(int instr) { throw std::runtime_error("not supported"); }
+
+        template<bool jmpT>
+        void cjmp(int a, const asmjit::Label &label) {
+            using namespace asmjit;
+            using namespace interpreter;
+            auto sf = cc.newLabel();
+            auto obj = cc.newLabel();
+            auto nxt = cc.newLabel();
+            {
+                cc.cmp(x86::word_ptr(arg1, a * 8 + 4), TYPE_INT);
+                cc.jne(sf);
+                cc.cmp(x86::word_ptr(arg1, a * 8), 0);
+                if constexpr (jmpT) {
+                    cc.jne(label);
+                } else {
+                    cc.je(label);
+                }
+                cc.jmp(nxt);
+            }
+            {
+                cc.bind(sf);
+                const float cnst = 0.0f;
+                cc.cmp(x86::word_ptr(arg1, a * 8 + 4), TYPE_FLOAT);
+                cc.jne(obj);
+                cc.cmp(x86::word_ptr(arg1, a * 8), *reinterpret_cast<const int *>(&cnst));
+                if constexpr (jmpT) {
+                    cc.jne(label);
+                } else {
+                    cc.je(label);
+                }
+                cc.jmp(nxt);
+            }
+            {
+                cc.bind(obj);
+                cc.cmp(x86::word_ptr(arg1, a * 8 + 4), TYPE_OBJ);
+                if constexpr (jmpT) {
+                    cc.jne(label);
+                } else {
+                    cc.je(label);
+                }
+                cc.jmp(nxt);
+            }
+            cc.bind(nxt);
         }
 
         void neg(int a, int b);
-
-        void bailout();
     };
 
     template<int mtype>

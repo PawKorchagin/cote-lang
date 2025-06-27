@@ -19,12 +19,12 @@ namespace {
 
 jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
                                                 interpreter::Function &func,
-                                                jit::FuncCompiled &res, int osr_size) {
+                                                jit::FuncCompiled &res) {
     using namespace interpreter;
     using namespace asmjit;
     CodeHolder holder;
     holder.init(asmrt.environment(), asmrt.cpuFeatures());
-    jit::JitFuncInfo info(asmrt, holder);
+    jit::JitFuncInfo info(asmrt, holder, vm);
 
     FileLogger logger(stdout);
     holder.setLogger(&logger);
@@ -46,19 +46,12 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
     }
     start -= func.code_size;
 
-    //                                                          Value (*) (Value* vm, Function* func)
-    FuncNode *node = info.cc.addFunc(FuncSignature::build<uint64_t, void *, void *, void *>());
+    //                                                          Value (*) (Value* vm)
+    FuncNode *node = info.cc.addFunc(FuncSignature::build<uint64_t, void *>());
 
     info.arg1 = info.cc.newUIntPtr("args*");       // Create `dst` register (destination pointer).
-    info.arg2 = info.cc.newUIntPtr("func*");       // Create `dst` register (destination pointer).
-    x86::Gp jtarget = info.cc.newInt32();
 
     node->setArg(0, info.arg1);
-    node->setArg(1, info.arg2);
-//    node->setArg(2, jtarget);
-
-//    info.cc.jmp(jtarget);
-
 
 
     for (int i = 0; i < func.code_size; i++) {
@@ -112,17 +105,20 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
                 break;
             }
             case interpreter::OP_JMPF: {
-                info.cjmp<false>(a, sbx);
+                info.cjmp<false>(a, labels[1 + i + sbx]);
                 break;
             }
-            case interpreter::OP_NATIVE_CALL:
+            case interpreter::OP_NATIVE_CALL: {
+                info.native_call((void *) vm.natives[a], b, c);
                 break;
+            }
             case interpreter::OP_CALL:
                 throw std::runtime_error("cannot compile");
                 break;
             case interpreter::OP_RETURN: {
                 auto temp = info.cc.newUInt64();
-                info.cc.mov(temp, x86::ptr(info.arg1, a * 8));
+                info.cc.mov(temp, x86::dword_ptr(info.arg1, a * 8));
+                info.cc.mov(x86::dword_ptr(info.arg1), temp);
                 info.cc.ret(temp);
             }
                 break;
@@ -166,14 +162,24 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
                 info.cc.mov(x86::word_ptr(info.arg1, a * 8 + 4), TYPE_INT);
             }
                 break;
-            case OP_NEQ:
+            case OP_NEQ: {
+                auto t1 = info.cc.newUInt64();
+                auto t2 = info.cc.newUInt64();
+                info.cc.mov(t1, x86::dword_ptr(info.arg1, b * 8));
+                info.cc.mov(t2, x86::dword_ptr(info.arg1, c * 8));
+                info.cc.bts(t1, 33);
+                info.cc.bts(t2, 33);
+                info.cc.cmp(t1, t2);
+                info.cc.setne(x86::word_ptr(info.arg1, a * 8));
+                info.cc.mov(x86::word_ptr(info.arg1, a * 8 + 4), TYPE_INT);
+            }
                 break;
             case OP_JMP: {
                 info.cc.jmp(labels[i + 1 + sbx]);
                 break;
             }
             case OP_JMPT: {
-                info.cjmp<true>(a, sbx);
+                info.cjmp<true>(a, labels[1 + i + sbx]);
                 break;
             }
             case OP_INVOKEDYNAMIC:
@@ -182,12 +188,13 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
                 throw std::runtime_error("cannot compile");
                 break;
             case OP_LOADFUNC: {
-                Value v;
-                v.set_callable(bx);
-                auto temp = info.cc.newUInt64();
-                info.cc.movabs(temp, v.as_uint64());
-                info.cc.movabs(x86::ptr(info.arg1, a * 8), temp);
-                break;
+                throw std::runtime_error("not supported");
+//                Value v;
+//                v.set_callable(bx);
+//                auto temp = info.cc.newUInt64();
+//                info.cc.movabs(temp, v.as_uint64());
+//                info.cc.movabs(x86::ptr(info.arg1, a * 8), temp);
+//                break;
             }
             case OP_LOADFLOAT: {
                 auto temp = info.cc.newUInt64();
@@ -196,13 +203,17 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
                 break;
             }
             case OP_ALLOC: {
-
+                throw std::runtime_error("not supported");
                 break;
             }
-            case OP_ARRGET:
+            case OP_ARRGET: {
+                info.op_arrget(instr);
                 break;
-            case OP_ARRSET:
+            }
+            case OP_ARRSET: {
+                info.op_arrset(instr);
                 break;
+            }
             default:
                 throw std::runtime_error("not supported");
         }
@@ -216,13 +227,16 @@ jit::CompilationResult jit::JitRuntime::compile(interpreter::VMData &vm,
     return jit::CompilationResult::SUCCESS;
 }
 
-
-void jit::JitFuncInfo::bailout() {
-    for (int i = 0; i < 256; ++i) {
-//        cc.mov(asmjit::x86::dword_ptr(arg1, i * 8), stack[i]);
+jit::FuncCompiled jit::JitRuntime::compile_safe(interpreter::VMData &vm, interpreter::Function &func) {
+    try {
+        FuncCompiled res;
+        if (compile(vm, func, res) != CompilationResult::SUCCESS) return nullptr;
+        return res;
+    } catch (...) {
+        return nullptr;
     }
-    cc.ret();
 }
+
 
 void jit::JitFuncInfo::modulo_operation(int a, int b, int c) {
     using namespace interpreter;
@@ -300,6 +314,52 @@ void jit::JitFuncInfo::neg(int a, int b) {
     cc.add(failCode, 1);
     cc.ret(failCode);
     cc.bind(nxt);
+}
+
+namespace {
+
+    asmjit::x86::Gp getArg1() {
+#if defined(_WIN32)
+        return asmjit::x86::rcx;
+#else
+        return asmjit::x86::rdi;
+#endif
+    }
+
+    asmjit::x86::Gp getArg2() {
+#if defined(_WIN32)
+        return asmjit::x86::rdx;
+#else
+        return asmjit::x86::rsi;
+#endif
+    }
+
+    asmjit::x86::Gp getArg3() {
+#if defined(_WIN32)
+        return asmjit::x86::r8;
+#else
+        return asmjit::x86::rdx;
+#endif
+    }
+}
+
+void jit::JitFuncInfo::native_call(void *func, int b, int c) {
+    using namespace asmjit;
+    cc.push(getArg1());
+    cc.push(getArg2());
+    cc.push(getArg3());
+    cc.push(x86::rax);//save registers
+    cc.sub(x86::rsp, 32);//move rsp
+    cc.mov(getArg1(), &vm);//set up args...
+    cc.mov(getArg2(), b);
+    cc.mov(getArg3(), c);
+    cc.mov(x86::rax, func);
+    cc.call(x86::rax);//call
+    cc.add(x86::rsp, 32);//mov back rsp
+    cc.pop(x86::rax);//restore registers
+    cc.pop(getArg3());
+    cc.pop(getArg2());
+    cc.pop(getArg1());
 }
 
 
