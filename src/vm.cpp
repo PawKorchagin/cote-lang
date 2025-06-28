@@ -20,19 +20,14 @@ namespace interpreter {
         return vm_instance_;
     }
 
-    void run(const bool with_gc) {
-        VMData &vm = vm_instance();
+    void run(VMData &vm) {
         // auto gc = gc::gc();
-        vm.gc.init(vm.stack, &vm.call_stack, &vm.fp);
-
-        int T = 0;
-        vm.jitrt = new jit::JitRuntime();
 
         while (true) {
-            T++;
+            vm.GC_T++;
 
-            if (with_gc && T >= GC_CALL_INTERVAL) {
-                T = 0;
+            if (vm.GC_T >= GC_CALL_INTERVAL) {
+                vm.GC_T = 0;
                 vm.gc.call();
             }
 
@@ -141,6 +136,16 @@ namespace interpreter {
         }
 
 
+    }
+
+    void run(bool with_gc) {
+
+        VMData &vm = vm_instance();
+        vm.gc.init(vm.stack, &vm.call_stack, &vm.fp);
+
+        vm.jitrt = new jit::JitRuntime();
+        vm.GC_T = 0;
+        run(vm);
     }
 
     jit::TraceResult run_record() {
@@ -288,7 +293,7 @@ namespace interpreter {
         func.hotness += 1;
         if (is_jit_on() && func.hotness >= HOT_THRESHOLD) {
             if (func.banned) {
-                run();
+                run(vm);
                 return;
             }
             if (vm.jit_log_level > 0) {
@@ -304,7 +309,7 @@ namespace interpreter {
                 return;
             }
         }
-        run();
+        run(vm);
     }
 
     void op_return(VMData &vm, uint8_t result_reg) {

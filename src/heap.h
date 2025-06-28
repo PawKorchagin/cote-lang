@@ -180,7 +180,7 @@ namespace heap {
         }
 
         template<class T>
-        void unmark(typename std::vector<T*>::iterator begin, typename std::vector<T*>::iterator end) {
+        void unmark(typename std::vector<T *>::iterator begin, typename std::vector<T *>::iterator end) {
             std::for_each(begin, end, [](auto ptr) { ptr->unmark(); });
         }
 
@@ -274,10 +274,10 @@ namespace heap {
             // unmark<obj_ptr_type>(ALL(old_roots));
             for (value_ptr ptr: old_roots
                                 | std::ranges::views::transform(
-                                    [](const uint32_t obj_ptr) -> value_ptr {
-                                        return mem.at(obj_ptr);
-                                    })
-            ) { ptr->unmark(); }
+                    [](const uint32_t obj_ptr) -> value_ptr {
+                        return mem.at(obj_ptr);
+                    })
+                    ) { ptr->unmark(); }
 
             mark();
             // mb rewrite later
@@ -295,7 +295,7 @@ namespace heap {
             old_roots.swap(survivors); // constant complexity :)
         }
 
-        GarbageCollector(): stack_(nullptr), call_stack_(nullptr), fp_(nullptr) {
+        GarbageCollector() : stack_(nullptr), call_stack_(nullptr), fp_(nullptr) {
         }
 
         value_ptr alloc_array(const size_t len) {
@@ -325,7 +325,7 @@ namespace heap {
         }
 
         void call(
-            // interpreter::Value *stack, const uint32_t sp
+                // interpreter::Value *stack, const uint32_t sp
         ) {
             large_gc();
             major_gc();
