@@ -1,6 +1,8 @@
 //
-// Created by Георгий on 21.06.2025.
+// Created by PawKorchagin on 21.06.2025.
 //
+
+// #define DEFAULT_GC_YOUNG_CAPACITY 21
 
 #include "utils.h"
 #include "src/ast.h"
@@ -11,8 +13,16 @@ using SimpleCompileFromFileOk = Test;
 
 inline void compile_program(std::istream &fin, const std::string &file_name = "code") {
     using namespace interpreter;
+    heap::mem.clear();
     auto &vm = initVM();
+    vm.gc.cleanup();
+#ifdef DEFAULT_GC_YOUNG_CAPACITY
+    vm.gc.MAJOR_THRESHOLD = 10;
+    vm.gc.LARGE_THRESHOLD = 10;
+#endif
+
     parser::init_parser(fin, new BytecodeEmitter());
+
     ast::Program p;
     ASSERT_NO_THROW(p = parser::parse_program(vm));
     print_vm_data(vm);
@@ -31,6 +41,13 @@ inline void compile_program(std::istream &fin, const std::string &file_name = "c
 }
 
 // using SimpleCompileFromFileParam = TestWithParam<std::string>;
+
+TEST(SimpleCompileFromFileOk, NoAlloc) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/gc/test_no_alloc.ct" );
+        return compile_program(fin);
+        });
+}
 
 TEST(SimpleCompileFromFileOk, Test3) {
     ASSERT_NO_THROW({
@@ -82,9 +99,23 @@ TEST(SimpleCompileFromFileOk, Test8) {
         });
 }
 
-TEST(SimpleCompileFromFileOk, TestGC1) {
+TEST(SimpleCompileFromFileOk, TestArrayLinkMini) {
     ASSERT_NO_THROW({
         std::ifstream fin("../../tests/sources/gc/test_arraylink_mini.ct" );
+        return compile_program(fin);
+        });
+}
+
+TEST(SimpleCompileFromFileOk, TestArrayLink) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/gc/test_arraylink.ct" );
+        return compile_program(fin);
+        });
+}
+
+TEST(SimpleCompileFromFileOk, TestArrayLinkFromFoo) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/gc/test_arraylink_from_foo.ct" );
         return compile_program(fin);
         });
 }
@@ -103,6 +134,69 @@ TEST(SimpleCompileFromFileOk, TestInnerMini) {
         });
 }
 
+TEST(SimpleCompileFromFileOk, TestCrazyLink) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/gc/test_crazylink.ct" );
+        return compile_program(fin);
+        });
+}
+
+TEST(SimpleCompileFromFileOk, TestCycleLinkMini) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/gc/test_cyclelink_mini.ct" );
+        return compile_program(fin);
+        });
+}
+
+TEST(SimpleCompileFromFileOk, TestCycleLink) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/gc/test_cyclelink.ct" );
+        return compile_program(fin);
+        });
+}
+
+
+TEST(SimpleCompileFromFileOk, TestNulling) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/gc/test_nulling.ct" );
+        return compile_program(fin);
+        });
+}
+
+TEST(SimpleCompileFromFileOk, TestPromote) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/gc/test_promote.ct" );
+        return compile_program(fin);
+        });
+}
+
+TEST(SimpleCompileFromFileOk, TestGlobalCycle) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/gc/test_global_cycle.ct" );
+        return compile_program(fin);
+        });
+}
+
+TEST(SimpleCompileFromFileOk, TestDeadLocalLink) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/gc/test_dead_local_link.ct" );
+        return compile_program(fin);
+        });
+}
+
+TEST(SimpleCompileFromFileOk, TestSurvive) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/gc/test_survive.ct" );
+        return compile_program(fin);
+        });
+}
+
+TEST(SimpleCompileFromFileOk, TestMultiCompGraph) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/gc/test_multi_comp_graph.ct" );
+        return compile_program(fin);
+        });
+}
 // INSTANTIATE_TEST_SUITE_P(
 //     CorrectGroup,
 //     SimpleCompileFromFileParam,

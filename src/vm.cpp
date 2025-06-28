@@ -9,6 +9,16 @@
 #include "gc.h"
 #include "heap.h"
 
+class VMException : public std::runtime_error {
+    const char* msg_;
+public:
+    VMException(interpreter::VMData& vm, const char* msg): std::runtime_error(msg) {
+        msg_ = (std::to_string(vm.ip)
+
+            ).c_str();
+    }
+};
+
 namespace {
     interpreter::VMData vm_instance_{};
 
@@ -50,7 +60,7 @@ namespace interpreter {
         while (true) {
             T++;
 
-            if (with_gc && T % 10 == 0) {
+            if (with_gc && T % 100 == 0) {
                 // vm.gc.call(vm.stack, vm.get_sp());
                 vm.gc.call();
             }
@@ -159,7 +169,12 @@ namespace interpreter {
                 default:
                     throw std::runtime_error("Unknown opcode");
             }
+            // if (heap::mem.contains(1) && heap::mem.at(1)[2].type_part != 16) {
+            //
+            // }
         }
+
+
     }
 
     jit::TraceResult run_record() {
@@ -478,10 +493,6 @@ namespace interpreter {
     }
 
     void op_alloc(VMData &vm, uint8_t dst, uint8_t s) {
-        // if (heap::get_size() >= HEAP_MAX_SIZE) {
-        //     throw std::runtime_error("Heap overflow");
-        // }
-
         const uint32_t size = vm.stack[vm.fp + s].i32;
 
         auto *fields = vm.gc.alloc_array(size);
@@ -489,12 +500,6 @@ namespace interpreter {
         if (!fields) {
             throw std::runtime_error("Memory allocation failed");
         }
-
-        // here is moved to alloc_array
-        // Set len field
-        // fields[0].set_int(size);
-
-        // heap::heap.push_back(fields);
 
         vm.stack[vm.fp + dst].set_array</*mark for gc=*/false>(size, fields); // Array class is always at index 1
     }
@@ -509,10 +514,6 @@ namespace interpreter {
             throw std::runtime_error("Expected array object while arrayget");
         }
 
-        // inner test
-        if (arr_val.object_ptr == 1 && heap::mem.size() == 1) {
-        }
-
         auto *obj = heap::mem.at(arr_val.object_ptr);
 
         assert(obj->is_array());
@@ -520,15 +521,21 @@ namespace interpreter {
         const uint32_t len = obj->get_len();
 
         if (idx.i32 >= len) {
-            throw std::out_of_range("Array index out of bounds");
+            throw std::out_of_range("Array index out of bounds, ip: " + std::to_string(vm.ip));
         }
 
-        // vm.stack[vm.fp + dst] = obj[idx.i32 + 1];  // +1 because index 0 is len
-        // if (obj[idx.i32 + 1].is_array()) {
-        // vm.stack[vm.fp + dst].set_array(len, obj + idx.i32 + 1);
-        // } else {
-        vm.stack[vm.fp + dst] = obj[idx.i32 + 1];
-        // }
+        if (obj[idx.i32 + 1].is_array()) {
+            auto *ptr = heap::mem.at(obj[idx.i32 + 1].object_ptr);
+            if (ptr->object_ptr == 2) {
+
+            }
+            // update obj[i]
+            obj[idx.i32 + 1] = *ptr;
+            vm.stack[vm.fp + dst] = *ptr;
+
+        } else {
+            vm.stack[vm.fp + dst] = obj[idx.i32 + 1];
+        }
     }
 
     void op_arrset(VMData &vm, uint8_t arr, uint8_t idxc, uint8_t src) {
@@ -549,19 +556,7 @@ namespace interpreter {
             throw std::out_of_range("Array index out of bounds");
         }
 
-        // bool marked = obj[idx.i32 + 1].is_marked();
-
-        // obj[idx.i32 + 1] = vm.stack[vm.fp + src];  // +1 because index 0 is len
-        // if (marked) {
-        //     obj[idx.i32 + 1].mark();
-        // }
-        // if (vm.stack[vm.fp + src].is_array()) {
-        // norm if object unmarked?
-        // obj[idx.i32 + 1].set_array(len, vm.stack + vm.fp + src);
-        // obj[idx.i32 + 1].object_ptr = vm.stack[vm.fp + src].object_ptr;
-        // } else {
         obj[idx.i32 + 1] = vm.stack[vm.fp + src];
-        // }
     }
 
 
