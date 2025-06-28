@@ -1,32 +1,8 @@
 
-# Project structure:
-
-
-- bin: main.cpp - sandbox
-- lib: contains parser
-- test/sources: contain test files in `.ct` extension
-
-# Tests
-
-### Compile (from root)
-
-```
-cmake .
-```
-
-### Testing (from root)
-
-run main.cpp:
-```
-cmake --build . && ./bin/crypt
-```
-
-run tests:
-```
-cmake --build . --target parser_test && ctest -V
-```
 
 # Syntax and Language Rules
+
+check tests/source
 
 ## General
 
@@ -45,21 +21,30 @@ cmake --build . --target parser_test && ctest -V
 3. Names cannot start with a digit
 4. register independent:`int var` and `int Var` is a different variables 
 
-## Type: `int`
+## Basic types supported: 
 
-1. Size: 32 bits (4 bytes).  
-2. Supported arithmetic operations: `+`, `-`, `*`, `/`.  
+1. *Int* Size: 32 bits (4 bytes).
+2. *Float* 
+3. Supported all arithmetic operations
 
 ## Type: `array`
 
-1. *To be implemented*.  
+1. example ```arr = array(10)```
 
 ## Functions
 
 1. Structure:  
-   ```fn name(Type1 arg1, ...) >>> RetType { ... }```  
+   ```fn name(arg1, ...) { ... }```  
 2. Call syntax:  
    ```name(args);```  
 3. Recursion is supported.
 4. Return from function with a keyword `return`
    
+## Garbage Collecting
+
+
+too lazy to write, but this is masterpiece
+
+## JIT
+
+too lazy to write, but this is masterpiece
