@@ -1,4 +1,5 @@
-add_executable(crypt main.cpp)
+add_executable(cote main.cpp
+)
 
-target_link_libraries(crypt PRIVATE crypt_lib)
-target_include_directories(crypt PUBLIC ${PROJECT_SOURCE_DIR}/lib)
+target_link_libraries(cote PUBLIC cote_lib)
+target_include_directories(cote PUBLIC ${PROJECT_SOURCE_DIR})

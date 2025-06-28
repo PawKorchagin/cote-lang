@@ -39,6 +39,7 @@ Makefile
 tests/_deps
 CMakeFiles
 _deps
+cmake-build-debug
 
 tests/parser_test
 bin/crypt
@@ -48,3 +49,5 @@ bin/crypt
 !tests/CMakeLists.txt
 !CMakeLists.txt
 Testing
+.vscode
+/lib/debug.h

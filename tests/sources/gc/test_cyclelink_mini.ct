@@ -1,0 +1,14 @@
+fn main() {
+    a = array(19);
+    a[0] = a;
+    b = array(1); // gc minor
+
+    println(a[1]);
+
+    //for (i = 0; i < 19; i += 1) {
+
+      //      println(a[i]);
+        //    println(a[0][i]);
+       // }
+    //}
+}

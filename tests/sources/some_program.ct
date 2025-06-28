@@ -1,0 +1,26 @@
+fn buildTree(a, depth) {
+    if (depth == 0) return;
+    n = rand() % 2;
+    a[0] = array(2);
+    buildTree(a[0], depth - 1);
+    if (rand() % 2) {
+        a[1] = array(2);
+        buildTree(a[1], depth - 1);
+    }
+}
+fn count(a) {
+    if (a == nil) return 0;
+    return 1 + count(a[0]) + count(a[1]);
+}
+fn main() {
+    n = 10;
+    a = array(2, 5);
+    b = array(2, 5);
+    b = array(2, 5);
+    c = array(2, 5);
+    d = array(2, 5);
+    a[0] = b;
+    b[1] = c;
+    c[0] = d;
+    println(count(a));
+}

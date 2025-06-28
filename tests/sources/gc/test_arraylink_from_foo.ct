@@ -1,0 +1,94 @@
+fn foo1() {
+    a = array(10);
+    b = array(5);
+}
+
+fn foo2() {
+    a = array(15);
+    b = array(7);
+}
+
+fn foo3() {
+    a = array(8);
+    b = array(3);
+}
+
+fn foo4() {
+    a = array(12);
+    b = array(6);
+}
+
+fn foo5() {
+    a = array(9);
+    b = array(4);
+}
+
+fn foo6() {
+    a = array(11);
+    b = array(5);
+}
+
+fn foo7() {
+    a = array(7);
+    b = array(2);
+}
+
+fn foo8() {
+    a = array(14);
+    b = array(8);
+}
+
+fn foo9() {
+    a = array(6);
+    b = array(3);
+}
+
+fn foo10() {
+    a = array(13);
+    b = array(7);
+}
+
+fn foo11() {
+    a = array(5);
+    b = array(2);
+}
+
+fn foo12() {
+    a = array(16);
+    b = array(9);
+}
+
+fn foo13() {
+    a = array(4);
+    b = array(1);
+}
+
+fn foo14() {
+    a = array(17);
+    b = array(10);
+}
+
+fn foo15() {
+    a = array(3);
+    b = array(1);
+    return b;
+}
+
+fn main() {
+    foo1();
+    foo2();
+    foo3();
+    foo4();
+    foo5();
+    foo6();
+    foo7();
+    foo8();
+    foo9();
+    foo10();
+    foo11();
+    foo12();
+    foo13();
+    foo14();
+    res = foo15();
+    println(res[0]);
+}

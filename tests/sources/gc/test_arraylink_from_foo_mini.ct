@@ -1,0 +1,11 @@
+fn foo() {
+    a = array(10);
+    return a;
+}
+
+fn main() {
+    res = array(10);
+    res[0] = nil;
+    println(res[0]);
+    return 0;
+}

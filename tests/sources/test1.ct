@@ -1,0 +1,284 @@
+//expr -> (x), x + y, x * y, x == y, x and y, x || y, x - y, -x -y, x(), x.y, x[0], (x, y) -> {}
+//object:  identifier0000;  123; (<expr>);  (x, y, z); <expr>(<expr>, <expr>, ..); <expr>[<expr>]; <expr>.identifier;
+//operator: + - / * % and or ->
+//<expr>: object | object operator object
+
+//class Vector2(x, y) {
+//   this.x = x;
+//    this.y = y;
+//    this.add = (other) -> Vector2(this.x + other.x, this.y + other.y);
+//}
+//tif - ternary
+fn valOrCall(val) { if (isCallable(val)) return val(); else return val; }
+fn tif(cond, good, bad, other) {
+    x = () -> x;
+    if (cond == null)
+        return (cond, good, bad) -> {
+            if (cond) return good;
+            else return bad;
+        };
+    nonnull(good, bad);
+
+
+}
+//Vector2Proto = object {
+//    add = (a, b) -> Vector2(a.x + b.x, a.y + b.y);
+//    sub = (a, b) -> Vector2(a.x - b.x, a.y - b.y);
+//}
+//Vector2 = (a, b) -> object {
+//    a = a;
+//    b = b;
+//    super = Vector2Proto
+//}
+//Stream = (a) -> object {
+//    pos = 0;
+//    this.next = () -> {
+//        pos += 1;
+//        return a[pos];
+//    }
+//    this.hasNext = () -> {
+//        if tif()(pos == a.size(), true, false);
+//    }
+//}
+//Range = (a) -> object {
+//
+//}
+//a.x - (if (a.hasOwn("x")) return a.x; else a.super.x)()
+//Vector2(1, 2).add(Vector2(3, 4)).sub(Vector2(4, 5))
+
+
+
+// a | f(b)  ~ f(a, b)
+//vector2 { x, y }
+//or simply like this: vector2 { x, y }
+//or
+//vector2 { x, y }
+//vector3 { x, y, z }
+//addProperty(vector2.super, "", () -> )
+
+
+//TODO: maybe тернарный, maybe битовые операции, annotations
+fn lambdas() {
+    a = (f).x;
+    a = a -> b;
+
+    //x = (a, b, c);//TODO: reject like this
+    x = (a, b, c) -> y;
+    x = x -> z;
+    empty_paren = () -> () -> 3;
+    ternary_max = (a, b) -> x -> a;
+    //ternary = (a, b) -> a == b ? a | b;
+    //ternary_max = (a, b) -> (a > b) ? a | b;
+    //ternary_abs = a -> a>0 ? a | -a;
+    //ternary_sign = x -> x > 0 ? 1 | -1;
+    x = a -> b;
+    x = (x) -> b;
+    (a -> b) = x;
+    a.b = 1;
+    minus_check3 = a.b.c -2;
+    add = (x, y) -> x + y;
+    id = x -> x;
+    id2 = x -> x;
+    mod1 = x -> 2 * x + 3;
+    mod2 = x -> { return 2 * x + 3; };
+    add = (x, y, z) -> x + y+z;
+    mult = (x, y, z) -> x*y + z[0];
+    minus_check1 = a[0] -2;
+    minus_check2 = a() -2;
+    minus_check4 = a.b.c[0] -2 -a[0];
+    something = (x, y) -> {
+        z = (a) -> x + a;
+        return z(y) * x;
+    };
+    adder = x -> y -> x + y;
+    x = adder(2);
+    if (adder(1)(2) == 3)
+        println("OK");
+    else
+        println("Something went wrong, ooops");
+    if (x(2) == 4)
+        println("seems to work");
+    else if (x(2) == 5)
+        println("almost");
+    else if (x(3) == 5)
+        println("else check");
+    else
+        println("not even close");
+    if (x(2) == 4) {
+        println("seems to work");
+    } else if (x(2) == 5) {
+        println("almost");
+    } else if (x(3) == 5) {
+        println("else check");
+    } else {
+        println("not even close");
+    }
+    bad = "heelo" * (a, b, c) * (()->x) * (x -> x);
+    literal = "hello world" * 2 + 3;//(
+    literal = "hello world";
+}
+fn assert(val) { if (val == 0) throws("assertion failed"); }
+
+fn objects() {
+    a = Vector2(1, 2);
+    b = Vector2(3, 4);
+    c = a.add(b);
+    assert(c.x == 4 and c.y == 6);
+    if (c.x == 4 or c.y == 6) { println(1); }
+}
+
+fn loops_and_arrays(n) {
+    arr = array(5);
+    for (i = 0; i < n; i = i + 1) {
+        arr[i] = i * n + i;
+    }
+    x = 1;
+    while (x < n) {
+        arr[x] = arr[x] + arr[x-1];
+    }
+    //return stream(arr) | filter(x -> x > 10) | toArray();
+    return stream(arr).filter(x -> x > 10).toArray();
+}
+//факториал, сортировка, поиск простого
+fn factorial(n) {
+    if (n <= 1) { return n; }
+    return factorial(n) * factorial(n - 1);
+}
+fn stupid_sort(arr, l, r) {
+    for (i = 0; i < arr.size(); i = i + 1) {
+        for (j = i + 1; j < arr.size(); j = j + 1) {
+            if (arr[i] > arr[j]) {
+                temp = arr[i];
+                arr[i] = arr[j];
+                arr[j] = temp;
+            }
+        }
+    }
+    return arr;
+}
+fn isPrime(x) {
+    for (i = 2; i * i <= x; i = i + 1) {
+        if (x % i == 0)
+            return 0;
+    }
+    return 1;
+}
+fn get_primes(n) {
+    if (n <= 1) return 0;
+    arr = list();
+    for (i = 2; i < n; i = i + 1) {
+        if (isPrime(i)) arr.append(i);
+    }
+    return arr;
+}
+
+fn closure_ex(x) {
+    return [x] y -> x + y;
+}
+fn main() {
+    y = [x] (a, b) -> a + b;
+    y = x = 2 + 3 * 4;
+    if (y == 3) {
+        while (1) {
+
+        }
+    }
+}
+fn garbage() {
+// this is a comment
+    y = x = 2; // we can write comments!
+    2[x];
+    x[2] = array(10);
+    y = x[0];
+
+    if (y == 2) {
+        while (y < 2 * 3) {
+            y=y+1*x;
+        }
+    } else if (x == 3) {
+
+    }
+    else if (x == 4) {
+
+    }
+    else {
+        x = 1;
+    }
+    x[2 * y + 1][1] = 1[2];
+    //x[2][3*x()[0]] = a -> a;[2]();
+    x[2][3*x()[0]] = a -> a[2]();
+    //x[2][fn(a){return a;}[2[1]]] = fn(a){ return a; }[2]();
+    //x[2][fn(a){return a;}[b[1]]] = fn(a){ return a; }[2]();
+    //      (fn: (x, y) -> x + y + 1) * 3 + 1
+    //      fn: (x, y) -> x + y + 1 * 3 + 1
+    //z x
+    //
+    x = 1;
+    x = 0;
+    x = false;
+    x = array(100);
+    a = 1;
+    b =  2;
+    c = 3;
+    d = a + b + c;
+    //y = fn(a) { return a + b + c + d; };
+//    return y; - error return should be last
+    //x = fn(a, b) { a + b; };
+    y = x(1, 2);
+    x = 2 * 2 + 2;
+    //x = y = fn(a) { return x + y + 1; } * 3 - 1;
+    x = y = x() - 1;
+    //x = y = fn(a) { x + y + 1; };
+    //x = y = fn(a, b) { x + y + 1; };
+    //x = y = fn(a,b,c) { x + y + 1; x(1, x * 2 + 3 * y); return y * 2; };
+    z = y * x + 2 * 2;
+}
+
+//vector<pair<string, int>> jmps;
+
+
+fn f() {
+    b = 2;
+}
+
+fn g() {//10
+    gg();//12
+    return fff();
+    // OP_CALL <16 bit>
+}
+
+fn fff() {//340
+}
+
+fn main() {//500
+    z = f2();
+    z();
+}
+fn h() {//600
+    return g();
+}
+
+constants: [1, 5, 120]
+10: func0(args: 0):
+10:     mov [0] 1
+10:     mov [1] 1
+10:     mov [2] 1
+10:     jmpf [2] 11
+10:     mov [2] 1
+10:     add [0] [2] [0]
+10:     mov [2] [0]
+10:     mul [1] [1] [2]
+10:     mov [2] [0]
+10:     mov [3] 5
+10:     eq [2] [2] [3]
+10:     jmpf [2] 1
+10:     jmp 2
+10:     mov [2] 1
+10:     jmpt [2] -11
+10:     mov [2] [1]
+10:     mov [3] 120
+10:     sub [2] [2] [3]
+10:     ret [2]
+10:     ret nil
+10:     call f0 [0]...[0] <- ip
+10:     halt

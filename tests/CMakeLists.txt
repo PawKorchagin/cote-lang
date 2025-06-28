@@ -12,11 +12,41 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-add_executable(parser_test parser_test.cpp)
+add_executable(
+        cote_test
+        parser_test.cpp
+        vm_test.cpp
+        jit_basic_tests.cpp
+        jit_program_test.cpp
+        utils.h
+        compile_test_param.cpp
+        gc_test.cpp
+)
 
-target_link_libraries(parser_test PRIVATE crypt_lib GTest::gtest_main)
+target_link_libraries(cote_test PRIVATE cote_lib GTest::gtest_main)
 
-target_include_directories(parser_test PUBLIC ${PROJECT_SOURCE_DIR})
+# --------------------------------------------------------------------------------
+# Sanitizers: enable AddressSanitizer and LeakSanitizer, ignore for Windows
+# --------------------------------------------------------------------------------
+if(NOT WIN32)
+    message(STATUS "Enabling AddressSanitizer and LeakSanitizer for cote test")
+    target_compile_options(cote_test PRIVATE
+            -fsanitize=address
+            -fsanitize=undefined
+#            -fsanitize=leak
+            -O1                 # ?
+            -fno-omit-frame-pointer
+    )
+    target_link_options(cote_test PRIVATE
+            -fsanitize=address
+#            -fsanitize=leak
+    )
+endif()
+
+
+
+
+target_include_directories(cote_test PUBLIC ${PROJECT_SOURCE_DIR})
 
 include(GoogleTest)
-gtest_discover_tests(parser_test)
+gtest_discover_tests(cote_test)

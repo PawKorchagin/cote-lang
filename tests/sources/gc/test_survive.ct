@@ -1,0 +1,20 @@
+fn make_survivor() {
+    s = array(1);
+    return s;
+}
+
+fn main() {
+    root = make_survivor();
+    for (i = 0; i < 100; i += 1) {
+        tmp = array(1);
+        root = root;
+    }
+    ASSERT(GET_OLD() >= 1);
+    println(root[0]);  // nil
+    //ASSERT(root[0] == nil);
+    for (i = 0; i < 25; i += 1) {
+        tmp2 = array(1);
+    }
+    println(root[0]);  // nil
+    //ASSERT(root[0] == nil);
+}

@@ -1,0 +1,37 @@
+fn main() {
+    roots = array(3);
+    for (i = 0; i < 3; i += 1) {
+        roots[i] = array(3); // gc
+    }
+    println(GET_YOUNG()); // 4
+    ASSERT(GET_YOUNG() == 4);
+    println();
+    for (i = 0; i < 50; i += 1) {
+        tmp = array(1);
+        print_(GET_YOUNG(), GET_OLD());
+        println();
+    }
+    ASSERT(GET_OLD() >= 4);
+    big1 = array(30);
+    big2 = array(40);
+    println();
+    println(GET_LARGE()); // 2
+    ASSERT(GET_LARGE() == 2);
+    println();
+    for (i = 0; i < 20; i += 1) {
+        tmp2 = array(1);
+        print_(GET_YOUNG(), GET_OLD());
+        println();
+    }
+    println();
+    // check
+    println(roots[2][0]); // nil
+    println(big1[0]);     // nil
+    println(big2[0]);     // nil
+    ASSERT(roots[2][0] == nil, big1[0] == nil, big2[0] == nil);
+
+    println();
+    println(GET_LARGE()); // 2
+    ASSERT(GET_LARGE() == 2);
+    return 0;
+}

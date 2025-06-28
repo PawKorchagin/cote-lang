@@ -1,0 +1,11 @@
+fn foo(a) {
+    c = array(9);
+    a[0] = c;
+}
+
+fn main() {
+    a = array(9);
+    foo(a);
+    b = array(1);
+    println(a[0][0]);
+}

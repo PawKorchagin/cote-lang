@@ -1,0 +1,11 @@
+fn f(x) {  }
+fn useless() {
+    arr = array(10);
+    arr = array(20);
+}
+
+fn main() {
+    useless();
+    b = array(5);
+    return 0;
+}

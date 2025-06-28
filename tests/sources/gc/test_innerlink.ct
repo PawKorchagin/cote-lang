@@ -1,0 +1,25 @@
+fn foo(a) {
+    c = array(3);
+    c[0] = 0;
+    c[1] = 1;
+    c[2] = 2;
+    a[0][1] = c;
+}
+
+fn main() {
+    a = array(3);
+    a[0] = array(3);
+    a[0][0] = array(3);
+    a[0][0][0] = array(3);
+    for (i = 0; i < 3; i += 1) {
+        println(a[0][0][0][i]);
+    }
+    foo(a);
+    // gc 16 + 4 + 1 young buffer to fail
+    d = array(1);
+    for (i = 0; i < 3; i += 1) {
+        println(a[0][1][i]);
+    }
+
+    // a[0][0][0] = array(3);
+}
