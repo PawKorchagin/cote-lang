@@ -16,6 +16,7 @@ namespace jit {
     struct Trace;
     struct TraceEntry;
     enum class TraceResult;
+    struct JitRuntime;
 }
 
 namespace interpreter {
@@ -153,14 +154,10 @@ namespace interpreter {
         OP_LOADFUNC,
         OP_LOADFLOAT,
         OP_ALLOC,
-        OP_ARRGET,
-        OP_ARRSET,
+        OP_ARRGET,//TODO
+        OP_ARRSET,//TODO
         OP_TAILCALL,
-        OP_NONE
     };
-
-
-
 
 
     typedef void (*NativeFunction)(VMData &, int reg, int cnt);
@@ -187,10 +184,9 @@ namespace interpreter {
     static constexpr uint32_t C_SHIFT = 0;
     static constexpr uint32_t SBX_SHIFT = 0;
     static constexpr uint32_t J_ZERO = BX_ARG >> 1;
-    static constexpr int VM_NORMAL = 0;
-    static constexpr int VM_RECORD = 1;
 
-    static constexpr int HOT_THRESHOLD = 3;
+    static constexpr int HOT_THRESHOLD = 10;
+    static constexpr int GC_CALL_INTERVAL = 2000;
 
     // template<uint16_t GC_YOUNG_THRESHOLD=50>
     struct VMData {
@@ -199,7 +195,6 @@ namespace interpreter {
 #else
         heap::GarbageCollector<DEFAULT_GC_YOUNG_CAPACITY> gc{};
 #endif
-
         //  Static data: must be filled before running vm
         std::vector<Value> constanti;
         std::vector<Value> constantf;
@@ -225,13 +220,16 @@ namespace interpreter {
         uint32_t sp = 0;  // Stack pointer
         uint32_t fp = 0;  // Frame pointer
         std::stack<CallFrame> call_stack;
-
-        // -- JIT data --
-//        util::int_ptr_map trace_head;
-        jit::Trace *trace = nullptr;
-
+        jit::JitRuntime *jitrt;
+        int jit_log_level = 0;
 
     };
+
+    bool is_jit_on();
+
+    void set_jit_on();
+
+    void set_jit_off();
 
 // Core VM functions
     void run(bool with_gc = true);

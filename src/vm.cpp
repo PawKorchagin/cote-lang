@@ -8,41 +8,11 @@
 
 #include "gc.h"
 #include "heap.h"
-
-class VMException : public std::runtime_error {
-    const char* msg_;
-public:
-    VMException(interpreter::VMData& vm, const char* msg): std::runtime_error(msg) {
-        msg_ = (std::to_string(vm.ip)
-
-            ).c_str();
-    }
-};
+#include "jit_runtime.h"
 
 namespace {
     interpreter::VMData vm_instance_{};
-
-    //if already in
-    //TODO: one of the most important functions
-    //    void update_hot(util::int_int_map &mp, interpreter::VMData &vm, int ip, int add = 0) {
-    //        using namespace interpreter;
-    //        util::int_int_map_itr it = util::int_int_map_get_or_insert(&mp, ip, 1);
-    //TODO: check that not end(out of mem)
-    //already hot => do not increase
-    //        if (it.data->val >= HOT_THRESHOLD)
-    //            return;
-    //
-    //        it.data->val += 1;
-    //        //became hot => need to record
-    //        if (it.data->val >= HOT_THRESHOLD) {
-    //            // vm.trace_head[ip] - is empty, because this position was never recorded
-    //            auto entry = new jit::TraceEntry();
-    //            util::int_ptr_map_insert(&vm.trace_head, ip, entry);
-    //            //TODO: check that not end(out of mem)
-    //            //record trace
-    //            record_fully(*entry);
-    //        }
-    //    }
+    bool jit_on = true;
 }
 
 namespace interpreter {
@@ -56,12 +26,13 @@ namespace interpreter {
         vm.gc.init(vm.stack, &vm.call_stack, &vm.fp);
 
         int T = 0;
+        vm.jitrt = new jit::JitRuntime();
 
         while (true) {
             T++;
 
-            if (with_gc && T % 100 == 0) {
-                // vm.gc.call(vm.stack, vm.get_sp());
+            if (with_gc && T >= GC_CALL_INTERVAL) {
+                T = 0;
                 vm.gc.call();
             }
 
@@ -76,11 +47,9 @@ namespace interpreter {
             switch (op) {
                 case OP_LOADINT:
                     op_load(vm, a, bx);
-                //                    if constexpr (mode == VM_RECORD) vm.trace->parse_loadi(a, bx);
                     break;
                 case OP_MOVE:
                     op_move(vm, a, b);
-                //                    if constexpr (mode == VM_RECORD) vm.trace->parse_mov(a, b);
                     break;
                 case OP_LOADNIL:
                     op_loadnil(vm, a);
@@ -141,10 +110,10 @@ namespace interpreter {
                     break;
                 case OP_RETURN:
                     op_return(vm, a);
-                    break;
+                    return;
                 case OP_RETURNNIL:
                     op_returnnil(vm);
-                    break;
+                    return;
                 case OP_HALT:
                     op_halt(vm);
                     return;
@@ -169,9 +138,6 @@ namespace interpreter {
                 default:
                     throw std::runtime_error("Unknown opcode");
             }
-            // if (heap::mem.contains(1) && heap::mem.at(1)[2].type_part != 16) {
-            //
-            // }
         }
 
 
@@ -287,6 +253,13 @@ namespace interpreter {
         vm.stack[vm.fp + dst].set_int(cmp<true>(v1, v2));
     }
 
+    void invoke_jit(VMData &vm, Function &func) {
+        func.jitted(vm.stack + vm.fp);
+        vm.fp = vm.call_stack.top().base_ptr;
+        vm.ip = vm.call_stack.top().return_ip;
+        vm.call_stack.pop();
+    }
+
     void op_call(VMData &vm, uint8_t func_idx, uint8_t first_arg_ind, uint8_t num_args) {
         if (func_idx >= FUNCTIONS_MAX) {
             throw std::out_of_range("Function index out of range");
@@ -308,6 +281,30 @@ namespace interpreter {
         for (int i = vm.fp + (uint32_t) num_args; i < sp; ++i) {
             vm.stack[i].set_nil();
         }
+        if (func.jitted != nullptr) {
+            invoke_jit(vm, func);
+            return;
+        }
+        func.hotness += 1;
+        if (is_jit_on() && func.hotness >= HOT_THRESHOLD) {
+            if (func.banned) {
+                run();
+                return;
+            }
+            if (vm.jit_log_level > 0) {
+                std::cerr << "Hot function at: " << func.entry_point << std::endl;
+            }
+            func.jitted = vm.jitrt->compile_safe(vm, func);
+            if (func.jitted == nullptr) {
+                func.banned = true;
+                if (vm.jit_log_level > 0) std::cerr << "Discard hot at: " << func.entry_point << std::endl;
+            } else {
+                if (vm.jit_log_level > 0) std::cerr << "Compiled hot at: " << func.entry_point << std::endl;
+                invoke_jit(vm, func);
+                return;
+            }
+        }
+        run();
     }
 
     void op_return(VMData &vm, uint8_t result_reg) {
@@ -398,6 +395,7 @@ namespace interpreter {
     Value add_values(const Value &a, const Value &b) {
         Value res;
 
+        if (a.get_class() != b.get_class()) throw std::runtime_error("addition expects same types");
         if (!a.is_float() && !a.is_int() ||
             !b.is_float() && !b.is_int())
             throw std::runtime_error("addition is defined for numeric types only");
@@ -411,6 +409,7 @@ namespace interpreter {
 
     Value sub_values(const Value &a, const Value &b) {
         Value res;
+        if (a.get_class() != b.get_class()) throw std::runtime_error("subtraction expects same types");
 
         if (!a.is_float() && !a.is_int() ||
             !b.is_float() && !b.is_int())
@@ -425,6 +424,7 @@ namespace interpreter {
 
     Value mul_values(const Value &a, const Value &b) {
         Value res;
+        if (a.get_class() != b.get_class()) throw std::runtime_error("multiplication expects same types");
 
         if (!a.is_float() && !a.is_int() ||
             !b.is_float() && !b.is_int())
@@ -438,6 +438,7 @@ namespace interpreter {
     }
 
     Value div_values(const Value &a, const Value &b) {
+        if (a.get_class() != b.get_class()) throw std::runtime_error("division expects same types");
         if (!a.is_float() && !a.is_int() ||
             !b.is_float() && !b.is_int())
             throw std::runtime_error("division is defined for numeric types only");
@@ -445,13 +446,10 @@ namespace interpreter {
 
         if (b.is_int() && b.i32 == 0)
             throw std::runtime_error("Division by zero");
-        if (b.is_float() && b.f32 == 0.0f)
-            throw std::runtime_error("Division by zero");
-
         if (a.is_int() && b.is_int())
-            res.set_int(a.i32 + b.i32);
+            res.set_int(a.i32 / b.i32);
         else
-            res.set_float(a.cast_to_float() + b.cast_to_float());
+            res.set_float(a.cast_to_float() / b.cast_to_float());
 
 
         return res;
@@ -482,7 +480,7 @@ namespace interpreter {
         if (const_idx >= vm.constantf.size()) {
             throw std::out_of_range("Float constant index out of range");
         }
-        vm.stack[vm.fp + reg].set_float(vm.constanti[const_idx].f32);
+        vm.stack[vm.fp + reg].set_float(vm.constantf[const_idx].f32);
     }
 
     void op_loadfunc(VMData &vm, uint8_t reg, uint32_t const_idx) {
@@ -561,13 +559,12 @@ namespace interpreter {
 
 
     bool is_truthy(const Value &val) {
-        if (val.is_object())
-            return !val.is_nil(); // Objects are always truthy(except nil)
+        if (val.is_nil()) return false;
         if (val.is_int())
             return val.i32 != 0;
         if (val.is_float())
             return val.f32 != 0.0f;
-        return false;
+        return true;//it's an object and is not nil
     }
 
     uint32_t opcode(OpCode code, uint8_t a, uint32_t bx) {
@@ -669,7 +666,7 @@ namespace interpreter {
                 break;
             case OP_CALL:
                 std::cout << "CALL        func[" << (int) a << "](args R" << (int) b << "..R" << (int) (b + c - 1)
-                        << ")";
+                          << ")";
                 break;
             case OP_RETURN:
                 std::cout << "RETURN      return R" << (int) a;
@@ -685,6 +682,18 @@ namespace interpreter {
                 break;
         }
         std::cout << std::endl;
+    }
+
+    bool is_jit_on() {
+        return jit_on;
+    }
+
+    void set_jit_on() {
+        jit_on = true;
+    }
+
+    void set_jit_off() {
+        jit_on = false;
     }
 
     void init_vm(std::istream &in) {

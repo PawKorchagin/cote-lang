@@ -55,6 +55,7 @@ namespace ast {
         Member,
         Return,
         IntLit,
+        FloatLit,
         StringLit,
         Var,
         If,
@@ -380,19 +381,6 @@ namespace ast {
     };
 
     /**
-     * @class Program
-     * @brief Container node representing the top-level structure of a program.
-     *
-     * Stores all top-level declarations such as function definitions.
-     * Does not own or evaluate the contents directly.
-     */
-    class Program {
-    public:
-        //function declaration (or const var declaration; TODO will be added later )
-        std::vector<uint32_t> instructions;
-    };
-
-    /**
      * @class IntLitExpr
      * @brief Represents an integer literal expression.
      *
@@ -414,6 +402,25 @@ namespace ast {
 
         std::unique_ptr<Node> move_upcasting() override {
             return std::make_unique<IntLitExpr>(number); // No move needed for primitive type
+        }
+    };
+
+    class FloatLitExpr : public Node {
+    public:
+        const float number;
+
+        FloatLitExpr(float val) : number(val) {}
+
+        NodeType get_type() const override { return NodeType::FloatLit; }
+
+        [[nodiscard]] std::string to_str1() const override;
+
+        std::unique_ptr<Node> clone_upcasting() const override {
+            return std::make_unique<FloatLitExpr>(number);
+        }
+
+        std::unique_ptr<Node> move_upcasting() override {
+            return std::make_unique<FloatLitExpr>(number); // No move needed for primitive type
         }
     };
 

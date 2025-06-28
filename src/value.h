@@ -7,6 +7,7 @@
 
 #include <cstdint>
 
+
 namespace interpreter {
     static constexpr uint32_t TYPE_OBJ = 1;
     static constexpr uint32_t MARK_BIT = 2;
@@ -24,7 +25,6 @@ namespace interpreter {
     //                                                                             mark for gc
 
     // in future objects third low bit will mean array/object
-
     // non-objects: xxx100 - int
     //              xx1000 - float
     //              xx1100 - callable
@@ -50,7 +50,7 @@ namespace interpreter {
 
         // TODO simplify
         void flip_mark() {
-           type_part ^= MARK_BIT;
+            type_part ^= MARK_BIT;
         }
 
         bool is_marked() const { return type_part & MARK_BIT; }
@@ -120,13 +120,16 @@ namespace interpreter {
         inline uint64_t as_uint64() { return *reinterpret_cast<uint64_t *>(this); }
     };
 
+
+    using mFuncCompiled = uint64_t (*)(void *);
     struct Function {
         uint32_t entry_point;
         uint8_t arity;
         uint32_t code_size = 0;
         uint32_t max_stack = 120;
         uint32_t hotness = 0;
-        //        util::int_int_map hot_loc;
+        bool banned = false;
+        mFuncCompiled jitted = nullptr;
     };
 
     struct CallFrame {

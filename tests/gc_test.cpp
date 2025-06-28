@@ -8,7 +8,7 @@
 
 #include "gc.h"
 
-#include <__ranges/all.h>
+//#include <__ranges/all.h>
 
 #include "heap.h"
 #include "vm.h"

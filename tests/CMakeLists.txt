@@ -16,8 +16,8 @@ add_executable(
         cote_test
         parser_test.cpp
         vm_test.cpp
-        parser_test_param.cpp
-        jit_tests.cpp
+        jit_basic_tests.cpp
+        jit_program_test.cpp
         utils.h
         compile_test_param.cpp
         gc_test.cpp

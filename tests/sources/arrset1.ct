@@ -1,0 +1,10 @@
+fn f(a) {
+    a[0] = 10;
+}
+fn main() {
+    a = array(10);
+    a[0] = 1;
+    a[1] = 2;
+    f(a);
+    return a[0];
+}

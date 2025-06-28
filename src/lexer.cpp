@@ -5,6 +5,7 @@
 #include "exceptions.h"
 #include "misc.h"
 #include "lexer.h"
+#include <algorithm>
 
 namespace parser {
 //wrapper for keeping cursor position and error messages
@@ -51,8 +52,11 @@ namespace parser {
         do {
             cur.identifier.push_back(static_cast<char>(cur_char));
             cur_char = in.get();
-        } while (isdigit(cur_char));
-        return cur.token = TOKEN_INT_LIT;
+        } while (isdigit(cur_char) || cur_char == '.');
+        if (std::count(cur.identifier.begin(), cur.identifier.end(), '.') > 1) {
+            parser_throws(error_msg("Illegal token: too many dots in number"));
+        }
+        return cur.token = TOKEN_NUMBER;
     }
 
     int parse_token2(char second, int res1, int res2) {
@@ -67,8 +71,8 @@ namespace parser {
             cur.identifier.push_back(static_cast<char>(cur_char));
             cur_char = in.get();
         } while (isalnum(cur_char) || cur_char == '_');
-        if (cur.identifier == "and") return cur.token = TOKEN_AND;
-        if (cur.identifier == "or") return cur.token = TOKEN_OR;
+//        if (cur.identifier == "and") return cur.token = TOKEN_AND;
+//        if (cur.identifier == "or") return cur.token = TOKEN_OR;
         if (cur.identifier == "fn") return cur.token = TOKEN_FN;
         if (cur.identifier == "break") return cur.token = TOKEN_BREAK;
         if (cur.identifier == "continue") return cur.token = TOKEN_BREAK;
@@ -212,7 +216,7 @@ namespace parser {
             case TOKEN_UNKNOWN:
                 return std::to_string(char(tok));
             case TOKEN_IDENTIFIER:
-            case TOKEN_INT_LIT:
+            case TOKEN_NUMBER:
                 return temp_data;
             case TOKEN_IF:
                 return "if";

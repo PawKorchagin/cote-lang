@@ -23,9 +23,9 @@ void cote_print(interpreter::VMData &vm, int reg, int cnt) {
     for (int i = 0; i < cnt; ++i) {
         auto &cur = vm.stack[off + i];
         if (cur.is_callable()) std::cout << "callable " << cur.i32;
-        else if (cur.is_int()) std::cout << cur.i32;
-        else if (cur.is_float()) std::cout << cur.f32;
-        else if (cur.is_nil()) std::cout << "nil";
+        else if (cur.is_int()) std::cout << cur.i32 << ' ';
+        else if (cur.is_float()) std::cout << cur.f32 << ' ';
+        else if (cur.is_nil()) std::cout << "nil ";
         else throw std::runtime_error("todo");
     }
 }
@@ -44,16 +44,17 @@ void cote_print_(interpreter::VMData &vm, int reg, int cnt) {
 
 
 void cote_println(interpreter::VMData &vm, int reg, int cnt) {
-    int off = vm.fp + reg;
-    for (int i = 0; i < cnt; ++i) {
-        auto &cur = vm.stack[off + i];
-        if (cur.is_callable()) std::cout << "callable " << cur.i32 << ' ';
-        else if (cur.is_int()) std::cout << cur.i32 << ' ';
-        else if (cur.is_float()) std::cout << cur.f32 << ' ';
-        else if (cur.is_nil()) std::cout << "nil" << ' ';
-        else throw std::runtime_error("todo or println dont know what is it");
-    }
+    cote_print(vm, reg, cnt);
     std::cout << std::endl;
+}
+
+void cote_rand(interpreter::VMData &vm, int reg, int cnt) {
+    if (cnt != 0) throw std::runtime_error("rand requires no arguments");
+    vm.stack[vm.fp + reg].set_int(rand());
+}
+void cote_throw(interpreter::VMData &vm, int reg, int cnt) {
+    if (cnt != 0) throw std::runtime_error("throw requires no arguments");
+    throw std::runtime_error("cote throw was called");
 }
 
 // get number of objects in memory at the moment
@@ -116,12 +117,14 @@ void GC_CALL(interpreter::VMData &vm, int, int cnt) {
     vm.gc.call();
 }
 
+
 void cote_stdlib::initStdlib(interpreter::VMData &data, parser::VarManager &vars) {
     data.natives[vars.add_native("print")] = cote_print;
     data.natives[vars.add_native("str")] = cote_str;
     data.natives[vars.add_native("println")] = cote_println;
     data.natives[vars.add_native("len")] = cote_len;
-
+    data.natives[vars.add_native("rand")] = cote_rand;
+    data.natives[vars.add_native("throw")] = cote_throw;
     // GC MONITOR NATIVES:
     data.natives[vars.add_native("GET_OBJECTS")] = GET_OBJECTS;
     data.natives[vars.add_native("GET_YOUNG")] = GET_YOUNG;
@@ -135,3 +138,4 @@ void cote_stdlib::initStdlib(interpreter::VMData &data, parser::VarManager &vars
     // ASSERT
     data.natives[vars.add_native("ASSERT")] = ASSERT;
 }
+
