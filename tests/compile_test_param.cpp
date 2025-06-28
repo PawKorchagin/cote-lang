@@ -13,7 +13,7 @@ using SimpleCompileFromFileOk = Test;
 
 inline void compile_program(std::istream &fin, const std::string &file_name = "code") {
     using namespace interpreter;
-    heap::mem.clear();
+    // heap::mem.clear();
     auto &vm = initVM();
     vm.gc.cleanup();
 #ifdef DEFAULT_GC_YOUNG_CAPACITY

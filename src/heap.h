@@ -14,6 +14,7 @@
 #include <stack>
 #include <unordered_set>
 #include <ranges>
+#include <algorithm>
 
 #include "value.h"
 
@@ -331,6 +332,7 @@ namespace heap {
         }
 
         void cleanup() {
+            mem.clear();
             reset_young();
             old_roots.clear();
             large_roots.clear();

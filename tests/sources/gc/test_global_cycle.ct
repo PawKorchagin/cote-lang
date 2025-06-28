@@ -9,6 +9,20 @@ fn make_cycle() {
 
 fn main() {
     global = make_cycle();
+    x1 = 0;
+    x2 = 0;
+    x3 = 0;
+    x4 = 0;
+    x5 = 0;
+    x6 = 0;
+    x7 = 0;
+    x8 = 0;
+    x9 = 0;
+    x10 = 0;
+    x11 = 0;
+    x12 = 0;
+    x13 = 0;
+    x14 = 0;
     for (i = 0; i < 25; i += 1) {
         tmp = array(1);
     }

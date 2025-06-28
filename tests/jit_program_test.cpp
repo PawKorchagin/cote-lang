@@ -104,12 +104,15 @@ void simple_perfomance_cmp(std::string filename) {
     auto emitter = test_jit_compile(filename);
     //Warm up 1
     std::cout << "Warm up 1\n";
+    vm_instance().gc.cleanup();
     emitter->initVM(vm_instance());
     interpreter::run();
     std::cout << "Warm up 2\n";
+    vm_instance().gc.cleanup();
     emitter->initVM(vm_instance());
     interpreter::run();
     std::cout << "Jit off\n";
+    vm_instance().gc.cleanup();
     emitter->initVM(vm_instance());
     auto y = measure1([]() {
         interpreter::run();
@@ -119,6 +122,7 @@ void simple_perfomance_cmp(std::string filename) {
     interpreter::set_jit_on();
 //    print_vm_data(vm_instance());
     interpreter::vm_instance().jit_log_level = 1;
+    vm_instance().gc.cleanup();
     emitter->initVM(vm_instance());
     for (int i = 0; i < vm_instance().functions_count; i++) {
         vm_instance().functions[i].hotness = 100;
