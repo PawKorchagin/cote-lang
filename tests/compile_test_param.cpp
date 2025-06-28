@@ -218,3 +218,9 @@ TEST(SimpleCompileFromFileOk, TestMultiCompGraph) {
         });
 }
 
+TEST(SimpleCompileFromFileOk, TestFact20) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/test_fact20.ct" );
+        return compile_program(fin);
+        });
+}

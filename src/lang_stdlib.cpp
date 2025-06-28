@@ -35,7 +35,7 @@ void cote_print_(interpreter::VMData &vm, int reg, int cnt) {
     for (int i = 0; i < cnt; ++i) {
         auto &cur = vm.stack[off + i];
         if (cur.is_callable()) std::cout << "callable " << cur.i32;
-        else if (cur.is_int()) std::cout << cur.i32 << ' ';
+        else if (cur.is_int()) std::cout << cur.i32;
         else if (cur.is_float()) std::cout << cur.f32;
         else if (cur.is_nil()) std::cout << "nil";
         else throw std::runtime_error("todo");
@@ -132,7 +132,8 @@ void cote_stdlib::initStdlib(interpreter::VMData &data, parser::VarManager &vars
     data.natives[vars.add_native("GET_OLD")] = GET_OLD;
     data.natives[vars.add_native("GC_CALL")] = GC_CALL;
 
-    // just prints space after ints
+    // just prints without space after ints
+    // check code better
     data.natives[vars.add_native("print_")] = cote_print_;
 
     // ASSERT
