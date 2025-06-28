@@ -13,7 +13,7 @@ using SimpleCompileFromFileOk = Test;
 
 inline void compile_program(std::istream &fin, const std::string &file_name = "code") {
     using namespace interpreter;
-    heap::mem.clear();
+    // heap::mem.clear();
     auto &vm = initVM();
     vm.gc.cleanup();
 #ifdef DEFAULT_GC_YOUNG_CAPACITY
@@ -218,3 +218,9 @@ TEST(SimpleCompileFromFileOk, TestMultiCompGraph) {
         });
 }
 
+TEST(SimpleCompileFromFileOk, TestFact20) {
+    ASSERT_NO_THROW({
+        std::ifstream fin("../../tests/sources/test_fact20.ct" );
+        return compile_program(fin);
+        });
+}

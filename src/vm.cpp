@@ -529,9 +529,6 @@ namespace interpreter {
 
         if (obj[idx.i32 + 1].is_array()) {
             auto *ptr = heap::mem.at(obj[idx.i32 + 1].object_ptr);
-            if (ptr->object_ptr == 2) {
-
-            }
             // update obj[i]
             obj[idx.i32 + 1] = *ptr;
             vm.stack[vm.fp + dst] = *ptr;
