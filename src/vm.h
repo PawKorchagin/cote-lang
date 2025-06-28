@@ -195,6 +195,8 @@ namespace interpreter {
 #else
         heap::GarbageCollector<DEFAULT_GC_YOUNG_CAPACITY> gc{};
 #endif
+        int GC_T = 0;
+
         //  Static data: must be filled before running vm
         std::vector<Value> constanti;
         std::vector<Value> constantf;
