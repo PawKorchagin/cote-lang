@@ -10,7 +10,7 @@ fn sort(arr) {
     }
 }
 fn main() {
-    n = 2000;
+    n = 50000;
     arr = array(n);
 
     for (i = 0; i < len(arr); i += 1) {

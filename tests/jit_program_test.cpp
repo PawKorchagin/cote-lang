@@ -158,6 +158,10 @@ TEST(PerfomanceJitOnAndOff, Sort) {
 TEST(PerfomanceJitOnAndOff, Playground) {
     simple_perfomance_cmp("../../tests/sources/jitPlayground.ct");
 }
+
+TEST(PerfomanceJitOnAndOff, Fact20) {
+    simple_perfomance_cmp("../../tests/sources/test_fact20.ct");
+}
 /*
  constants: [2, 1, 0, 10]
 func0(args: 3):
