@@ -6,11 +6,11 @@
 #include <stack>
 #include <unordered_map>
 #include <vector>
-#include <memory>
 
 #include "heap.h"
-#include "misc.h"
 #include "value.h"
+
+#define DEFAULT_GC_YOUNG_CAPACITY 21
 
 namespace jit {
     struct Trace;
@@ -190,8 +190,11 @@ namespace interpreter {
 
     // template<uint16_t GC_YOUNG_THRESHOLD=50>
     struct VMData {
-        heap::GarbageCollector<1000> gc{};
-
+#ifndef DEFAULT_GC_YOUNG_CAPACITY
+        heap::GarbageCollector<200> gc{};
+#else
+        heap::GarbageCollector<DEFAULT_GC_YOUNG_CAPACITY> gc{};
+#endif
         //  Static data: must be filled before running vm
         std::vector<Value> constanti;
         std::vector<Value> constantf;

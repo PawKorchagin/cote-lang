@@ -1,0 +1,32 @@
+fn build_graph() {
+    // comp A
+    // reachable
+    a1 = array(1);
+    a2 = array(1);
+    a1[0] = a2; a2[0] = a1;  // cycle
+
+    // comp B
+    // unreachable after function
+    b1 = array(1);
+    b2 = array(1);
+    b1[0] = b2; b2[0] = b1;  // cycle
+
+    root = array(1);
+    root[0] = a1;            // only A is connected
+    return root;
+}
+
+fn main() {
+    g = build_graph();
+    call_minor = array(12);
+    ASSERT(GET_OLD() >= 2);
+    // B unreachable
+    for (i = 0; i < 100; i += 1) {
+        tmp = array(1);
+    }
+    ASSERT(GET_OLD() >= 2);
+    println(g[0][0][0] == g[0]); // true
+    ASSERT(g[0][0][0] == g[0]);
+    GC_CALL();
+    ASSERT(GET_OLD() == 4);
+}

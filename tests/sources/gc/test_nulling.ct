@@ -1,0 +1,23 @@
+fn main() {
+    a = array(5);
+    b = array(5);
+    a[0] = b;
+    b[0] = a;
+
+    print_(GET_YOUNG(), GET_OLD(), GET_LARGE());
+    println();
+
+    a = nil; b = nil;
+    for (i = 0; i < 12 + 3; i += 1) {
+        tmp = array(1);
+        print_(GET_YOUNG(), GET_OLD(), GET_LARGE());
+        println();
+    }
+
+    GC_CALL();
+    print_(GET_YOUNG(), GET_OLD(), GET_LARGE());
+    println();
+
+    return 0;
+}
+

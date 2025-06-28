@@ -1,0 +1,16 @@
+fn link_dead_local() {
+    local = array(3);
+    local[0] = 42;
+    holder = array(1);
+    holder[0] = local;
+    return holder;
+}
+
+fn main() {
+    h = link_dead_local();
+    ASSERT(h[0][0] == 42);
+    for (i = 0; i < 30; i += 1) {
+        tmp = array(1);
+    }
+    ASSERT(h[0][0] == 42);
+}

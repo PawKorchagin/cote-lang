@@ -12,8 +12,12 @@
 #include <iostream>
 #include <map>
 #include <stack>
+#include <unordered_set>
+#include <ranges>
 
 #include "value.h"
+
+#define ALL(a) a.begin(), a.end()
 
 namespace heap {
     inline std::map<uint32_t, interpreter::Value *> mem{};
@@ -52,34 +56,26 @@ namespace heap {
                 arena = nullptr;
             }
 
+            void forget() {
+                used = 0;
+                alloc_buffer();
+            }
+
             [[nodiscard]] uint16_t get_used() const {
                 return used;
             }
         };
 
-        // class monotonic_resource final : public std::pmr::monotonic_buffer_resource {
-        //     std::size_t used_values_ = 0;
-        //
-        // public:
-        //     monotonic_resource(void *buf, const std::size_t buf_size)
-        //         : monotonic_buffer_resource(buf, buf_size) {
-        //         // reset_used();
-        //     }
-        //
-        //
-        //
-        // protected:
-        //     void *do_allocate(const std::size_t bytes, const std::size_t alignment) override {
-        //         // this->used_values_ += bytes;
-        //         return monotonic_buffer_resource::do_allocate(bytes, alignment);
-        //     }
-        // };
-
         size_t allocated_ = 1;
 
-        // static constexpr uint16_t YOUNG_THRESHOLD = 50;
+#ifdef DEFAULT_GC_YOUNG_CAPACITY
         size_t MAJOR_THRESHOLD = 10;
         size_t LARGE_THRESHOLD = 10;
+#else
+        // set your own
+        size_t MAJOR_THRESHOLD = 10;
+        size_t LARGE_THRESHOLD = 10;
+#endif
 
         std::pmr::unsynchronized_pool_resource old_arena{};
 
@@ -90,6 +86,7 @@ namespace heap {
         Alloc old_alloc{&old_arena};
 
         using value_ptr = interpreter::Value *;
+        using obj_ptr_type = uint32_t;
 
         struct YoungRoot {
             value_ptr roots[YOUNG_THRESHOLD]{};
@@ -113,10 +110,12 @@ namespace heap {
         };
 
         // Roots
-        using DynamicRoot = std::vector<value_ptr>;
+        using DynamicRoot = std::vector<value_ptr>; // no way :(
         YoungRoot young_roots = YoungRoot();
         DynamicRoot large_roots;
-        DynamicRoot old_roots;
+        // std::unordered_set<uint32_t>
+        // DynamicRoot old_roots;
+        std::vector<obj_ptr_type> old_roots;
 
         interpreter::Value *stack_;
         std::stack<interpreter::CallFrame> *call_stack_;
@@ -130,10 +129,10 @@ namespace heap {
 
         [[nodiscard]] uint32_t get_sp() const {
             if (call_stack_ == nullptr || call_stack_->empty()) {
-                return fp_? *fp_  : 0;
+                return fp_ ? *fp_ : 0;
             }
 
-            return (fp_? *fp_ : 0) + call_stack_->top().cur_func->max_stack;
+            return (fp_ ? *fp_ : 0) + call_stack_->top().cur_func->max_stack;
         }
 
         // reserve len + 1 objects to young arena
@@ -165,87 +164,84 @@ namespace heap {
         }
 
         void mark(value_ptr ptr) const {
-            if (ptr->object_ptr == 1) {
+            if (ptr->is_marked()) return;
 
-            }
-            if (ptr->object_ptr == 2) {
-
-            }
-            if (ptr->object_ptr == 3) {
-
-            }
-            if (ptr->object_ptr == 4) {
-
-            }
-            if (ptr->object_ptr == 5) {
-
-            }
-            if (ptr->object_ptr == 6) {
-
-            }
-            // auto* ptr = mem.at(object_ptr);
-            // if (ptr->is_marked()) return;
             uint32_t len = ptr->get_len();
             ptr->mark();
-            // for (auto *elem = ptr + 1; ptr < elem + len; ++ptr) {
-            //     mark(elem);
-            // }
             for (int i = 1; i < len + 1; ++i) {
-                auto* neigh = ptr + i;
+                auto *neigh = ptr + i;
                 if (neigh->is_array()) {
-                    auto* obj_neigh = mem.at(neigh->object_ptr);
+                    auto *obj_neigh = mem.at(neigh->object_ptr);
+                    assert(obj_neigh != ptr + i);
                     mark(obj_neigh);
                 }
             }
         }
 
-        // value_ptr extract_mem(uint32_t obj_ptr) {
-        //     return mem.at(obj_ptr);
-        // }
+        template<class T>
+        void unmark(typename std::vector<T*>::iterator begin, typename std::vector<T*>::iterator end) {
+            std::for_each(begin, end, [](auto ptr) { ptr->unmark(); });
+        }
 
         void mark() const {
             assert(stack_ != nullptr || get_sp() == 0);
             try {
                 for (int i = 0; i < get_sp(); ++i) {
                     if (stack_[i].is_array()) {
-                        auto* ptr = mem.at(stack_[i].object_ptr);
+                        auto *ptr = mem.at(stack_[i].object_ptr);
                         ptr->unmark();
-                        // ptr->mark();
                         mark(ptr);
-                        // mark(stack_ + i);
                     }
                 }
-            } catch (std::runtime_error& e) {
+            } catch (std::runtime_error &e) {
                 std::cerr << e.what() << std::endl;
                 exit(1);
             }
         }
 
-        void rebind_mem(value_ptr ptr, value_ptr old) {
-            auto len = ptr->get_len();
+        std::unordered_set<uint32_t> vis;
+
+        void rebind_mem(value_ptr ptr) {
+            if (vis.contains(ptr->object_ptr)) return;
+            assert(ptr->is_array());
+            vis.insert(ptr->object_ptr);
+            value_ptr old = old_alloc.allocate(ptr->get_len() + 1);
+            *old = *ptr;
+            // rebind mem
+            mem[ptr->object_ptr] = old;
+            const auto len = ptr->get_len();
             for (int i = 1; i < len + 1; ++i) {
-                mem[ptr[i].object_ptr] = old + i;
                 old[i] = ptr[i];
+                if (!ptr[i].is_array()) {
+                    continue;
+                }
+                value_ptr obj;
+                try {
+                    obj = mem.at(ptr[i].object_ptr);
+                } catch (std::runtime_error &e) {
+                    std::cerr << e.what() << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+                // use to handle cycling:
+                // assert(ptr[i].object_ptr != ptr->object_ptr);
+                rebind_mem(obj);
             }
+            old_roots.push_back(old->object_ptr);
         }
 
         void minor_gc() {
+            for (uint16_t i = 0; i < young_roots.size(); ++i) {
+                auto *ptr = young_roots[i];
+                ptr->unmark();
+            }
             mark();
             // throw survivors to old arena
-            // for (value_ptr ptr: young_roots) {
+            vis.clear();
             for (uint16_t i = 0; i < young_roots.size(); ++i) {
                 if (auto *ptr = young_roots[i]; ptr->is_marked()) {
                     assert(ptr != nullptr);
                     ptr->unmark();
-                    auto *old = old_alloc.allocate(ptr->get_len() + 1);
-                    this->rebind_mem(ptr, old);
-                    // rebind ptr
-                    *old = *ptr;
-                    mem[old->object_ptr] = old;
-                    // *old = *ptr;
-                    // old->type_part = ptr->type_part;
-                    // old->set_array(ptr->get_len(), old);
-                    old_roots.push_back(old);
+                    this->rebind_mem(ptr);
                 }
             }
 
@@ -257,6 +253,7 @@ namespace heap {
         }
 
         void large_gc() {
+            unmark<interpreter::Value>(ALL(large_roots));
             mark();
             // mb rewrite later
             DynamicRoot keep_large;
@@ -273,18 +270,22 @@ namespace heap {
         }
 
         void major_gc() {
-            // test_inner
-            if (old_roots.size() == 2) {
+            // unmark<obj_ptr_type>(ALL(old_roots));
+            for (value_ptr ptr: old_roots
+                                | std::ranges::views::transform(
+                                    [](const uint32_t obj_ptr) -> value_ptr {
+                                        return mem.at(obj_ptr);
+                                    })
+            ) { ptr->unmark(); }
 
-            }
-
-            mark(); // not needed
+            mark();
             // mb rewrite later
-            DynamicRoot survivors;
-            for (value_ptr ptr: old_roots) {
+            std::vector<uint32_t> survivors;
+            for (auto obj_ptr: old_roots) {
+                auto *ptr = mem.at(obj_ptr);
                 if (ptr->is_marked()) {
                     ptr->unmark();
-                    survivors.push_back(ptr);
+                    survivors.push_back(obj_ptr);
                 } else {
                     mem.erase(ptr->object_ptr);
                     old_alloc.deallocate(ptr, ptr->get_len() + 1);
@@ -294,7 +295,6 @@ namespace heap {
         }
 
         GarbageCollector(): stack_(nullptr), call_stack_(nullptr), fp_(nullptr) {
-            // young_roots.reserve(YOUNG_THRESHOLD >> 1);
         }
 
         value_ptr alloc_array(const size_t len) {
@@ -325,18 +325,16 @@ namespace heap {
 
         void call(
             // interpreter::Value *stack, const uint32_t sp
-            ) {
-            // stack_ = stack; sp_ = sp;
-
-            // minor_gc();
-
-            // if (large_roots.size() >= LARGE_THRESHOLD) {
+        ) {
             large_gc();
-            // }
-
-            // if (old_roots.size() >= MAJOR_THRESHOLD) {
             major_gc();
-            // }
+        }
+
+        void cleanup() {
+            reset_young();
+            old_roots.clear();
+            large_roots.clear();
+            vis.clear();
         }
     };
 } // heap

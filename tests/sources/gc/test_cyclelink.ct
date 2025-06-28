@@ -1,0 +1,16 @@
+fn main() {
+    a = array(1);
+    a[0] = array(20); // gc
+    println(GET_OLD()); // 0
+    ASSERT(GET_OLD() == 0);
+    println(GET_LARGE()); // 1
+    ASSERT(GET_LARGE() == 1);
+    a[0][0] = a[0];
+    ASSERT(a[0][0][0] == a[0]);
+    for (i = 0; i < 20; i += 1) {
+        if (i > 0) {
+            println(a[0][0][i]);
+            println(a[0][i]);
+        }
+    }
+}
